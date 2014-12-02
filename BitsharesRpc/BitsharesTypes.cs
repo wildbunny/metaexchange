@@ -216,7 +216,7 @@ namespace BitsharesRpc
 	///  } </summary>
 	///
 	/// <remarks>	Paul, 27/11/2014. </remarks>
-	public class BitsharesTransaction
+	public class BitsharesWalletTransaction
 	{
 		public bool is_virtual;
 		public bool is_confirmed;
@@ -229,5 +229,149 @@ namespace BitsharesRpc
 		public DateTime timestamp;
 		public DateTime expiration_timestamp;
 		public string error;
+	}
+
+	public enum BitsharesTransactionOp
+	{
+		null_op_type = 0,
+
+		/** balance operations */
+		withdraw_op_type,
+		deposit_op_type,
+
+		/** account operations */
+		register_account_op_type,
+		update_account_op_type,
+		withdraw_pay_op_type,
+
+		/** asset operations */
+		create_asset_op_type,
+		update_asset_op_type,
+		issue_asset_op_type,
+
+		/** delegate operations */
+		fire_delegate_op_type,
+
+		/** proposal operations */
+		submit_proposal_op_type,
+		vote_proposal_op_type,
+
+		/** market operations */
+		bid_op_type,
+		ask_op_type,
+		short_op_type, /* Deprecated */
+		cover_op_type,
+		add_collateral_op_type,
+		remove_collateral_op_type,
+
+		define_delegate_slate_op_type,
+
+		update_feed_op_type,
+		burn_op_type,
+		link_account_op_type,
+		withdraw_all_op_type,
+		release_escrow_op_type,
+		update_block_signing_key_type,
+
+		short_op_v2_type
+	}
+
+	public enum BitsharesWithdrawCondition
+	{
+		/** assumes blockchain already knowws the condition, which
+		* is provided the first time something is withdrawn */
+		withdraw_null_type = 0,
+		withdraw_signature_type,
+		withdraw_vesting_type,
+		withdraw_multi_sig_type,
+		withdraw_password_type,
+		withdraw_option_type,
+		withdraw_escrow_type
+	}
+
+	public class BitsharesTransactionMemo
+	{
+		public string one_time_key;
+		public string encrypted_memo_data;
+	}
+
+	public class BitsharesMemoOwner
+	{
+		public string owner;
+		public BitsharesTransactionMemo memo;
+	}
+
+	/// <summary>	{
+	///            "asset_id": 0,
+	///            "delegate_slate_id": 0,
+	///            "type": "withdraw_signature_type",
+	///            "data": {
+	///              "owner": "BTSX8oYY5PkyjxNCkE8Hsm65XJimfd7nqC1P9",
+	///              "memo": {
+	///                "one_time_key": "BTSX8asGa1sX5V17GBXhyTXoexfZcwWMTQw4jwFQjUmJavdM4egaBQ",
+	///                "encrypted_memo_data": "ee5628f850cec8f828ff7db0419b8091a4e8aad2e9a976db332aad5bbf3d460715703ae3266c9094812a936351cda881ff05d4ae4f49c8affba4874a8f928284"
+	///              }
+	///            }
+	///          } </summary>
+	///
+	/// <remarks>	Paul, 01/12/2014. </remarks>
+	public class BitsharesOpCondition
+	{
+		public ulong asset_id;
+		public ulong delegate_slate_id;
+		public BitsharesWithdrawCondition type;
+		public BitsharesMemoOwner data;
+	}
+
+	public class BitsharesOpData
+	{
+		public ulong amount;
+		public string balance_id;
+		public string claim_input_data;
+		public BitsharesOpCondition condition;
+	}
+
+	public class BitsharesOperation
+	{
+		public BitsharesTransactionOp type;
+		public BitsharesOpData data;
+	}
+
+	public class BitsharesChainPos
+	{
+		public ulong block_num;
+		public ulong trx_num;
+	}
+
+	public class BitsharesVoteAmount
+	{
+		public long votes_for;
+		public long votes_against;
+	}
+
+	public class BitsharesTrx
+	{
+		public DateTime expiration;
+		public string delegate_slate_id;
+		public BitsharesOperation[] operations;
+		public string[] signatures;		
+	}
+
+	public class BitsharesTransaction
+	{
+		public BitsharesTrx trx;
+		public string[] signed_keys;
+		public string validation_error;
+		public Dictionary<string, BitsharesAmount>[] required_deposits;
+		public Dictionary<string, BitsharesAmount>[] provided_deposits;
+		public Dictionary<long, BitsharesAmount>[] withdraws;
+		public Dictionary<long, BitsharesAmount>[] deposits;
+		public Dictionary<long, BitsharesAmount>[] deltas;
+		public Dictionary<long, BitsharesVoteAmount>[] net_delegate_votes;
+		public BitsharesAmount required_fees;
+		public BitsharesAmount alt_fees_paid;
+		public List<ulong[]> balance;
+
+		public BitsharesChainPos chain_location;
 	}
 }

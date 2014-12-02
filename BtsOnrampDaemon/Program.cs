@@ -14,7 +14,12 @@ namespace BtsOnrampDaemon
 		{
 			BitsharesWallet w = new BitsharesWallet("http://localhost:65066/rpc", "rpc_user", "abcdefgh");
 
-			List<BitsharesTransaction> trans = w.WalletAccountTransactionHistory();
+			List<BitsharesWalletTransaction> trans = w.WalletAccountTransactionHistory();
+
+			if (trans.Count > 0)
+			{
+				BitsharesTransaction t = w.BlockchainGetTransaction(trans.First().trx_id);
+			}
 		}
 	}
 }

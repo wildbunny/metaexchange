@@ -100,15 +100,27 @@ namespace BitsharesRpc
 		/// <param name="limit">	  	(Optional) the limit. </param>
 		///
 		/// <returns>	A List&lt;BitsharesTransaction&gt; </returns>
-		public List<BitsharesTransaction> WalletAccountTransactionHistory(string accountName=null, string assetSymbol=null, int limit=int.MaxValue)
+		public List<BitsharesWalletTransaction> WalletAccountTransactionHistory(string accountName=null, string assetSymbol=null, int limit=int.MaxValue)
 		{
-			return	ApiPostSync<List<BitsharesTransaction>>
+			return	ApiPostSync<List<BitsharesWalletTransaction>>
 					(
 						BitsharesMethods.wallet_account_transaction_history, 
 						accountName, 
 						assetSymbol, 
 						limit
 					);
+		}
+
+		/// <summary>	Blockchain get transaction. </summary>
+		///
+		/// <remarks>	Paul, 02/12/2014. </remarks>
+		///
+		/// <param name="txid">	The txid. </param>
+		///
+		/// <returns>	A BitsharesTransaction. </returns>
+		public BitsharesTransaction BlockchainGetTransaction(string txid)
+		{
+			return ApiPostSync<BitsharesTransaction>(BitsharesMethods.blockchain_get_transaction, txid);
 		}
     }
 }
