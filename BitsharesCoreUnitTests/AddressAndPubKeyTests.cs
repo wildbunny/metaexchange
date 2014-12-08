@@ -130,5 +130,49 @@ namespace BitsharesCoreUnitTests
 				Assert.AreEqual(addr, compare);
 			}
 		}
+
+		[Test]
+		public void CheckBtsPubKeyFromBitcoinPubKeyHex()
+		{
+			for (int i = 0; i < m_bitcoinPrivKeys.Count; i++)
+			{
+				string bitcoinHex = m_bitcoinPubKeys[i];
+				string btsHex = m_btsPubKeys[i];
+
+				BitsharesPubKey key = BitsharesPubKey.FromBitcoinHex(bitcoinHex);
+				string compare = key.m_PubKeyBase58;
+
+				Assert.AreEqual(btsHex, compare);
+			}
+		}
+
+		[Test]
+		public void CheckBtsAddressFromBitcoinPubKeyHex()
+		{
+			for (int i = 0; i < m_bitcoinPrivKeys.Count; i++)
+			{
+				string bitcoinHex = m_bitcoinPubKeys[i];
+				string btsAddress = m_btsAddresses[i];
+
+				BitsharesPubKey key = BitsharesPubKey.FromBitcoinHex(bitcoinHex);
+				string compare = key.m_Address;
+
+				Assert.AreEqual(btsAddress, compare);
+			}
+		}
+
+		[Test]
+		public void CheckBitcoinAddressFromBitsharesPublicKey()
+		{
+			for (int i = 0; i < m_btsPubKeys.Count; i++)
+			{
+				string btsPubKey = m_btsPubKeys[i];
+				string bitcoinAddress = m_bitcoinAddresses[i];
+
+				BitsharesPubKey key = new BitsharesPubKey(btsPubKey);
+
+				Assert.AreEqual(bitcoinAddress, key.ToBitcoinAddress(false));
+			}
+		}
     }
 }

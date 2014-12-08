@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BitsharesKeyPair.cs" />
+    <Compile Include="BitsharesPubKey.cs" />
     <Compile Include="Crypto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

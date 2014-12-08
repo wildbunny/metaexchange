@@ -53,22 +53,10 @@ namespace BtsOnrampDaemon
 			{
 				BitsharesTransaction t = w.BlockchainGetTransaction(trans.First().trx_id);
 
-				//string btsPubKey = t.trx.operations[1].data.condition.data.memo.one_time_key;
 
-				
+				string btsPubKey = t.trx.operations[1].data.condition.data.memo.one_time_key;
 
-				///---------------------------
-				string btcPrivateKey58 = "5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF";
-
-				BitsharesKeyPair kp = new BitsharesKeyPair(btcPrivateKey58);
-
-				string btsAddress = kp.ComputeBitsharesAddress();
-				string btsPubKey = kp.ComputeBitsharesPubKey();
-
-				///---------------------------
-
-				
-
+				BitsharesPubKey key = new BitsharesPubKey(btsPubKey);
 			}
 
 			// psudocode
