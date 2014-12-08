@@ -4,3 +4,11 @@
 /BtsOnrampDaemon/*.suo
 /RestLib/bin/Debug
 /RestLib/obj/Debug
+/BitsharesCore/bin/Debug
+/BitsharesCore/obj/Debug
+/BitsharesCoreUnitTests/bin/Debug
+/BitsharesCoreUnitTests/obj/Debug
+/bin/Debug
+/UnitTestDebugging/bin/Debug
+/UnitTestDebugging/obj/Debug
+/obj/Debug

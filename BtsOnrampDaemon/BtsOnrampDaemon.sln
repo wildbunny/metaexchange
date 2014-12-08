@@ -9,6 +9,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitsharesRpc", "..\Bitshare
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestLib", "..\RestLib\RestLib.csproj", "{C2755A02-D80A-4FB2-8210-45C181DD6785}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitsharesCore", "..\BitsharesCore\BitsharesCore.csproj", "{DC18E1FD-6299-40B7-82DD-7FE4E9EEA7E2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitsharesCoreUnitTests", "..\BitsharesCoreUnitTests\BitsharesCoreUnitTests.csproj", "{C38F76DF-FFCC-4877-8B1E-4ADCCB134A58}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestDebugging", "..\UnitTestDebugging\UnitTestDebugging.csproj", "{B6851CFE-3C95-4109-87ED-63F57FC5186A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +33,18 @@ Global
 		{C2755A02-D80A-4FB2-8210-45C181DD6785}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2755A02-D80A-4FB2-8210-45C181DD6785}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2755A02-D80A-4FB2-8210-45C181DD6785}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC18E1FD-6299-40B7-82DD-7FE4E9EEA7E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC18E1FD-6299-40B7-82DD-7FE4E9EEA7E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC18E1FD-6299-40B7-82DD-7FE4E9EEA7E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC18E1FD-6299-40B7-82DD-7FE4E9EEA7E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C38F76DF-FFCC-4877-8B1E-4ADCCB134A58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C38F76DF-FFCC-4877-8B1E-4ADCCB134A58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C38F76DF-FFCC-4877-8B1E-4ADCCB134A58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C38F76DF-FFCC-4877-8B1E-4ADCCB134A58}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
