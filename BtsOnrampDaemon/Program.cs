@@ -59,28 +59,10 @@ namespace BtsOnrampDaemon
 				BitsharesPubKey key = new BitsharesPubKey(btsPubKey);
 			}
 
-			// psudocode
-			//
-			// loop
-			//    list all confirmed BTS transactions since last block checked
-			//    if any is a deposit of the asset we are tracking to our deposit address
-			//       get full details
-			//       if we have not paid out for this deposit before
-			//          turn the BTS address / one_time_key info into a bitcoin address
-			//          send bitcoins to this address
-			//          mark this deposit as paid
-			//          log everything
-			//    update last block checked 
-			//       
-			//    list all confirmed BTC transactions since last block checked
-			//    for every deposit to our deposit address
-			//       get full details
-			//       if we have not sent the depositor the assets for this transaction
-			//          turn the public key from the deposit transaction into a BTS address
-			//          send assets to this BTS address
-			//          mark this deposit as paid
-			//          log everything
-			//    update last block checked
+			DaemonMySql daemon = new DaemonMySql(	new RpcConfig { m_url = "http://localhost:65066/rpc", m_rpcUser = "rpc_user", m_rpcPassword = "abcdefgh" },
+													new RpcConfig { }, "monsterer", "BTS", "");
+
+			daemon.Join();
 		}
 	}
 }

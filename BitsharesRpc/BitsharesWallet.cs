@@ -53,6 +53,12 @@ namespace BitsharesRpc
 																m_rpcUsername, m_rpcPassword);
 		}
 
+		public List<BitsharesResponse<T>> MakeRawBatchRequestSync<T>(BitsharesRequest request)
+		{
+			return Rest.JsonApiCallSync<List<BitsharesResponse<T>>>(m_rpcUrl, JsonSerializer.SerializeToString(request),
+																	m_rpcUsername, m_rpcPassword);
+		}
+
 		/// <summary>	Makes syncronus request </summary>
 		///
 		/// <remarks>	Paul, 26/11/2014. </remarks>
@@ -65,6 +71,12 @@ namespace BitsharesRpc
 		{
 			BitsharesResponse<T> response = MakeRawRequestSync<T>(request);
 			return response.result;
+		}
+
+		public List<BitsharesResponse<T>> MakeBatchRequestSync<T>(BitsharesBatchRequest request)
+		{
+			List<BitsharesResponse<T>> responses = MakeRawBatchRequestSync<T>(request);
+			return responses;
 		}
 
 		/// <summary>	Make a syncronus API post </summary>
@@ -91,6 +103,18 @@ namespace BitsharesRpc
 			return ApiPostSync<GetInfoResponse>(BitsharesMethods.get_info);
 		}
 
+		/// <summary>	Wallet get account. </summary>
+		///
+		/// <remarks>	Paul, 10/12/2014. </remarks>
+		///
+		/// <param name="accountName">	name of the account. </param>
+		///
+		/// <returns>	A BitsharesAccount. </returns>
+		public BitsharesAccount WalletGetAccount(string accountName)
+		{
+			return ApiPostSync<BitsharesAccount>(BitsharesMethods.wallet_get_account, accountName);
+		}
+
 		/// <summary>	Wallet account transaction history. </summary>
 		///
 		/// <remarks>	Paul, 27/11/2014. </remarks>
@@ -100,18 +124,24 @@ namespace BitsharesRpc
 		/// <param name="limit">	  	(Optional) the limit. </param>
 		///
 		/// <returns>	A List&lt;BitsharesTransaction&gt; </returns>
-		public List<BitsharesWalletTransaction> WalletAccountTransactionHistory(string accountName=null, string assetSymbol=null, int limit=int.MaxValue)
+		public List<BitsharesWalletTransaction> WalletAccountTransactionHistory(string accountName=null, 
+																				string assetSymbol=null, 
+																				int limit=0,
+																				uint startBlock=0,
+																				uint endBlock=uint.MaxValue)
 		{
 			return	ApiPostSync<List<BitsharesWalletTransaction>>
 					(
 						BitsharesMethods.wallet_account_transaction_history, 
 						accountName, 
 						assetSymbol, 
-						limit
+						limit,
+						startBlock,
+						endBlock
 					);
 		}
 
-		/// <summary>	Blockchain get transaction. </summary>
+		/// <summary>	Get one single transaction </summary>
 		///
 		/// <remarks>	Paul, 02/12/2014. </remarks>
 		///
@@ -121,6 +151,37 @@ namespace BitsharesRpc
 		public BitsharesTransaction BlockchainGetTransaction(string txid)
 		{
 			return ApiPostSync<BitsharesTransaction>(BitsharesMethods.blockchain_get_transaction, txid);
+		}
+
+		/// <summary>	Get a batch of transactions </summary>
+		///
+		/// <remarks>	Paul, 10/12/2014. </remarks>
+		///
+		/// <param name="txids">	The txids. </param>
+		///
+		/// <returns>	A List&lt;BitsharesTransaction&gt; </returns>
+		public List<BitsharesTransaction> BlockchainGetTransactionBatch(IEnumerable<string> txids)
+		{
+			// convert into array of parameters
+			IEnumerable<object[]> p = txids.Select<string, object[]>(s=>new object[] {s});
+
+			return MakeRequestSync<List<BitsharesTransaction>>(new BitsharesBatchRequest
+																(
+																	BitsharesMethods.blockchain_get_transaction, 
+																	p
+																));
+		}
+
+		/// <summary>	Get the asset details from the name </summary>
+		///
+		/// <remarks>	Paul, 11/12/2014. </remarks>
+		///
+		/// <param name="name">	The name. </param>
+		///
+		/// <returns>	A Bitshares Asset. </returns>
+		public BitsharesAsset BlockchainGetAsset(string name)
+		{
+			return ApiPostSync<BitsharesAsset>(BitsharesMethods.blockchain_get_asset, name);
 		}
     }
 }

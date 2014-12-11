@@ -14,11 +14,16 @@ namespace BitsharesRpc
 		public string description;
 		public string public_data;
 		public long issuer_account_id;
-		public long precision;
+		public ulong precision;
 		public DateTime registration_date;
 		public DateTime last_update;
 		public long current_share_supply;
 		public decimal collected_fees; 
+
+		public decimal GetAmountFromLarimers(ulong larmiers)
+		{
+			return (decimal)larmiers / precision;
+		}
 	}
 	
 	public class BitsharesMarketHistoryPoint
@@ -51,7 +56,7 @@ namespace BitsharesRpc
 
 	public class BitsharesAmount
 	{
-		public long amount;
+		public ulong amount;
 		public int asset_id;
 	}
 
@@ -63,7 +68,7 @@ namespace BitsharesRpc
 
 	public class BitsharesOrderState
 	{
-		public long balance;
+		public ulong balance;
 		public BitsharesPrice short_price_limit;
 		public DateTime last_update;
 	}
@@ -73,7 +78,7 @@ namespace BitsharesRpc
 		public BitsharesOrderType type;
 		public BitsharesMarketIndex market_index;
 		public BitsharesOrderState state;
-		public long? collateral;
+		public ulong? collateral;
 		public BitsharesPrice interest_rate;
 		public DateTime? expiration;
 
@@ -373,5 +378,67 @@ namespace BitsharesRpc
 		public List<ulong[]> balance;
 
 		public BitsharesChainPos chain_location;
+	}
+
+	/// <summary>	
+	/// {
+	///    "votes_for": 24809048496717,
+	///    "blocks_produced": 1270,
+	///    "blocks_missed": 1,
+	///    "next_secret_hash": "fc1fbc50---------------------------",
+	///    "last_block_num_produced": 1231903,
+	///    "pay_rate": 100,
+	///    "pay_balance": 15050000,
+	///    "total_paid": 6350000000,
+	///    "total_burned": 0,
+	///    "block_signing_key": "BTSX5T-------------------------------ZdGvcqN"
+	///  } </summary>
+	///
+	/// <remarks>	Paul, 10/12/2014. </remarks>
+	public class BitsharesDelegateInfo
+	{
+		public ulong votes_for;
+		public uint blocks_produced;
+		public uint blocks_missed;
+		public string next_secret_hash;
+		public uint last_block_num_produced;
+		public int pay_rate;
+		public ulong pay_balance;
+		public ulong total_paid;
+		public ulong total_burned;
+		public string block_signing_key;
+	}
+
+	/// <summary>
+	/// {
+	///  "id": 9569,
+	///  "name": "shentist",
+	///  "public_data": {
+	///    "gravatarID": "8b9671d4fad2d25bf218a51538bcb192"
+	///  },
+	///  "owner_key": "BTS---------------------------------UwsBQKn845R",
+	///  "active_key_history": [[
+	///      "20140722T194340",
+	///      "BTS---------------------------------UwsBQKn845R"
+	///    ]
+	///  ],
+	///  "registration_date": "20140722T194340",
+	///  "last_update": "20140722T194340",
+	///  "delegate_info": null,
+	///  "meta_data": null
+	/// } </summary>
+	///
+	/// <remarks>	Paul, 10/12/2014. </remarks>
+	public class BitsharesAccount
+	{
+		public uint id;
+		public string name;
+		public string public_data;
+		public string owner_key;
+		public List<Dictionary<DateTime, string>> active_key_history;
+		public DateTime registration_date;
+		public DateTime last_update;
+		public BitsharesDelegateInfo delegate_info;
+		public string meta_data;
 	}
 }

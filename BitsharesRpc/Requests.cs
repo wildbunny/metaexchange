@@ -192,6 +192,7 @@ namespace BitsharesRpc
 
 	public class BitsharesBatchRequest : BitsharesRequest
 	{
-		public BitsharesBatchRequest(BitsharesMethods method, IEnumerable<object[]> @params) : base(BitsharesMethods.batch, method, @params) { }
+		public BitsharesBatchRequest(	BitsharesMethods method, IEnumerable<object[]> @params) : 
+										base(BitsharesMethods.batch, method, @params) { }
 	}
 }
