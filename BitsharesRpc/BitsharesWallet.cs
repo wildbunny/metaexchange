@@ -150,7 +150,7 @@ namespace BitsharesRpc
 		/// <returns>	A BitsharesTransaction. </returns>
 		public BitsharesTransaction BlockchainGetTransaction(string txid)
 		{
-			return ApiPostSync<BitsharesTransaction>(BitsharesMethods.blockchain_get_transaction, txid);
+			return ApiPostSync<Dictionary<string,BitsharesTransaction>>(BitsharesMethods.blockchain_get_transaction, txid).First().Value;
 		}
 
 		/// <summary>	Get a batch of transactions </summary>

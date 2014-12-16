@@ -20,6 +20,11 @@ namespace BtsOnrampDaemon
 			return 0;
 		}
 
+		public override void UpdateBitsharesBlock(uint blockNum)
+		{
+			
+		}
+
 		public override bool HasBitsharesDepositBeenCredited(string trxId)
 		{
 			return false;

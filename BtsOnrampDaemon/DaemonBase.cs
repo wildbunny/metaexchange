@@ -11,6 +11,16 @@ using BitsharesCore;
 
 namespace BtsOnrampDaemon
 {
+	public class UnsupportedTransactionException : Exception
+	{
+		BitsharesWalletTransaction m_t;
+
+		public UnsupportedTransactionException(BitsharesWalletTransaction t)
+		{
+			m_t = t;
+		}
+	}
+
 	// psudocode
 	//
 	// loop
@@ -63,9 +73,39 @@ namespace BtsOnrampDaemon
 		}
 
 		public abstract uint GetLastBitsharesBlock();
+		public abstract void UpdateBitsharesBlock(uint blockNum);
 		public abstract bool HasBitsharesDepositBeenCredited(string trxId);
 		public abstract void MarkBitsharesDespositAsCredited(string bitsharesTxId, string bitcoinTxId);
 
+		/// <summary>	This is virtual because implementors might like a different way  </summary>
+		///
+		/// <remarks>	Paul, 16/12/2014. </remarks>
+		///
+		/// <param name="account">	The account. </param>
+		///
+		/// <returns>	A string. </returns>
+		public virtual string BitsharesAccountToBitcoinAddress(BitsharesAccount account)
+		{
+			// turn that into a BTC address
+			BitsharesPubKey pubKey = new BitsharesPubKey(account.owner_key);
+			return pubKey.ToBitcoinAddress(false);
+		}
+
+		/// <summary>	Refund bitshares deposit. </summary>
+		///
+		/// <remarks>	Paul, 16/12/2014. </remarks>
+		///
+		/// <param name="sender">   	The sender. </param>
+		/// <param name="deposit">  	The deposit. </param>
+		/// <param name="depositId">	Identifier for the deposit. </param>
+		void RefundBitsharesDeposit(BitsharesAccount sender, BitsharesLedgerEntry deposit, string depositId)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>	Joins the damon thread </summary>
+		///
+		/// <remarks>	Paul, 16/12/2014. </remarks>
 		public void Join()
 		{
 			while (true)
@@ -89,20 +129,22 @@ namespace BtsOnrampDaemon
 																								t.ledger_entries.Any(l=>l.to_account == m_bitsharesAccount && l.from_account != l.to_account)).ToList();
 					foreach (BitsharesWalletTransaction t in assetDeposits)
 					{
-						// make sure we didn't already send bitcoins for this deposit
-						if (!HasBitsharesDepositBeenCredited(t.trx_id))
+						IEnumerable<BitsharesLedgerEntry> deposits = t.ledger_entries.Where(l => l.to_account == m_bitsharesAccount);
+
+						if (deposits.Count() == 1)
 						{
-							foreach (BitsharesLedgerEntry l in t.ledger_entries)
+							BitsharesLedgerEntry l = deposits.First();
+
+							// make sure we didn't already send bitcoins for this deposit
+							if (!HasBitsharesDepositBeenCredited(t.trx_id))
 							{
-								if (l.to_account == m_bitsharesAccount)
+								// get the public key of the sender
+								BitsharesAccount account = m_bitshares.WalletGetAccount(l.from_account);
+
+								string btcAddress = BitsharesAccountToBitcoinAddress(account);
+
+								if (btcAddress != null)
 								{
-									// get the public key of the sender
-									BitsharesAccount account = m_bitshares.WalletGetAccount(l.from_account);
-
-									// turn that into a BTC address
-									BitsharesPubKey pubKey = new BitsharesPubKey(account.owner_key);
-									string btcAddress = pubKey.ToBitcoinAddress(false);
-
 									// get the BTC amount we need to transfer
 									decimal btcToTransfer = m_asset.GetAmountFromLarimers(l.amount.amount);
 
@@ -112,9 +154,21 @@ namespace BtsOnrampDaemon
 									// mark this in our records
 									MarkBitsharesDespositAsCredited(t.trx_id, txid);
 								}
+								else
+								{
+									// were unable to get a bitcoin address from the bitshares account, so refund the transaction
+									RefundBitsharesDeposit(account, l, t.trx_id);
+								}
 							}
 						}
+						else
+						{
+							// fail with unhandled case
+							throw new UnsupportedTransactionException(t);
+						}
 					}
+
+					UpdateBitsharesBlock(info.blockchain_head_block_num);
 				}
 				catch (Exception e)
 				{
