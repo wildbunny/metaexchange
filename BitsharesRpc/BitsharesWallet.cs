@@ -183,5 +183,53 @@ namespace BitsharesRpc
 		{
 			return ApiPostSync<BitsharesAsset>(BitsharesMethods.blockchain_get_asset, name);
 		}
+
+		/// <summary>	Wallet transfer. </summary>
+		///
+		/// <remarks>	Paul, 22/12/2014. </remarks>
+		///
+		/// <param name="amount">	  	The amount. </param>
+		/// <param name="asset">	  	The asset. </param>
+		/// <param name="fromAccount">	from account. </param>
+		/// <param name="toAccount">  	to account. </param>
+		/// <param name="memo">		  	(Optional) the memo. </param>
+		/// <param name="voteMethod"> 	(Optional) the vote method. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		public BitsharesTransactionResponse WalletTransfer(	decimal amount, string asset, 
+															string fromAccount,	string toAccount, 
+															string memo="", 
+															VoteMethod voteMethod = VoteMethod.vote_recommended)
+		{
+			return ApiPostSync<BitsharesTransactionResponse>(	BitsharesMethods.wallet_transfer, amount, asset, 
+																fromAccount,
+																toAccount,
+																memo,
+																voteMethod);
+		}
+
+		/// <summary>	Wallet transfer to address. </summary>
+		///
+		/// <remarks>	Paul, 22/12/2014. </remarks>
+		///
+		/// <param name="amount">	  	The amount. </param>
+		/// <param name="asset">	  	The asset. </param>
+		/// <param name="fromAccount">	from account. </param>
+		/// <param name="toAddress">  	to address. </param>
+		/// <param name="memo">		  	(Optional) the memo. </param>
+		/// <param name="voteMethod"> 	(Optional) the vote method. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		public BitsharesTransactionResponse WalletTransferToAddress(decimal amount, string asset,
+																	string fromAccount, string toAddress,
+																	string memo = "",
+																	VoteMethod voteMethod = VoteMethod.vote_recommended)
+		{
+			return ApiPostSync<BitsharesTransactionResponse>(	BitsharesMethods.wallet_transfer_to_address, amount, asset,
+																fromAccount,
+																toAddress,
+																memo,
+																voteMethod);
+		}
     }
 }

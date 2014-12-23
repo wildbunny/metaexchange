@@ -11,5 +11,6 @@ namespace BtsOnrampDaemon
 		public string m_url;
 		public string m_rpcUser;
 		public string m_rpcPassword;
+		public bool m_useTestnet;
 	}
 }

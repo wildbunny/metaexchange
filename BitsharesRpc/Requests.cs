@@ -161,6 +161,7 @@ namespace BitsharesRpc
 		wallet_set_transaction_scanning,
 		wallet_sign_hash,
 		wallet_transfer,
+		wallet_transfer_to_address,
 		wallet_transfer_from,
 		wallet_unlock
 	}
@@ -171,6 +172,15 @@ namespace BitsharesRpc
 		each_hour,
 		each_day
 	}
+
+	public enum VoteMethod
+	{
+		vote_none,
+		vote_all,
+		vote_random,
+		vote_recommended
+	}
+
 	/// <summary>
 	/// {"jsonrpc":"2.0","id":1,"method":"blockchain_list_assets","params":[]}
 	/// </summary>

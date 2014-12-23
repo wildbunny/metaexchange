@@ -70,9 +70,9 @@ namespace BitsharesCore
 		/// <param name="bitcoinHexPublicKey">	The bitcoin hexadecimal public key. </param>
 		///
 		/// <returns>	A BitsharesPubKey. </returns>
-		static public BitsharesPubKey FromBitcoinHex(string bitcoinHexPublicKey)
+		static public BitsharesPubKey FromBitcoinHex(string bitcoinHexPublicKey, byte addressByteType=0)
 		{
-			PublicKey bitcoin = new PublicKey(bitcoinHexPublicKey, 0);
+			PublicKey bitcoin = new PublicKey(bitcoinHexPublicKey, addressByteType);
 			return new BitsharesPubKey(bitcoin.GetCompressed());
 		}
 
@@ -97,13 +97,13 @@ namespace BitsharesCore
 		/// <remarks>	Paul, 08/12/2014. </remarks>
 		///
 		/// <returns>	This object as a string. </returns>
-		public string ToBitcoinAddress(bool compressed)
+		public string ToBitcoinAddress(bool compressed, byte addressType)
 		{
-			PublicKey bitcoin = new PublicKey(m_compressed);
+			PublicKey bitcoin = new PublicKey(m_compressed, addressType);
 
 			if (!compressed)
 			{
-				bitcoin = new PublicKey( bitcoin.GetUncompressed() );
+				bitcoin = new PublicKey( bitcoin.GetUncompressed(), addressType );
 			}
 
 			return bitcoin.AddressBase58;

@@ -52,4 +52,82 @@ namespace BitsharesRpc
 		public DateTime? wallet_next_block_production_time;
 		public DateTime? wallet_next_block_production_timestamp;
 	}
+
+	/// <summary>	The bitshares transaction response.
+	/// 			{
+	///  "index": 0,
+	///  "record_id": "a0e6d81af8595f87992df53356d829a3c6b3d50b",
+	///  "block_num": 0,
+	///  "is_virtual": false,
+	///  "is_confirmed": false,
+	///  "is_market": false,
+	///  "trx": {
+	///    "expiration": "2014-12-22T17:55:57",
+	///    "delegate_slate_id": null,
+	///    "operations": [{
+	///        "type": "deposit_op_type",
+	///        "data": {
+	///          "amount": 10000,
+	///          "condition": {
+	///            "asset_id": 0,
+	///            "slate_id": 0,
+	///            "type": "withdraw_signature_type",
+	///            "data": {
+	///              "owner": "BTSF2-----------------uVFcBq",
+	///              "memo": {
+	///                "one_time_key": "BTS8UWkj------------------Sb7Upfxc1Jw54",
+	///                "encrypted_memo_data": "b0ff8ab5e3169------------------------65588de4bf10c13521157b6cb0f476468e3d0dc9ecbdf709493e49799eb1d"
+	///              }
+	///            }
+	///          }
+	///        }
+	///      },{
+	///        "type": "withdraw_op_type",
+	///        "data": {
+	///          "balance_id": "BTSH-------------------WecxUKF",
+	///          "amount": 20000,
+	///          "claim_input_data": ""
+	///        }
+	///      }
+	///    ],
+	///    "signatures": [
+	///      "1f52ac36402ec839524df69a7c19-------------------------------------96b9d2c8d3332a59e9d2219850e7b149932375"
+	///    ]
+	///  },
+	///  "ledger_entries": [{
+	///      "from_account": "BTS8Rw-------------------2ietxF8APy",
+	///      "to_account": "BTS-=------------------------LPrYfz4Lsib",
+	///      "amount": {
+	///        "amount": 10000,
+	///        "asset_id": 0
+	///      },
+	///      "memo": "",
+	///      "memo_from_account": null
+	///    }
+	///  ],
+	///  "fee": {
+	///    "amount": 10000,
+	///    "asset_id": 0
+	///  },
+	///  "created_time": "2014-12-22T16:48:38",
+	///  "received_time": "2014-12-22T16:48:38",
+	///  "extra_addresses": []
+	/// } </summary>
+	///
+	/// <remarks>	Paul, 22/12/2014. </remarks>
+	public class BitsharesTransactionResponse
+	{
+		public int index;
+		public string record_id;
+		public ulong block_num;
+		public bool is_virtual;
+		public bool is_confirmed;
+		public bool is_market;
+		public BitsharesTrx trx;
+		public BitsharesLedgerEntry[] ledger_entries;
+		public BitsharesAmount fee;
+		public DateTime created_time;
+		public DateTime received_time;
+		public string[] extra_addresses;
+	}
 }

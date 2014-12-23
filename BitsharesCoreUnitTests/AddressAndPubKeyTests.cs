@@ -171,7 +171,7 @@ namespace BitsharesCoreUnitTests
 
 				BitsharesPubKey key = new BitsharesPubKey(btsPubKey);
 
-				Assert.AreEqual(bitcoinAddress, key.ToBitcoinAddress(false));
+				Assert.AreEqual(bitcoinAddress, key.ToBitcoinAddress(false, 0));
 			}
 		}
     }

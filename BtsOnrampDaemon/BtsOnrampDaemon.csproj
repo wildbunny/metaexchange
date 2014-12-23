@@ -35,6 +35,22 @@
     <Reference Include="BitcoinRpcSharp">
       <HintPath>..\libs\BitcoinRpcSharp.dll</HintPath>
     </Reference>
+    <Reference Include="Casascius, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\libs\Casascius.dll</HintPath>
+    </Reference>
+    <Reference Include="Monsterer">
+      <HintPath>..\libs\Monsterer.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data">
+      <HintPath>..\libs\MySql.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="MySqlDatabase">
+      <HintPath>..\libs\MySqlDatabase.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\libs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Security" />
@@ -47,6 +63,7 @@
   <ItemGroup>
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />
+    <Compile Include="Exceptions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RpcConfig.cs" />
