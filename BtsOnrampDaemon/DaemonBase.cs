@@ -74,6 +74,7 @@ namespace BtsOnrampDaemon
 		protected abstract void UpdateBitsharesBlock(uint blockNum);
 		protected abstract bool HasBitsharesDepositBeenCredited(string trxId);
 		protected abstract void MarkBitsharesDespositAsCredited(string bitsharesTxId, string bitcoinTxId, decimal amount);
+		protected abstract bool IsTransactionIgnored(string txid);
 
 		/// <summary>	This is virtual because implementors might like a different way  </summary>
 		///
@@ -109,13 +110,18 @@ namespace BtsOnrampDaemon
 		/// <param name="l">		 	The BitsharesLedgerEntry to process. </param>
 		///
 		/// <returns>	A string. </returns>
-		protected virtual string SendBitcoinsToDepositor(string btcAddress, BitsharesLedgerEntry l)
+		protected virtual string SendBitcoinsToDepositor(string btcAddress, BitsharesWalletTransaction t, BitsharesLedgerEntry l)
 		{
 			// get the BTC amount we need to transfer
 			decimal btcToTransfer = m_asset.GetAmountFromLarimers(l.amount.amount);
 
 			// do the transfer
-			return m_bitcoin.SendToAddress(btcAddress, btcToTransfer);
+			string txid = m_bitcoin.SendToAddress(btcAddress, btcToTransfer);
+
+			// mark this in our records
+			MarkBitsharesDespositAsCredited(t.trx_id, txid, btcToTransfer);
+
+			return txid;
 		}
 
 		/// <summary>	Handles the bitshares desposits. </summary>
@@ -139,8 +145,8 @@ namespace BtsOnrampDaemon
 																												lastBlockBitshares,
 																												info.blockchain_head_block_num);
 
-			List<BitsharesWalletTransaction> assetDeposits = assetTransactions.Where(t => t.is_confirmed &&
-																						t.ledger_entries.Any(l => l.to_account == m_bitsharesAccount && l.from_account != l.to_account)).ToList();
+			IEnumerable<BitsharesWalletTransaction> assetDeposits = assetTransactions.Where(t => t.is_confirmed &&
+																							t.ledger_entries.Any(l => l.to_account == m_bitsharesAccount && l.from_account != l.to_account));
 			foreach (BitsharesWalletTransaction t in assetDeposits)
 			{
 				IEnumerable<BitsharesLedgerEntry> deposits = t.ledger_entries.Where(l => l.to_account == m_bitsharesAccount);
@@ -150,7 +156,7 @@ namespace BtsOnrampDaemon
 					BitsharesLedgerEntry l = deposits.First();
 
 					// make sure we didn't already send bitcoins for this deposit
-					if (!HasBitsharesDepositBeenCredited(t.trx_id))
+					if (!HasBitsharesDepositBeenCredited(t.trx_id) && !IsTransactionIgnored(t.trx_id))
 					{
 						// get the public key of the sender
 						BitsharesAccount account = m_bitshares.WalletGetAccount(l.from_account);
@@ -159,12 +165,7 @@ namespace BtsOnrampDaemon
 
 						if (btcAddress != null)
 						{
-							string txid = SendBitcoinsToDepositor(btcAddress, l);
-
-							decimal btcToTransfer = m_asset.GetAmountFromLarimers(l.amount.amount);
-
-							// mark this in our records
-							MarkBitsharesDespositAsCredited(t.trx_id, txid, btcToTransfer);
+							SendBitcoinsToDepositor(btcAddress, t, l);					
 						}
 						else
 						{
@@ -230,7 +231,11 @@ namespace BtsOnrampDaemon
 			string bitsharesAddress = GetBitsharesAddressFromBitcoinDeposit(t);
 
 			// send the bitAssets!
-			return m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress, t.TxId);
+			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress, t.TxId);
+
+			MarkBitcoinDespositAsCredited(t.TxId, bitsharesTrx.record_id, t.Amount);
+
+			return bitsharesTrx;
 		}
 
 		/// <summary>	Handles the bitcoin deposits. </summary>
@@ -248,7 +253,7 @@ namespace BtsOnrampDaemon
 			string latestBlockHash = m_bitcoin.GetBlockHash(blockHeight);
 
 			// get all transactions of category 'receive'
-			IEnumerable<TransactionSinceBlock> transactions = m_bitcoin.ListSinceBlock(lastBlockHash, kBitcoinConfirms).transactions.Where(t => t.Category == TransactionCategory.receive);
+			IEnumerable<TransactionSinceBlock> transactions = m_bitcoin.ListSinceBlock(lastBlockHash, kBitcoinConfirms).transactions.Where(t => t.Category == TransactionCategory.receive && t.Confirmations >= kBitcoinConfirms);
 
 			foreach (TransactionSinceBlock t in transactions)
 			{
@@ -257,11 +262,9 @@ namespace BtsOnrampDaemon
 					// this is a confirmed bitcoin transaction
 					//
 					// make sure it hasn't already been credited
-					if (!HasBitcoinDespoitBeenCredited(t.TxId))
+					if (!HasBitcoinDespoitBeenCredited(t.TxId) && !IsTransactionIgnored(t.TxId))
 					{
-						BitsharesTransactionResponse bitsharesTrx = SendBitAssetsToDepositor(t);
-
-						MarkBitcoinDespositAsCredited(t.TxId, bitsharesTrx.record_id, t.Amount);
+						SendBitAssetsToDepositor(t);
 					}
 				}
 			}

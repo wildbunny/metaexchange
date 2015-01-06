@@ -28,6 +28,12 @@ namespace BtsOnrampDaemon
 		public bool bitcoin_deposit;
 	}
 
+	public class IgnoreRow : ICoreType
+	{
+		public uint uid;
+		public string txid;
+	}
+
 	public class DaemonMySql : DaemonBase
 	{
 		Database m_database;
@@ -54,7 +60,7 @@ namespace BtsOnrampDaemon
 
 		protected override bool HasBitsharesDepositBeenCredited(string trxId)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE bitshares_trx=@trx;", trxId) > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE bitshares_trx=@trx AND bitcoin_deposit=0;", trxId) > 0;
 		}
 
 		protected override void MarkBitsharesDespositAsCredited(string bitsharesTrx, string bitcoinTxid, decimal amount)
@@ -74,12 +80,17 @@ namespace BtsOnrampDaemon
 
 		protected override bool HasBitcoinDespoitBeenCredited(string txid)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE bitcoin_txid=@txid;", txid) > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE bitcoin_txid=@txid AND bitcoin_deposit=1;", txid) > 0;
 		}
 
 		protected override void MarkBitcoinDespositAsCredited(string bitcoinTxid, string bitsharesTrxId, decimal amount)
 		{
 			InsertTransaction(bitcoinTxid, bitsharesTrxId, amount, true);
+		}
+
+		protected override bool IsTransactionIgnored(string txid)
+		{
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignore WHERE txid=@txid;") > 0;
 		}
 
 		// ------------------------------------------------------------------------------------------------------------
