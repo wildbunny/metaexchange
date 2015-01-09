@@ -41,7 +41,7 @@ namespace BtsOnrampDaemon
 	abstract public class DaemonBase
 	{
 		const int kSleepTimeSeconds = 1;
-		const int kBitcoinConfirms = 3;
+		const int kBitcoinConfirms = 1;
 
 		protected BitsharesWallet m_bitshares;
 		protected BitcoinWallet m_bitcoin;
@@ -159,7 +159,18 @@ namespace BtsOnrampDaemon
 					if (!HasBitsharesDepositBeenCredited(t.trx_id) && !IsTransactionIgnored(t.trx_id))
 					{
 						// get the public key of the sender
-						BitsharesAccount account = m_bitshares.WalletGetAccount(l.from_account);
+						BitsharesAccount account;
+
+						try
+						{
+							account = m_bitshares.WalletGetAccount(l.from_account);
+						}
+						catch (Exception)
+						{
+							// if the sender wasn't a registered account, the from_account will by the owner key, 
+							// so fake up an account with just that info to proceed
+							account = new BitsharesAccount { owner_key = l.from_account };
+						}
 
 						string btcAddress = BitsharesAccountToBitcoinAddress(account);
 
@@ -253,7 +264,7 @@ namespace BtsOnrampDaemon
 			string latestBlockHash = m_bitcoin.GetBlockHash(blockHeight);
 
 			// get all transactions of category 'receive'
-			IEnumerable<TransactionSinceBlock> transactions = m_bitcoin.ListSinceBlock(lastBlockHash, kBitcoinConfirms).transactions.Where(t => t.Category == TransactionCategory.receive && t.Confirmations >= kBitcoinConfirms);
+			IEnumerable<TransactionSinceBlock> transactions = m_bitcoin.ListSinceBlock(lastBlockHash, 1).transactions.Where(t => t.Category == TransactionCategory.receive && t.Confirmations >= kBitcoinConfirms);
 
 			foreach (TransactionSinceBlock t in transactions)
 			{

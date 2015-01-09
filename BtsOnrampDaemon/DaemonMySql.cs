@@ -90,7 +90,7 @@ namespace BtsOnrampDaemon
 
 		protected override bool IsTransactionIgnored(string txid)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignore WHERE txid=@txid;") > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignored WHERE txid=@txid;", txid) > 0;
 		}
 
 		// ------------------------------------------------------------------------------------------------------------

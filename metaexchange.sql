@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 06, 2015 at 07:30 PM
+-- Generation Time: Jan 09, 2015 at 04:53 PM
 -- Server version: 5.1.41
 -- PHP Version: 5.3.1
 
@@ -22,14 +22,14 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `ignore`
+-- Table structure for table `ignored`
 --
 
-CREATE TABLE IF NOT EXISTS `ignore` (
+CREATE TABLE IF NOT EXISTS `ignored` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `txid` varchar(64) NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7 ;
 
 -- --------------------------------------------------------
 

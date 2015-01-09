@@ -17,31 +17,42 @@ namespace BtsOnrampDaemon
 	{
 		static void Main(string[] args)
 		{
-			/*BitsharesWallet w = new BitsharesWallet("http://localhost:65066/rpc", "rpc_user", "abcdefgh");
-
-			List<BitsharesWalletTransaction> trans = w.WalletAccountTransactionHistory();
-
-			if (trans.Count > 0)
+			if (args.Length == 13)
 			{
-				BitsharesTransaction t = w.BlockchainGetTransaction(trans.First().trx_id);
+				string bitsharesUrl = args[0];
+				string bitsharesUser = args[1];
+				string bitsharesPassword = args[2];
+				string bitsharesAccount = args[3];
+				string bitsharesAssetName = args[4];
+				
+				string bitcoinUrl = args[5];
+				string bitcoinUser = args[6];
+				string bitcoinPassword = args[7];
+				bool bitcoinUseTestNet = bool.Parse(args[8]);
+				string bitcoinDepositAddress = args[9];
 
+				string database = args[10];
+				string databaseUser = args[11];
+				string databasePassword = args[12];
 
-				string btsPubKey = t.trx.operations[1].data.condition.data.memo.one_time_key;
+				// create a scheduler so we can be sure of thread affinity
+				AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
-				BitsharesPubKey key = new BitsharesPubKey(btsPubKey);
-			}*/
+				DaemonMySql daemon = new DaemonMySql(new RpcConfig { m_url = bitsharesUrl, m_rpcUser = bitsharesUser, m_rpcPassword = bitsharesPassword },
+														new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
+														bitsharesAccount, bitsharesAssetName, bitcoinDepositAddress,
+														database, databaseUser, databasePassword);
 
-			// create a scheduler so we can be sure of thread affinity
-			AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
+				scheduler.Run( daemon.Join );
 
-			DaemonMySql daemon = new DaemonMySql(	new RpcConfig { m_url = "http://localhost:65066/rpc", m_rpcUser = "rpc_user", m_rpcPassword = "abcdefgh" },
-													new RpcConfig { m_url = "http://localhost:18332", m_rpcUser = "bitcoinrpc", m_rpcPassword = "HTQAHLqsETJJZ9WXpDg5jrU5bzLy9mnuV2qLG9gsHPoq", m_useTestnet = true },
-													"gatewaytest", "BTS", "midNXX13beTs1bha8xYcuLBu24egN4DVKt",
-													"metaexchange", "metaexchange", "ZSbyH7bGCz6BXHRY");
-
-			scheduler.Run( daemon.Join );
-
-			Console.WriteLine("Exiting...");
+				Console.WriteLine("Exiting...");
+			}
+			else
+			{
+				Console.WriteLine("Error, usage: BtsOnRampDamon.exe <bitshares rpc url> <bitshares rpc user> <bitshares rpc password> " +
+									"<bitshares asset name> <bitcoin rpc url> <bitcoin rpc user> <bitcoin rpc password> <use bitcoin testnet> <bitcoin deposit address>" +
+									"<myql database name> <mysql database user> <mysql database password>");
+			}
 		}
 
 		static void OnException(Exception e)
