@@ -441,4 +441,14 @@ namespace BitsharesRpc
 		public BitsharesDelegateInfo delegate_info;
 		public string meta_data;
 	}
+
+	/// <summary> {\"message\":\"Invalid Argument (5)\\nmissing required parameter 1 (asset)\\n\",\"detail\":\"5 invalid_arg_exception: Invalid Argument\\nmissing required parameter 1 (asset)\\n    {}\\n    bitshares  common_api_rpc_server.cpp:1541 bts::rpc_stubs::common_api_rpc_server::blockchain_get_asset_positional\",\"code\":5} </summary>
+	///
+	/// <remarks>	Paul, 10/01/2015. </remarks>
+	public class BitsharesError
+	{
+		public string message;
+		public string detail;
+		public int code;
+	}
 }

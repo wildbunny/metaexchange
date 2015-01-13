@@ -75,6 +75,8 @@ namespace BtsOnrampDaemon
 		protected abstract bool HasBitsharesDepositBeenCredited(string trxId);
 		protected abstract void MarkBitsharesDespositAsCredited(string bitsharesTxId, string bitcoinTxId, decimal amount);
 		protected abstract bool IsTransactionIgnored(string txid);
+		protected abstract void IgnoreTransaction(string txid);
+		protected abstract void LogException(string txid, string message, DateTime date, bool bitcoinDeposit);
 
 		/// <summary>	This is virtual because implementors might like a different way  </summary>
 		///
@@ -176,7 +178,18 @@ namespace BtsOnrampDaemon
 
 						if (btcAddress != null)
 						{
-							SendBitcoinsToDepositor(btcAddress, t, l);					
+							try
+							{
+								SendBitcoinsToDepositor(btcAddress, t, l);
+							}
+							catch (BitcoinRpcException e)
+							{
+								// problem sending bitcoins, lets log it
+								LogException(t.trx_id, e.Message, DateTime.UtcNow, false);
+
+								// also lets now ignore this transaction so we don't keep failing
+								IgnoreTransaction(t.trx_id);
+							}
 						}
 						else
 						{
@@ -217,12 +230,6 @@ namespace BtsOnrampDaemon
 			DecodedRawTransaction rawDeposit = m_bitcoin.GetRawTransaction(t.TxId, 1);
 
 			IEnumerable<string> allPubKeys = rawDeposit.VIn.Select(vin => vin.ScriptSig.Asm.Split(' ')[1]);
-
-			if (allPubKeys.Distinct().Count() > 1)
-			{
-				// can't handle more than one sender case
-				throw new MultiplePublicKeysException(rawDeposit);
-			}
 
 			string publicKey = allPubKeys.First();
 			BitsharesPubKey btsPk = BitsharesPubKey.FromBitcoinHex(publicKey, m_addressByteType);
@@ -275,7 +282,18 @@ namespace BtsOnrampDaemon
 					// make sure it hasn't already been credited
 					if (!HasBitcoinDespoitBeenCredited(t.TxId) && !IsTransactionIgnored(t.TxId))
 					{
-						SendBitAssetsToDepositor(t);
+						try
+						{
+							SendBitAssetsToDepositor(t);
+						}
+						catch (BitsharesRpcException e)
+						{
+							// problem sending bitassets, lets log it
+							LogException(t.TxId, e.Message, DateTime.UtcNow, true);
+
+							// also lets now ignore this transaction so we don't keep failing
+							IgnoreTransaction(t.TxId);
+						}
 					}
 				}
 			}

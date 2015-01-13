@@ -34,6 +34,14 @@ namespace BtsOnrampDaemon
 		public string txid;
 	}
 
+	public class ExceptionRow : ICoreType
+	{
+		public string txid;
+		public string message;
+		public DateTime date;
+		public bool bitcoin_deposit;
+	}
+
 	public class DaemonMySql : DaemonBase
 	{
 		Database m_database;
@@ -91,6 +99,16 @@ namespace BtsOnrampDaemon
 		protected override bool IsTransactionIgnored(string txid)
 		{
 			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignored WHERE txid=@txid;", txid) > 0;
+		}
+
+		protected override void IgnoreTransaction(string txid)
+		{
+			m_database.Statement("INSERT INTO ignored (txid) VALUES(@txid);", txid);
+		}
+
+		protected override void LogException(string txid, string message, DateTime date, bool bitcoinDeposit)
+		{
+			m_database.Statement("INSERT INTO exceptions (txid, message, date, bitcoin_deposit) VALUES(@a,@b,@c,@d);", txid, message, date, bitcoinDeposit);
 		}
 
 		// ------------------------------------------------------------------------------------------------------------

@@ -11,6 +11,18 @@ using BitsharesRpc;
 
 namespace BitsharesRpc
 {
+	public class BitsharesRpcException : Exception
+	{
+		BitsharesError m_error;
+
+		public BitsharesRpcException(BitsharesError error)
+		{
+			m_error = error;
+		}
+
+		public override string Message { get { return m_error.message; } }
+	}
+
     public class BitsharesWallet
     {
 		string m_rpcUrl;
@@ -49,8 +61,20 @@ namespace BitsharesRpc
 		/// <returns>	A BitsharesResponse&lt;T&gt; </returns>
 		public BitsharesResponse<T> MakeRawRequestSync<T>(BitsharesRequest request)
 		{
-			return Rest.JsonApiCallSync<BitsharesResponse<T>>(	m_rpcUrl, JsonSerializer.SerializeToString(request), 
-																m_rpcUsername, m_rpcPassword);
+			string result = Rest.ExecutePostSync(m_rpcUrl, JsonSerializer.SerializeToString(request), Rest.kContentTypeJson, m_rpcUsername, m_rpcPassword);
+			BitsharesResponse<T> response = JsonSerializer.DeserializeFromString<BitsharesResponse<T>>(result);
+			
+			if (response.result == null)
+			{
+				// an error may have occured here
+				BitsharesErrorResponse error = JsonSerializer.DeserializeFromString<BitsharesErrorResponse>(result);
+				if (error.error != null)
+				{
+					throw new BitsharesRpcException(error.error);
+				}
+			}
+
+			return response;
 		}
 
 		public List<BitsharesResponse<T>> MakeRawBatchRequestSync<T>(BitsharesRequest request)

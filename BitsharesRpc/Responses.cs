@@ -12,6 +12,12 @@ namespace BitsharesRpc
 		public T result;
 	}
 
+	public class BitsharesErrorResponse
+	{
+		public int id;
+		public BitsharesError error;
+	}
+
 	public class MarketStatusResponse
 	{
 		public int quote_id;

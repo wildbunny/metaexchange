@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Mime;
+using System.IO;
 
 using ServiceStack.Text;
 
@@ -44,12 +45,24 @@ namespace RestLib
 			if (username != null)
 			{
 				client.Credentials = new NetworkCredential(username, password);
-
-				//string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes(username + ":" + password));
-				//client.Headers[HttpRequestHeader.Authorization] = string.Format("Basic {0}", credentials);
 			}
 			client.Headers[HttpRequestHeader.ContentType] = contentType;
-			return client.UploadString(url, query);
+
+			try
+			{
+				return client.UploadString(url, query);
+			}
+			catch (WebException e)
+			{
+				if (e.Response != null && e.Response.ContentLength > 0)
+				{
+					return new StreamReader(e.Response.GetResponseStream()).ReadToEnd();
+				}
+				else
+				{
+					throw;
+				}
+			}
 		}
 
 		static public string ExecuteGetSync(string url)

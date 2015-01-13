@@ -57,8 +57,9 @@ namespace BtsOnrampDaemon
 
 		static void OnException(Exception e)
 		{
+			Console.WriteLine("Unhandled exception! This is a bug, please inform the developer.");
 			Console.WriteLine(e.ToString());
-			Debugger.Break();
+			Console.WriteLine();
 		}
 	}
 }
