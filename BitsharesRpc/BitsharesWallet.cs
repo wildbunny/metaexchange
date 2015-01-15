@@ -177,6 +177,18 @@ namespace BitsharesRpc
 			return ApiPostSync<Dictionary<string,BitsharesTransaction>>(BitsharesMethods.blockchain_get_transaction, txid).First().Value;
 		}
 
+		/// <summary>	Gets a balance. </summary>
+		///
+		/// <remarks>	Paul, 15/01/2015. </remarks>
+		///
+		/// <param name="balanceId">	Identifier for the balance. </param>
+		///
+		/// <returns>	The balance. </returns>
+		public BitsharesBalanceRecord GetBalance(string balanceId)
+		{
+			return ApiPostSync<BitsharesBalanceRecord>(BitsharesMethods.get_balance, balanceId);
+		}
+
 		/// <summary>	Get a batch of transactions </summary>
 		///
 		/// <remarks>	Paul, 10/12/2014. </remarks>

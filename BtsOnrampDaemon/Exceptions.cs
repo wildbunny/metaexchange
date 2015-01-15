@@ -17,15 +17,27 @@ namespace BtsOnrampDaemon
 		{
 			m_t = t;
 		}
+
+		public override string ToString()
+		{
+			return m_t.trx_id;
+		}
 	}
 
-	public class MultiplePublicKeysException : Exception
-	{
-		DecodedRawTransaction m_t;
+	public class MultiplePublicKeysException : Exception { }
 
-		public MultiplePublicKeysException(DecodedRawTransaction t)
+	public class RefundBitsharesException : Exception
+	{
+		string m_memo;
+
+		public RefundBitsharesException(string memo)
 		{
-			m_t = t;
+			m_memo = memo;
+		}
+
+		public override string ToString()
+		{
+			return m_memo;
 		}
 	}
 }

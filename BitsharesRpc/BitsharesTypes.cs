@@ -323,10 +323,12 @@ namespace BitsharesRpc
 	public class BitsharesOpCondition
 	{
 		public ulong asset_id;
-		public ulong delegate_slate_id;
+		public ulong slate_id;
 		public BitsharesWithdrawCondition type;
 		public BitsharesMemoOwner data;
 	}
+
+
 
 	public class BitsharesOpData
 	{
@@ -450,5 +452,33 @@ namespace BitsharesRpc
 		public string message;
 		public string detail;
 		public int code;
+	}
+
+	/// <summary>	{
+	///  "condition": {
+	///    "asset_id": 0,
+	///    "slate_id": 0,
+	///    "type": "withdraw_signature_type",
+	///    "data": {
+	///      "owner": "BTSKrYCvm4RcLNqekPiTXHzcrVkxejwAdhfL",
+	///      "memo": null
+	///    }
+	///  },
+	///  "balance": 0,
+	///  "restricted_owner": null,
+	///  "snapshot_info": null,
+	///  "deposit_date": "2015-01-13T08:42:00",
+	///  "last_update": "2015-01-14T08:46:30"
+	/// } </summary>
+	///
+	/// <remarks>	Paul, 15/01/2015. </remarks>
+	public class BitsharesBalanceRecord
+	{
+		public BitsharesOpCondition condition;
+		public ulong balance;
+		public string restricted_owner;
+		public string snapshot_info;
+		public DateTime deposit_date;
+		public DateTime last_update;
 	}
 }

@@ -25,7 +25,7 @@ namespace BtsOnrampDaemon
 		public string asset;
 		public decimal amount;
 
-		public bool bitcoin_deposit;
+		public DaemonTransactionType type;
 	}
 
 	public class IgnoreRow : ICoreType
@@ -39,8 +39,9 @@ namespace BtsOnrampDaemon
 		public string txid;
 		public string message;
 		public DateTime date;
-		public bool bitcoin_deposit;
+		public DaemonTransactionType type;
 	}
+
 
 	public class DaemonMySql : DaemonBase
 	{
@@ -68,12 +69,12 @@ namespace BtsOnrampDaemon
 
 		protected override bool HasBitsharesDepositBeenCredited(string trxId)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE bitshares_trx=@trx AND bitcoin_deposit=0;", trxId) > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@trx;", trxId) > 0;
 		}
 
 		protected override void MarkBitsharesDespositAsCredited(string bitsharesTrx, string bitcoinTxid, decimal amount)
 		{
-			InsertTransaction(bitcoinTxid, bitsharesTrx, amount, false);
+			InsertTransaction(bitsharesTrx, bitcoinTxid, amount, DaemonTransactionType.bitsharesDeposit);
 		}
 
 		protected override string GetLastBitcoinBlockHash()
@@ -88,12 +89,17 @@ namespace BtsOnrampDaemon
 
 		protected override bool HasBitcoinDespoitBeenCredited(string txid)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE bitcoin_txid=@txid AND bitcoin_deposit=1;", txid) > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@txid;", txid) > 0;
 		}
 
 		protected override void MarkBitcoinDespositAsCredited(string bitcoinTxid, string bitsharesTrxId, decimal amount)
 		{
-			InsertTransaction(bitcoinTxid, bitsharesTrxId, amount, true);
+			InsertTransaction(bitcoinTxid, bitsharesTrxId, amount, DaemonTransactionType.bitcoinDeposit);
+		}
+
+		protected override void MarkTransactionAsRefunded(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type)
+		{
+			InsertTransaction(receivedTxid, sentTxid, amount, type);
 		}
 
 		protected override bool IsTransactionIgnored(string txid)
@@ -106,17 +112,17 @@ namespace BtsOnrampDaemon
 			m_database.Statement("INSERT INTO ignored (txid) VALUES(@txid);", txid);
 		}
 
-		protected override void LogException(string txid, string message, DateTime date, bool bitcoinDeposit)
+		protected override void LogException(string txid, string message, DateTime date, DaemonTransactionType type)
 		{
-			m_database.Statement("INSERT INTO exceptions (txid, message, date, bitcoin_deposit) VALUES(@a,@b,@c,@d);", txid, message, date, bitcoinDeposit);
+			m_database.Statement("INSERT INTO exceptions (txid, message, date, type) VALUES(@a,@b,@c,@d);", txid, message, date, type);
 		}
 
 		// ------------------------------------------------------------------------------------------------------------
 
-		void InsertTransaction(string bitcoinTxid, string bitsharesTrx, decimal amount, bool wasBitcoinDeposit)
+		void InsertTransaction(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type)
 		{
-			m_database.Statement(	"INSERT INTO transactions (bitshares_trx, bitcoin_txid, asset, amount, date, bitcoin_deposit) VALUES(@a,@b,@c,@d,@e,@f);",
-									bitsharesTrx, bitcoinTxid, m_asset.symbol, amount, DateTime.UtcNow, wasBitcoinDeposit);
+			m_database.Statement(	"INSERT INTO transactions (received_txid, sent_txid, asset, amount, date, type) VALUES(@a,@b,@c,@d,@e,@f);",
+									receivedTxid, sentTxid, m_asset.symbol, amount, DateTime.UtcNow, type);
 		}
 	}
 }

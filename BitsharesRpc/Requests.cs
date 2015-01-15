@@ -58,6 +58,7 @@ namespace BitsharesRpc
 		execute_command_line,
 		execute_script,
 		get_info,
+		get_balance,
 		http_start_server,
 		mail_archive_message,
 		mail_check_new_messages,
