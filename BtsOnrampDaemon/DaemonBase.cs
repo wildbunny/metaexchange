@@ -83,7 +83,7 @@ namespace BtsOnrampDaemon
 		protected abstract bool IsTransactionIgnored(string txid);
 		protected abstract void IgnoreTransaction(string txid);
 		protected abstract void LogException(string txid, string message, DateTime date, DaemonTransactionType type);
-		protected abstract void MarkTransactionAsRefunded(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type);
+		protected abstract void MarkTransactionAsRefunded(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type, string notes);
 
 		/// <summary>	This is virtual because implementors might like a different way  </summary>
 		///
@@ -127,11 +127,24 @@ namespace BtsOnrampDaemon
 		/// <returns>	A string. </returns>
 		protected virtual string BitsharesTransactionToBitcoinAddress(BitsharesLedgerEntry l)
 		{
-			// get the public key of the sender
-			BitsharesAccount account = GetAccountFromLedger(l);
+			try
+			{
+				// get the public key of the sender
+				BitsharesAccount account = GetAccountFromLedger(l);
 
-			// turn into into a bitshares address
-			return BitsharesAccountToBitcoinAddress(account);
+				// turn into into a bitshares address
+				return BitsharesAccountToBitcoinAddress(account);
+			}
+			catch (BitsharesRpcException)
+			{
+				throw new RefundBitsharesException("Unregistered acct!");
+
+				//
+				// this may not work
+				//
+				BitsharesPubKey pk = new BitsharesPubKey(l.from_account);
+				return pk.ToBitcoinAddress(true, m_addressByteType);
+			}
 		}
 
 		/// <summary>	Bitshares account to bitcoin address. </summary>
@@ -192,7 +205,7 @@ namespace BtsOnrampDaemon
 				response = m_bitshares.WalletTransferToAddress(amount, m_asset.symbol, m_bitsharesAccount, senderAddress, memo);
 			}
 
-			MarkTransactionAsRefunded(depositId, response.record_id, amount, DaemonTransactionType.bitsharesRefund);
+			MarkTransactionAsRefunded(depositId, response.record_id, amount, DaemonTransactionType.bitsharesRefund, memo);
 		}
 
 		/// <summary>	Refund bitcoin deposit. </summary>
@@ -200,7 +213,7 @@ namespace BtsOnrampDaemon
 		/// <remarks>	Paul, 15/01/2015. </remarks>
 		///
 		/// <param name="t">	The TransactionSinceBlock to process. </param>
-		protected virtual void RefundBitcoinDeposit(TransactionSinceBlock t)
+		protected virtual void RefundBitcoinDeposit(TransactionSinceBlock t, string notes)
 		{
 			// get public key out of transaction
 			string firstPubKey = GetAllPubkeysFromBitcoinTransaction(t.TxId).First();
@@ -210,7 +223,7 @@ namespace BtsOnrampDaemon
 			string sentTxid = m_bitcoin.SendToAddress(pk.AddressBase58, t.Amount);
 
 			// mark as such
-			MarkTransactionAsRefunded(t.TxId, sentTxid, t.Amount, DaemonTransactionType.bitcoinRefund);
+			MarkTransactionAsRefunded(t.TxId, sentTxid, t.Amount, DaemonTransactionType.bitcoinRefund, notes);
 		}
 
 		/// <summary>	Default implementation sends an exactly matching bitcoin transaction to the depositor </summary>
@@ -271,13 +284,9 @@ namespace BtsOnrampDaemon
 					{
 						try
 						{
-							throw new RefundBitsharesException("refund test");
-
 							/// STILL NEED A WAY TO GET SENDER BITCOIN ADDRESS FOR UNREGISTERED ACCOUNTS
 							string btcAddress = BitsharesTransactionToBitcoinAddress(l);
-
 							
-
 							if (btcAddress != null)
 							{
 								try
@@ -424,7 +433,7 @@ namespace BtsOnrampDaemon
 						catch (MultiplePublicKeysException)
 						{
 							// a transaction with multiple inputs was received!
-							RefundBitcoinDeposit(t);
+							RefundBitcoinDeposit(t, "Multiple input keys!");
 						}
 					}
 				}

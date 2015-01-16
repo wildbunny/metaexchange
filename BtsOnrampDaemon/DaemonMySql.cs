@@ -26,6 +26,8 @@ namespace BtsOnrampDaemon
 		public decimal amount;
 
 		public DaemonTransactionType type;
+
+		public string notes;
 	}
 
 	public class IgnoreRow : ICoreType
@@ -97,9 +99,10 @@ namespace BtsOnrampDaemon
 			InsertTransaction(bitcoinTxid, bitsharesTrxId, amount, DaemonTransactionType.bitcoinDeposit);
 		}
 
-		protected override void MarkTransactionAsRefunded(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type)
+		protected override void MarkTransactionAsRefunded(	string receivedTxid, string sentTxid, decimal amount, 
+															DaemonTransactionType type, string notes)
 		{
-			InsertTransaction(receivedTxid, sentTxid, amount, type);
+			InsertTransaction(receivedTxid, sentTxid, amount, type, notes);
 		}
 
 		protected override bool IsTransactionIgnored(string txid)
@@ -119,10 +122,10 @@ namespace BtsOnrampDaemon
 
 		// ------------------------------------------------------------------------------------------------------------
 
-		void InsertTransaction(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type)
+		void InsertTransaction(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type, string notes=null)
 		{
-			m_database.Statement(	"INSERT INTO transactions (received_txid, sent_txid, asset, amount, date, type) VALUES(@a,@b,@c,@d,@e,@f);",
-									receivedTxid, sentTxid, m_asset.symbol, amount, DateTime.UtcNow, type);
+			m_database.Statement(	"INSERT INTO transactions (received_txid, sent_txid, asset, amount, date, type, notes) VALUES(@a,@b,@c,@d,@e,@f,@g);",
+									receivedTxid, sentTxid, m_asset.symbol, amount, DateTime.UtcNow, type, notes);
 		}
 	}
 }

@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 15, 2015 at 10:23 PM
+-- Generation Time: Jan 16, 2015 at 05:35 PM
 -- Server version: 5.1.41
 -- PHP Version: 5.3.1
 
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `exceptions` (
   `date` datetime NOT NULL,
   `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund') NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
 
 -- --------------------------------------------------------
 
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `ignored` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `txid` varchar(64) NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=11 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=13 ;
 
 -- --------------------------------------------------------
 
@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `amount` decimal(18,8) NOT NULL,
   `date` datetime NOT NULL,
   `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund') NOT NULL,
+  `notes` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`received_txid`,`sent_txid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
