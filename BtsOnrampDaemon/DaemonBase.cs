@@ -14,6 +14,10 @@ using BitcoinRpcSharp.Responses;
 
 namespace BtsOnrampDaemon
 {
+
+	/// <summary>	Transaction types for logging purposes </summary>
+	///
+	/// <remarks>	Paul, 17/01/2015. </remarks>
 	public enum DaemonTransactionType
 	{
 		bitcoinDeposit = 1,
@@ -22,28 +26,6 @@ namespace BtsOnrampDaemon
 		bitsharesRefund
 	}
 
-	// psudocode
-	//
-	// loop
-	//    list all confirmed BTS transactions since last block checked
-	//    if any is a deposit of the asset we are tracking to our deposit address
-	//       get full details
-	//       if we have not paid out for this deposit before
-	//          turn the BTS address / one_time_key info into a bitcoin address
-	//          send bitcoins to this address
-	//          mark this deposit as paid
-	//          log everything
-	//    update last block checked 
-	//       
-	//    list all confirmed BTC transactions since last block checked
-	//    for every deposit to our deposit address
-	//       get full details
-	//       if we have not sent the depositor the assets for this transaction
-	//          turn the public key from the deposit transaction into a BTS address
-	//          send assets to this BTS address
-	//          mark this deposit as paid
-	//          log everything
-	//    update last block checked
 	abstract public class DaemonBase
 	{
 		const int kSleepTimeSeconds = 1;
@@ -60,6 +42,15 @@ namespace BtsOnrampDaemon
 
 		protected byte m_addressByteType;
 
+		/// <summary>	Constructor. </summary>
+		///
+		/// <remarks>	Paul, 17/01/2015. </remarks>
+		///
+		/// <param name="bitsharesConfig">		 	The bitshares configuration. </param>
+		/// <param name="bitcoinConfig">		 	The bitcoin configuration. </param>
+		/// <param name="bitsharesAccount">		 	The bitshares account. </param>
+		/// <param name="bitsharesAsset">		 	The bitshares asset. </param>
+		/// <param name="bitcoinDespositAddress">	The bitcoin desposit address. </param>
 		public DaemonBase(	RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
 							string bitsharesAccount, string bitsharesAsset,
 							string bitcoinDespositAddress)
@@ -262,6 +253,12 @@ namespace BtsOnrampDaemon
 			// which block do we end on
 			GetInfoResponse info = m_bitshares.GetInfo();
 
+			if (lastBlockBitshares == 0)
+			{
+				// default to current block
+				lastBlockBitshares = info.blockchain_head_block_num;
+			}
+
 			// get all relevant bitshares deposits
 			List<BitsharesWalletTransaction> assetTransactions = m_bitshares.WalletAccountTransactionHistory(m_bitsharesAccount,
 																												m_bitsharesAsset,
@@ -361,11 +358,14 @@ namespace BtsOnrampDaemon
 		{
 			IEnumerable<string> allPubKeys = GetAllPubkeysFromBitcoinTransaction(t.TxId);
 
-			if (allPubKeys.Distinct().Count() > 1)
+			// this is probably ok to leave out because if the user imports their whole wallet, they will likely
+			// have all the PKs they need since bitcoin pregenerates 100 or so of them. worst case the user
+			// can re-import their wallet into bitshares to get access to missing transcations
+			/*if (allPubKeys.Distinct().Count() > 1)
 			{
 				// can't handle more than one sender case
 				throw new MultiplePublicKeysException();
-			}
+			}*/
 
 			string publicKey = allPubKeys.First();
 			BitsharesPubKey btsPk = BitsharesPubKey.FromBitcoinHex(publicKey, m_addressByteType);
@@ -385,8 +385,14 @@ namespace BtsOnrampDaemon
 			string bitsharesAddress = GetBitsharesAddressFromBitcoinDeposit(t);
 
 			// send the bitAssets!
-			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress, t.TxId);
+			/*if (m_asset.IsUia())
+			{
+				// issue the asset
+				bitsharesTrx = m_bitshares.WalletIssueAsset(t.Amount, m_asset.symbol, m_bitsharesAccount);
+			}*/
 
+			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress, t.TxId);
+			
 			MarkBitcoinDespositAsCredited(t.TxId, bitsharesTrx.record_id, t.Amount);
 
 			return bitsharesTrx;
@@ -397,13 +403,13 @@ namespace BtsOnrampDaemon
 		/// <remarks>	Paul, 23/12/2014. </remarks>
 		void HandleBitcoinDeposits()
 		{
+			long blockHeight = m_bitcoin.GetBlockCount();
 			string lastBlockHash = GetLastBitcoinBlockHash();
 			if (lastBlockHash == null)
 			{
-				lastBlockHash = m_bitcoin.GetBlockHash(0);
+				lastBlockHash = m_bitcoin.GetBlockHash(blockHeight);
 			}
-
-			long blockHeight = m_bitcoin.GetBlockCount();
+					
 			string latestBlockHash = m_bitcoin.GetBlockHash(blockHeight);
 
 			// get all transactions of category 'receive'
@@ -445,25 +451,19 @@ namespace BtsOnrampDaemon
 		/// <summary>	Joins the damon thread </summary>
 		///
 		/// <remarks>	Paul, 16/12/2014. </remarks>
-		public void Join()
+		public void Update()
 		{
-			while (true)
-			{
-				//
-				// handle bitshares->bitcoin
-				//
+			//
+			// handle bitshares->bitcoin
+			//
 				
-				HandleBitsharesDesposits();	
+			HandleBitsharesDesposits();	
 				
-				//
-				// handle bitcoin->bitshares
-				// 
+			//
+			// handle bitcoin->bitshares
+			// 
 
-				HandleBitcoinDeposits();
-				
-
-				Thread.Sleep(kSleepTimeSeconds*1000);
-			}
+			HandleBitcoinDeposits();
 		}
 	}
 }

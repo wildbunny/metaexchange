@@ -36,6 +36,9 @@ namespace BtsOnrampDaemon
 				string databaseUser = args[11];
 				string databasePassword = args[12];
 
+				BitsharesPubKey pk = BitsharesPubKey.FromBitcoinHex("030c238f98b35cf7e02d52827ebe0ce57f9894136171dd2acf0eb1f87a891fbeb7");
+				
+
 				// create a scheduler so we can be sure of thread affinity
 				AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
@@ -44,14 +47,14 @@ namespace BtsOnrampDaemon
 														bitsharesAccount, bitsharesAssetName, bitcoinDepositAddress,
 														database, databaseUser, databasePassword);
 
-				scheduler.Run( daemon.Join );
+				scheduler.RunWithUpdate(()=>{}, daemon.Update, 1 );
 
 				Console.WriteLine("Exiting...");
 			}
 			else
 			{
 				Console.WriteLine("Error, usage: BtsOnRampDamon.exe <bitshares rpc url> <bitshares rpc user> <bitshares rpc password> " +
-									"<bitshares asset name> <bitcoin rpc url> <bitcoin rpc user> <bitcoin rpc password> <use bitcoin testnet> <bitcoin deposit address>" +
+									"<bitshares asset name> <bitcoin rpc url> <bitcoin rpc user> <bitcoin rpc password> <use bitcoin testnet> <bitcoin deposit address> " +
 									"<myql database name> <mysql database user> <mysql database password>");
 			}
 		}

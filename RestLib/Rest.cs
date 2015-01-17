@@ -11,6 +11,31 @@ using ServiceStack.Text;
 
 namespace RestLib
 {
+	public class WebClientTimeout : WebClient
+	{
+		/// <summary>
+		/// Time in milliseconds
+		/// </summary>
+		public int Timeout { get; set; }
+
+		public WebClientTimeout() : this(60000) { }
+
+		public WebClientTimeout(int timeout)
+		{
+			this.Timeout = timeout;
+		}
+
+		protected override WebRequest GetWebRequest(Uri address)
+		{
+			var request = base.GetWebRequest(address);
+			if (request != null)
+			{
+				request.Timeout = this.Timeout;
+			}
+			return request;
+		}
+	}
+
 	public class Rest
 	{
 		public const string kContentTypeForm = "application/x-www-form-urlencoded";
@@ -23,11 +48,7 @@ namespace RestLib
 			client.Encoding = System.Text.Encoding.UTF8;
 			client.Headers[HttpRequestHeader.ContentType] = contentType;
 
-			
-
 			return client.UploadStringTaskAsync(url, query);
-
-			
 		}
 
 		static public Task<string> ExecuteGetAsync(string url)
@@ -40,7 +61,7 @@ namespace RestLib
 		static public string ExecutePostSync(string url, string query, string contentType = kContentTypeForm, 
 											string username=null, string password=null)
 		{
-			WebClient client = new WebClient();
+			WebClientTimeout client = new WebClientTimeout(30000);
 			client.Encoding = System.Text.Encoding.UTF8;
 			if (username != null)
 			{

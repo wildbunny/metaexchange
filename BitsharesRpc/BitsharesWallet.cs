@@ -267,5 +267,20 @@ namespace BitsharesRpc
 																memo,
 																voteMethod);
 		}
+
+		/// <summary>	Wallet issue asset. </summary>
+		///
+		/// <remarks>	Paul, 17/01/2015. </remarks>
+		///
+		/// <param name="amount">   	The amount. </param>
+		/// <param name="symbol">   	The symbol. </param>
+		/// <param name="toAccount">	to account. </param>
+		/// <param name="memo">			(Optional) the memo. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		public BitsharesTransactionResponse WalletIssueAsset(decimal amount, string symbol, string toAccount, string memo="")
+		{
+			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue, amount, symbol, toAccount, memo);
+		}
     }
 }

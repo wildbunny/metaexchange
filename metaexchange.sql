@@ -1,13 +1,14 @@
 -- phpMyAdmin SQL Dump
--- version 3.2.4
+-- version 3.4.9
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 16, 2015 at 05:35 PM
--- Server version: 5.1.41
--- PHP Version: 5.3.1
+-- Generation Time: Jan 17, 2015 at 06:44 PM
+-- Server version: 5.1.61
+-- PHP Version: 5.3.3
 
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+00:00";
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -57,7 +58,14 @@ CREATE TABLE IF NOT EXISTS `stats` (
   `last_bitcoin_block` varchar(64) DEFAULT NULL,
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+
+--
+-- Dumping data for table `stats`
+--
+
+INSERT INTO `stats` (`last_bitshares_block`, `last_bitcoin_block`, `uid`) VALUES
+(0, NULL, 2);
 
 -- --------------------------------------------------------
 

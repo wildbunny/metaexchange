@@ -6,6 +6,37 @@ using System.Threading.Tasks;
 
 namespace BitsharesRpc
 {
+	public class BitsharesAuthority
+	{
+		public int required;
+		public string[] owners;
+	}
+	/// <summary>	{
+	///  "id": 250,
+	///  "symbol": "BTSBOTS",
+	///  "name": "bts trading bots",
+	///  "description": "warnning:it's just experiment, with high risk",
+	///  "public_data": null,
+	///  "issuer_account_id": 31076,
+	///  "precision": 100,
+	///  "registration_date": "2014-11-28T14:36:10",
+	///  "last_update": "2014-12-19T12:17:40",
+	///  "current_share_supply": 129999969,
+	///  "maximum_share_supply": 10000000000,
+	///  "collected_fees": 57749,
+	///  "flags": 0,
+	///  "issuer_permissions": 29,
+	///  "transaction_fee": 0,
+	///  "authority": {
+	///    "required": 1,
+	///    "owners": [
+	///      "BTSmXRo97FSn6SgrnNwgYDeKXw4xZP8v169"
+	///    ]
+	///  },
+	///  "last_proposal_id": 0
+	/// } </summary>
+	///
+	/// <remarks>	Paul, 17/01/2015. </remarks>
 	public class BitsharesAsset
 	{
 		public int id;
@@ -13,16 +44,27 @@ namespace BitsharesRpc
 		public string name;
 		public string description;
 		public string public_data;
-		public long issuer_account_id;
+		public ulong issuer_account_id;
 		public ulong precision;
 		public DateTime registration_date;
 		public DateTime last_update;
-		public long current_share_supply;
-		public decimal collected_fees; 
+		public ulong current_share_supply;
+		public ulong maximum_share_supply;
+		public ulong collected_fees;
+		public uint flags;
+		public uint issuer_permissions;
+		public ulong transaction_fee;
+		public BitsharesAuthority authority;
+		public uint last_proposal_id;
 
 		public decimal GetAmountFromLarimers(ulong larmiers)
 		{
 			return (decimal)larmiers / precision;
+		}
+
+		public bool IsUia()
+		{
+			return this.issuer_account_id > 0;
 		}
 	}
 	
