@@ -74,9 +74,14 @@ namespace BtsOnrampDaemon
 			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@trx;", trxId) > 0;
 		}
 
-		protected override void MarkBitsharesDespositAsCredited(string bitsharesTrx, string bitcoinTxid, decimal amount)
+		protected override void MarkBitsharesDespositAsCreditedStart(string bitsharesTxId)
 		{
-			InsertTransaction(bitsharesTrx, bitcoinTxid, amount, DaemonTransactionType.bitsharesDeposit);
+			MarkTransactionStart(bitsharesTxId);
+		}
+
+		protected override void MarkBitsharesDespositAsCreditedEnd(string bitsharesTrx, string bitcoinTxid, decimal amount)
+		{
+			MarkTransactionEnd(bitsharesTrx, bitcoinTxid, amount, DaemonTransactionType.bitsharesDeposit);
 		}
 
 		protected override string GetLastBitcoinBlockHash()
@@ -94,20 +99,33 @@ namespace BtsOnrampDaemon
 			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@txid;", txid) > 0;
 		}
 
-		protected override void MarkBitcoinDespositAsCredited(string bitcoinTxid, string bitsharesTrxId, decimal amount)
+		protected override void MarkBitcoinDespositAsCreditedStart(string bitcoinTxid)
 		{
-			InsertTransaction(bitcoinTxid, bitsharesTrxId, amount, DaemonTransactionType.bitcoinDeposit);
+			MarkTransactionStart(bitcoinTxid);
 		}
 
-		protected override void MarkTransactionAsRefunded(	string receivedTxid, string sentTxid, decimal amount, 
-															DaemonTransactionType type, string notes)
+		protected override void MarkBitcoinDespositAsCreditedEnd(string bitcoinTxid, string bitsharesTrxId, decimal amount)
 		{
-			InsertTransaction(receivedTxid, sentTxid, amount, type, notes);
+			MarkTransactionEnd(bitcoinTxid, bitsharesTrxId, amount, DaemonTransactionType.bitcoinDeposit);
+		}
+
+		protected override void MarkTransactionAsRefundedStart(string receivedTxid)
+		{
+			if (!IsPartTransaction(receivedTxid))
+			{
+				MarkTransactionStart(receivedTxid);
+			}
+		}
+
+		protected override void MarkTransactionAsRefundedEnd(	string receivedTxid, string sentTxid, decimal amount, 
+																DaemonTransactionType type, string notes)
+		{
+			MarkTransactionEnd(receivedTxid, sentTxid, amount, type, notes);
 		}
 
 		protected override bool IsTransactionIgnored(string txid)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignored WHERE txid=@txid;", txid) > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignored,exceptions WHERE ignored.txid=@txid OR exceptions.txid=@txid2;", txid, txid) > 0;
 		}
 
 		protected override void IgnoreTransaction(string txid)
@@ -120,12 +138,33 @@ namespace BtsOnrampDaemon
 			m_database.Statement("INSERT INTO exceptions (txid, message, date, type) VALUES(@a,@b,@c,@d);", txid, message, date, type);
 		}
 
+		protected override void LogGeneralException(string message)
+		{
+			m_database.Statement("REPLACE INTO general_exceptions (hash,message,date) VALUES(@a,@b,@c);", (uint)message.GetHashCode(), message, DateTime.UtcNow);
+		}
+
 		// ------------------------------------------------------------------------------------------------------------
 
 		void InsertTransaction(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type, string notes=null)
 		{
 			m_database.Statement(	"INSERT INTO transactions (received_txid, sent_txid, asset, amount, date, type, notes) VALUES(@a,@b,@c,@d,@e,@f,@g);",
 									receivedTxid, sentTxid, m_asset.symbol, amount, DateTime.UtcNow, type, notes);
+		}
+
+		void MarkTransactionStart(string receivedTxid)
+		{
+			InsertTransaction(receivedTxid, null, 0, DaemonTransactionType.none);
+		}
+
+		void MarkTransactionEnd(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type, string notes=null)
+		{
+			m_database.Statement("UPDATE transactions SET sent_txid=@sent, amount=@amount, type=@type, notes=@notes WHERE received_txid=@txid;",
+									sentTxid, amount, type, notes, receivedTxid);
+		}
+
+		bool IsPartTransaction(string receivedTxid)
+		{
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@txid AND sent_txid IS NULL;", receivedTxid) > 0;
 		}
 	}
 }

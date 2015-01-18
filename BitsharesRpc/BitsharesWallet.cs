@@ -25,6 +25,8 @@ namespace BitsharesRpc
 
     public class BitsharesWallet
     {
+		const int kBitsharesMaxMemoLength = 19;
+
 		string m_rpcUrl;
 		string m_rpcUsername;
 		string m_rpcPassword;
@@ -220,6 +222,22 @@ namespace BitsharesRpc
 			return ApiPostSync<BitsharesAsset>(BitsharesMethods.blockchain_get_asset, name);
 		}
 
+		/// <summary>	Trucate memo. </summary>
+		///
+		/// <remarks>	Paul, 18/01/2015. </remarks>
+		///
+		/// <param name="memo">	the memo. </param>
+		///
+		/// <returns>	A string. </returns>
+		string TrucateMemo(string memo)
+		{
+			if (memo.Length > kBitsharesMaxMemoLength)
+			{
+				memo = memo.Substring(0, kBitsharesMaxMemoLength);
+			}
+			return memo;
+		}
+
 		/// <summary>	Wallet transfer. </summary>
 		///
 		/// <remarks>	Paul, 22/12/2014. </remarks>
@@ -237,6 +255,8 @@ namespace BitsharesRpc
 															string memo="", 
 															VoteMethod voteMethod = VoteMethod.vote_recommended)
 		{
+			memo = TrucateMemo(memo);
+
 			return ApiPostSync<BitsharesTransactionResponse>(	BitsharesMethods.wallet_transfer, amount, asset, 
 																fromAccount,
 																toAccount,
@@ -261,6 +281,8 @@ namespace BitsharesRpc
 																	string memo = "",
 																	VoteMethod voteMethod = VoteMethod.vote_recommended)
 		{
+			memo = TrucateMemo(memo);
+
 			return ApiPostSync<BitsharesTransactionResponse>(	BitsharesMethods.wallet_transfer_to_address, amount, asset,
 																fromAccount,
 																toAddress,
@@ -280,6 +302,8 @@ namespace BitsharesRpc
 		/// <returns>	A BitsharesTransactionResponse. </returns>
 		public BitsharesTransactionResponse WalletIssueAsset(decimal amount, string symbol, string toAccount, string memo="")
 		{
+			memo = TrucateMemo(memo);
+
 			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue, amount, symbol, toAccount, memo);
 		}
     }

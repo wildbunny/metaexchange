@@ -20,16 +20,18 @@ namespace BtsOnrampDaemon
 	/// <remarks>	Paul, 17/01/2015. </remarks>
 	public enum DaemonTransactionType
 	{
-		bitcoinDeposit = 1,
+		bitcoinDeposit=1,
 		bitsharesDeposit,
 		bitcoinRefund,
-		bitsharesRefund
+		bitsharesRefund,
+		none
 	}
 
 	abstract public class DaemonBase
 	{
 		const int kSleepTimeSeconds = 1;
 		const int kBitcoinConfirms = 1;
+		const decimal kDepositLimit = 0.01M;
 
 		protected BitsharesWallet m_bitshares;
 		protected BitcoinWallet m_bitcoin;
@@ -70,11 +72,14 @@ namespace BtsOnrampDaemon
 		protected abstract uint GetLastBitsharesBlock();
 		protected abstract void UpdateBitsharesBlock(uint blockNum);
 		protected abstract bool HasBitsharesDepositBeenCredited(string trxId);
-		protected abstract void MarkBitsharesDespositAsCredited(string bitsharesTxId, string bitcoinTxId, decimal amount);
+		protected abstract void MarkBitsharesDespositAsCreditedStart(string bitsharesTxId);
+		protected abstract void MarkBitsharesDespositAsCreditedEnd(string bitsharesTxId, string bitcoinTxId, decimal amount);
 		protected abstract bool IsTransactionIgnored(string txid);
 		protected abstract void IgnoreTransaction(string txid);
 		protected abstract void LogException(string txid, string message, DateTime date, DaemonTransactionType type);
-		protected abstract void MarkTransactionAsRefunded(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type, string notes);
+		protected abstract void MarkTransactionAsRefundedStart(string receivedTxid);
+		protected abstract void MarkTransactionAsRefundedEnd(string receivedTxid, string sentTxid, decimal amount, DaemonTransactionType type, string notes);
+		protected abstract void LogGeneralException(string message);
 
 		/// <summary>	This is virtual because implementors might like a different way  </summary>
 		///
@@ -174,6 +179,9 @@ namespace BtsOnrampDaemon
 		/// <param name="memo">		  	The memo. </param>
 		protected virtual void RefundBitsharesDeposit(string fromAccount, BitsharesLedgerEntry deposit, string depositId, string memo)
 		{
+			// make sure failures after this point don't result in multiple refunds
+			MarkTransactionAsRefundedStart(depositId);
+
 			BitsharesTransactionResponse response;
 			decimal amount = m_asset.GetAmountFromLarimers(deposit.amount.amount);
 
@@ -196,7 +204,7 @@ namespace BtsOnrampDaemon
 				response = m_bitshares.WalletTransferToAddress(amount, m_asset.symbol, m_bitsharesAccount, senderAddress, memo);
 			}
 
-			MarkTransactionAsRefunded(depositId, response.record_id, amount, DaemonTransactionType.bitsharesRefund, memo);
+			MarkTransactionAsRefundedEnd(depositId, response.record_id, amount, DaemonTransactionType.bitsharesRefund, memo);
 		}
 
 		/// <summary>	Refund bitcoin deposit. </summary>
@@ -206,6 +214,8 @@ namespace BtsOnrampDaemon
 		/// <param name="t">	The TransactionSinceBlock to process. </param>
 		protected virtual void RefundBitcoinDeposit(TransactionSinceBlock t, string notes)
 		{
+			MarkTransactionAsRefundedStart(t.TxId);
+
 			// get public key out of transaction
 			string firstPubKey = GetAllPubkeysFromBitcoinTransaction(t.TxId).First();
 			PublicKey pk = new PublicKey(firstPubKey, m_addressByteType);
@@ -214,7 +224,7 @@ namespace BtsOnrampDaemon
 			string sentTxid = m_bitcoin.SendToAddress(pk.AddressBase58, t.Amount);
 
 			// mark as such
-			MarkTransactionAsRefunded(t.TxId, sentTxid, t.Amount, DaemonTransactionType.bitcoinRefund, notes);
+			MarkTransactionAsRefundedEnd(t.TxId, sentTxid, t.Amount, DaemonTransactionType.bitcoinRefund, notes);
 		}
 
 		/// <summary>	Default implementation sends an exactly matching bitcoin transaction to the depositor </summary>
@@ -227,14 +237,22 @@ namespace BtsOnrampDaemon
 		/// <returns>	A string. </returns>
 		protected virtual string SendBitcoinsToDepositor(string btcAddress, BitsharesWalletTransaction t, BitsharesLedgerEntry l)
 		{
+			// make sure failures after this point dont result in multiple credits
+			MarkBitsharesDespositAsCreditedStart(t.trx_id);
+
 			// get the BTC amount we need to transfer
 			decimal btcToTransfer = m_asset.GetAmountFromLarimers(l.amount.amount);
+
+			if (btcToTransfer > kDepositLimit)
+			{
+				throw new RefundBitsharesException("Over " + kDepositLimit + " BTC!");
+			}
 
 			// do the transfer
 			string txid = m_bitcoin.SendToAddress(btcAddress, btcToTransfer);
 
 			// mark this in our records
-			MarkBitsharesDespositAsCredited(t.trx_id, txid, btcToTransfer);
+			MarkBitsharesDespositAsCreditedEnd(t.trx_id, txid, btcToTransfer);
 
 			return txid;
 		}
@@ -296,7 +314,8 @@ namespace BtsOnrampDaemon
 									LogException(t.trx_id, e.Message, DateTime.UtcNow, DaemonTransactionType.bitsharesDeposit);
 
 									// also lets now ignore this transaction so we don't keep failing
-									IgnoreTransaction(t.trx_id);
+									//IgnoreTransaction(t.trx_id);
+									RefundBitsharesDeposit(l.from_account, l, t.trx_id, e.Message);
 								}
 							}
 							else
@@ -324,7 +343,8 @@ namespace BtsOnrampDaemon
 		protected abstract string GetLastBitcoinBlockHash();
 		protected abstract void UpdateBitcoinBlockHash(string lastBlock);
 		protected abstract bool HasBitcoinDespoitBeenCredited(string txid);
-		protected abstract void MarkBitcoinDespositAsCredited(string bitcoinTxid, string bitsharesTrxId, decimal amount);
+		protected abstract void MarkBitcoinDespositAsCreditedStart(string bitcoinTxid);
+		protected abstract void MarkBitcoinDespositAsCreditedEnd(string bitcoinTxid, string bitsharesTrxId, decimal amount);
 		protected virtual bool BitcoinAddressIsDepositAddress(string bitcoinAddress)
 		{
 			return bitcoinAddress == m_bitcoinDespoitAddress;
@@ -382,6 +402,14 @@ namespace BtsOnrampDaemon
 		/// <returns>	A BitsharesTransactionResponse. </returns>
 		protected virtual BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t)
 		{
+			// make sure failures after this point do not result in repeated sending
+			MarkBitcoinDespositAsCreditedStart(t.TxId);
+
+			if (t.Amount > kDepositLimit)
+			{
+				throw new RefundBitcoinException("Over " + kDepositLimit + " BTC!");
+			}
+
 			string bitsharesAddress = GetBitsharesAddressFromBitcoinDeposit(t);
 
 			// send the bitAssets!
@@ -391,9 +419,9 @@ namespace BtsOnrampDaemon
 				bitsharesTrx = m_bitshares.WalletIssueAsset(t.Amount, m_asset.symbol, m_bitsharesAccount);
 			}*/
 
-			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress, t.TxId);
+			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress);
 			
-			MarkBitcoinDespositAsCredited(t.TxId, bitsharesTrx.record_id, t.Amount);
+			MarkBitcoinDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, t.Amount);
 
 			return bitsharesTrx;
 		}
@@ -434,12 +462,13 @@ namespace BtsOnrampDaemon
 							LogException(t.TxId, e.Message, DateTime.UtcNow, DaemonTransactionType.bitcoinDeposit);
 
 							// also lets now ignore this transaction so we don't keep failing
-							IgnoreTransaction(t.TxId);
+							//IgnoreTransaction(t.TxId);
+							RefundBitcoinDeposit(t, e.Message);
 						}
-						catch (MultiplePublicKeysException)
+						catch (RefundBitcoinException e)
 						{
 							// a transaction with multiple inputs was received!
-							RefundBitcoinDeposit(t, "Multiple input keys!");
+							RefundBitcoinDeposit(t, e.ToString());
 						}
 					}
 				}
@@ -453,17 +482,24 @@ namespace BtsOnrampDaemon
 		/// <remarks>	Paul, 16/12/2014. </remarks>
 		public void Update()
 		{
-			//
-			// handle bitshares->bitcoin
-			//
-				
-			HandleBitsharesDesposits();	
-				
-			//
-			// handle bitcoin->bitshares
-			// 
+			try
+			{
+				//
+				// handle bitshares->bitcoin
+				//
 
-			HandleBitcoinDeposits();
+				HandleBitsharesDesposits();
+
+				//
+				// handle bitcoin->bitshares
+				// 
+
+				HandleBitcoinDeposits();
+			}
+			catch (Exception e)
+			{
+				LogGeneralException(e.ToString());
+			}
 		}
 	}
 }

@@ -24,7 +24,10 @@ namespace BtsOnrampDaemon
 		}
 	}
 
-	public class MultiplePublicKeysException : Exception { }
+	public class RefundBitcoinException : RefundBitsharesException 
+	{
+		public RefundBitcoinException(string memo) : base(memo) { }
+	}
 
 	public class RefundBitsharesException : Exception
 	{

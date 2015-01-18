@@ -36,9 +36,6 @@ namespace BtsOnrampDaemon
 				string databaseUser = args[11];
 				string databasePassword = args[12];
 
-				BitsharesPubKey pk = BitsharesPubKey.FromBitcoinHex("030c238f98b35cf7e02d52827ebe0ce57f9894136171dd2acf0eb1f87a891fbeb7");
-				
-
 				// create a scheduler so we can be sure of thread affinity
 				AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 

@@ -21,3 +21,11 @@
 /UnitTestsDebugging/bin/Debug
 /UnitTestsDebugging/obj/Debug
 /BtsOnrampDaemon/BtsOnrampDaemon.csproj.user
+/BitsharesCore/bin/mono
+/BitsharesCore/obj/mono
+/BitsharesCoreUnitTests/bin/mono
+/BitsharesCoreUnitTests/obj/mono
+/BitsharesRpc/bin/mono
+/BitsharesRpc/obj/mono
+/BtsOnrampDaemon/bin/mono
+/BtsOnrampDaemon/obj/mono

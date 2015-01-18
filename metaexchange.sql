@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 17, 2015 at 06:44 PM
+-- Generation Time: Jan 18, 2015 at 08:43 PM
 -- Server version: 5.1.61
 -- PHP Version: 5.3.3
 
@@ -31,9 +31,22 @@ CREATE TABLE IF NOT EXISTS `exceptions` (
   `txid` varchar(64) NOT NULL,
   `message` varchar(255) NOT NULL,
   `date` datetime NOT NULL,
-  `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund') NOT NULL,
+  `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund','none') NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=372 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `general_exceptions`
+--
+
+CREATE TABLE IF NOT EXISTS `general_exceptions` (
+  `hash` int(10) unsigned NOT NULL,
+  `message` text COLLATE utf8_unicode_ci NOT NULL,
+  `date` datetime NOT NULL,
+  UNIQUE KEY `hash` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -44,8 +57,9 @@ CREATE TABLE IF NOT EXISTS `exceptions` (
 CREATE TABLE IF NOT EXISTS `ignored` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `txid` varchar(64) NOT NULL,
+  `notes` varchar(255) NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=13 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15 ;
 
 -- --------------------------------------------------------
 
@@ -60,13 +74,6 @@ CREATE TABLE IF NOT EXISTS `stats` (
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
---
--- Dumping data for table `stats`
---
-
-INSERT INTO `stats` (`last_bitshares_block`, `last_bitcoin_block`, `uid`) VALUES
-(0, NULL, 2);
-
 -- --------------------------------------------------------
 
 --
@@ -75,13 +82,13 @@ INSERT INTO `stats` (`last_bitshares_block`, `last_bitcoin_block`, `uid`) VALUES
 
 CREATE TABLE IF NOT EXISTS `transactions` (
   `received_txid` varchar(64) NOT NULL,
-  `sent_txid` varchar(64) NOT NULL,
+  `sent_txid` varchar(64) DEFAULT NULL,
   `asset` varchar(8) NOT NULL,
-  `amount` decimal(18,8) NOT NULL,
+  `amount` decimal(18,8) NOT NULL DEFAULT '0.00000000',
   `date` datetime NOT NULL,
-  `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund') NOT NULL,
+  `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund','none') NOT NULL,
   `notes` varchar(64) DEFAULT NULL,
-  PRIMARY KEY (`received_txid`,`sent_txid`)
+  PRIMARY KEY (`received_txid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
