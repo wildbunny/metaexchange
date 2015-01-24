@@ -18,10 +18,6 @@ using BitcoinRpcSharp;
 
 using MetaExchange.Pages;
 
-
-
-using Newtonsoft.Json;
-
 namespace MetaExchange
 {
 	interface IDummy {}

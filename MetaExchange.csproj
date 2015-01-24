@@ -32,24 +32,24 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ApiHost">
-      <HintPath>..\PayDirtBTC\ApiHost\bin\Debug\ApiHost.dll</HintPath>
+    <Reference Include="ApiHost, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>libs\ApiHost.dll</HintPath>
     </Reference>
     <Reference Include="BitcoinRpcSharp">
       <HintPath>libs\BitcoinRpcSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Monsterer">
-      <HintPath>..\SatoshiDiceTest\Monsterer\bin\Debug\Monsterer.dll</HintPath>
+    <Reference Include="Monsterer, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>libs\Monsterer.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SatoshiDiceTest\BitcoinRpcSharp-master\BitcoinRpcSharp\bin\Debug\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="RedisCache">
-      <HintPath>..\SatoshiDiceTest\RedisCache\bin\Debug\RedisCache.dll</HintPath>
+    <Reference Include="RedisCache, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>libs\RedisCache.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Text, Version=3.9.54.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SatoshiDiceTest\Monsterer\bin\Debug\ServiceStack.Text.dll</HintPath>
+      <HintPath>libs\ServiceStack.Text.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -58,8 +58,9 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="WebHost">
-      <HintPath>..\PayDirtBTC\WebHost\bin\Debug\WebHost.dll</HintPath>
+    <Reference Include="WebHost, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>libs\WebHost.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
