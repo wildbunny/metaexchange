@@ -31,3 +31,5 @@
 /BtsOnrampDaemon/obj/mono
 /RestLib/bin/mono
 /RestLib/obj/mono
+/UnitTestDebugging/bin/mono
+/UnitTestDebugging/obj/mono
