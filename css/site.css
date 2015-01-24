@@ -1,0 +1,22 @@
+﻿body 
+{
+  padding-top: 60px;
+}
+.smallFont 
+{
+	font-size: 12px;
+}
+.noPadding
+{
+	padding:0px;
+}
+.wbScrollList
+{
+	overflow: auto; 
+	max-height: 385px;
+	margin-bottom: 30px;
+}
+.candlestickChart
+{
+	height:360px;
+}

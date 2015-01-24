@@ -29,3 +29,5 @@
 /BitsharesRpc/obj/mono
 /BtsOnrampDaemon/bin/mono
 /BtsOnrampDaemon/obj/mono
+/RestLib/bin/mono
+/RestLib/obj/mono

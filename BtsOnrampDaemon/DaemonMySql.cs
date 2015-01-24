@@ -7,6 +7,7 @@ using System.Diagnostics;
 
 using MySql.Data;
 using MySqlDatabase;
+using BitsharesRpc;
 
 
 namespace BtsOnrampDaemon

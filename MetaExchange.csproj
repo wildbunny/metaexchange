@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{0E9292A7-858F-4DB6-B1F4-A3026F6A5F57}</ProjectGuid>
+    <ProjectGuid>{062B4F7E-2B6D-44EB-89F4-A147C3B87AE4}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BtsOnrampDaemon</RootNamespace>
-    <AssemblyName>BtsOnrampDaemon</AssemblyName>
+    <RootNamespace>MetaExchange</RootNamespace>
+    <AssemblyName>MetaExchange</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -18,7 +18,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -31,71 +31,71 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'mono|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\mono\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>true</Prefer32Bit>
-  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BitcoinRpcSharp">
-      <HintPath>..\libs\BitcoinRpcSharp.dll</HintPath>
+    <Reference Include="ApiHost">
+      <HintPath>..\PayDirtBTC\ApiHost\bin\Debug\ApiHost.dll</HintPath>
     </Reference>
-    <Reference Include="Casascius, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\libs\Casascius.dll</HintPath>
+    <Reference Include="BitcoinRpcSharp">
+      <HintPath>libs\BitcoinRpcSharp.dll</HintPath>
     </Reference>
     <Reference Include="Monsterer">
-      <HintPath>..\libs\Monsterer.dll</HintPath>
-    </Reference>
-    <Reference Include="MySql.Data">
-      <HintPath>..\libs\MySql.Data.dll</HintPath>
-    </Reference>
-    <Reference Include="MySqlDatabase">
-      <HintPath>..\libs\MySqlDatabase.dll</HintPath>
+      <HintPath>..\SatoshiDiceTest\Monsterer\bin\Debug\Monsterer.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\libs\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\SatoshiDiceTest\BitcoinRpcSharp-master\BitcoinRpcSharp\bin\Debug\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="RedisCache">
+      <HintPath>..\SatoshiDiceTest\RedisCache\bin\Debug\RedisCache.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Text, Version=3.9.54.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SatoshiDiceTest\Monsterer\bin\Debug\ServiceStack.Text.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="WebHost">
+      <HintPath>..\PayDirtBTC\WebHost\bin\Debug\WebHost.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DaemonBase.cs" />
-    <Compile Include="DaemonMySql.cs" />
-    <Compile Include="Exceptions.cs" />
+    <Compile Include="MetaServer.cs" />
+    <Compile Include="Pages\BootstrapBase.cs" />
+    <Compile Include="Pages\MainPage.cs" />
+    <Compile Include="Pages\SharedPage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Pages\RequiredJs\Main.rs" />
+    <None Include="Pages\RequiredJs\Markets.rs" />
+    <None Include="Pages\RequiredJs\Shared.rs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BitsharesCore\BitsharesCore.csproj">
-      <Project>{dc18e1fd-6299-40b7-82dd-7fe4e9eea7e2}</Project>
-      <Name>BitsharesCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitsharesRpc\BitsharesRpc.csproj">
+    <Content Include="css\bootstrap.min.css" />
+    <Content Include="css\site.css" />
+    <Content Include="js\bitsharesApi.js" />
+    <Content Include="js\bootstrap.min.js" />
+    <Content Include="js\canvasChart.js" />
+    <Content Include="js\global.js" />
+    <Content Include="js\jquery-1.10.2.min.js" />
+    <Content Include="js\jquery.jsonrpc.js" />
+    <Content Include="js\Pages\main.js" />
+    <Content Include="js\Pages\markets.js" />
+    <Content Include="js\metaApi.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="BitsharesRpc\BitsharesRpc.csproj">
       <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
       <Name>BitsharesRpc</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup Condition="'$(Configuration)' == 'mono'">
-    <PostBuildEvent>cd $(TargetDir)
-pdb2mdb $(TargetName).exe
-</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
