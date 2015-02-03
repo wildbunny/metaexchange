@@ -20,3 +20,22 @@
 {
 	height:360px;
 }
+.noTopMargin
+{
+	margin-top:0px;
+}
+.noMargin
+{
+	margin:0px;
+}
+.arrow
+{
+	margin:2px 2px 0px 2px;
+}
+.glyphicon-lock:before {
+  content: "\1f512";
+}
+sup { 
+    vertical-align: super;
+    font-size: small;
+}

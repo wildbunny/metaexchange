@@ -11,16 +11,16 @@ namespace BtsOnrampDaemon
 {
 	public class UnsupportedTransactionException : Exception
 	{
-		BitsharesWalletTransaction m_t;
+		string m_trxId;
 
-		public UnsupportedTransactionException(BitsharesWalletTransaction t)
+		public UnsupportedTransactionException(string t)
 		{
-			m_t = t;
+			m_trxId = t;
 		}
 
 		public override string ToString()
 		{
-			return m_t.trx_id;
+			return m_trxId;
 		}
 	}
 
@@ -38,9 +38,39 @@ namespace BtsOnrampDaemon
 			m_memo = memo;
 		}
 
+		public override string Message
+		{
+			get { return m_memo; }
+		}
+	}
+
+	public class ApiException : Exception
+	{
+		public ApiError m_error;
+
+		public ApiException( ApiError error )
+		{
+			m_error = error;
+		}
+
 		public override string ToString()
 		{
-			return m_memo;
+			return m_error.m_errorMsg;
 		}
+	}
+
+	public class ApiExceptionGeneral : ApiException
+	{
+		public ApiExceptionGeneral() : base(new ApiError { m_errorMsg = "Ooops, a general API exception occured!" }) { }
+	}
+
+	public class ApiExceptionMissingParameter : ApiException
+	{
+		public ApiExceptionMissingParameter() : base(new ApiError{m_errorMsg ="Missing parameter"}){}
+	}
+
+	public class ApiExceptionMessage : ApiException
+	{
+		public ApiExceptionMessage(string message) : base(new ApiError { m_errorMsg = message }) { }
 	}
 }

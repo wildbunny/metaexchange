@@ -101,6 +101,7 @@ namespace BitsharesRpc
 		wallet_account_vote_summary,
 		wallet_account_yield,
 		wallet_add_contact_account,
+		wallet_address_create,
 		wallet_asset_create,
 		wallet_asset_issue,
 		wallet_backup_create,

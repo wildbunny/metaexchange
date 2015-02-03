@@ -9,30 +9,25 @@ using BitsharesRpc;
 using BitcoinRpcSharp;
 using BitsharesCore;
 using Casascius.Bitcoin;
-
+using WebDaemonShared;
 using BitcoinRpcSharp.Responses;
 
 namespace BtsOnrampDaemon
 {
 
-	/// <summary>	Transaction types for logging purposes </summary>
-	///
-	/// <remarks>	Paul, 17/01/2015. </remarks>
-	public enum DaemonTransactionType
+	public class AddressOrAccountName
 	{
-		bitcoinDeposit=1,
-		bitsharesDeposit,
-		bitcoinRefund,
-		bitsharesRefund,
-		none
+		public string m_text;
+		public bool m_isAddress;
 	}
 
 	abstract public class DaemonBase
 	{
 		const int kSleepTimeSeconds = 1;
 		const int kBitcoinConfirms = 1;
-		const decimal kDepositLimit = 0.01M;
-
+		public const decimal kMaxTransactionFactor = 10.0M / 100.0M;
+		const string kFundingMemo = "FUND";
+		
 		protected BitsharesWallet m_bitshares;
 		protected BitcoinWallet m_bitcoin;
 
@@ -43,6 +38,13 @@ namespace BtsOnrampDaemon
 		protected string m_bitcoinDespoitAddress;
 
 		protected byte m_addressByteType;
+
+		protected decimal m_bitcoinDepositLimit = 0.01M;
+		protected decimal m_bitsharesDepositLimit = 0.01M;
+		protected decimal m_bidPrice;
+		protected decimal m_askPrice;
+		protected decimal m_bitsharesBalance;
+		protected decimal m_bitcoinBalance;
 
 		/// <summary>	Constructor. </summary>
 		///
@@ -116,17 +118,21 @@ namespace BtsOnrampDaemon
 
 		/// <summary>	Bitshares transaction to bitcoin address. </summary>
 		///
-		/// <remarks>	Paul, 15/01/2015. </remarks>
+		/// <remarks>	Paul, 25/01/2015. </remarks>
+		///
+		/// <exception cref="RefundBitsharesException">	Thrown when a Refund Bitshares error condition
+		/// 											occurs. </exception>
 		///
 		/// <param name="l">	The BitsharesLedgerEntry to process. </param>
+		/// <param name="t">	The TransactionSinceBlock to process. </param>
 		///
 		/// <returns>	A string. </returns>
-		protected virtual string BitsharesTransactionToBitcoinAddress(BitsharesLedgerEntry l)
+		protected virtual string BitsharesTransactionToBitcoinAddress(BitsharesLedgerEntry l, BitsharesTransaction t)
 		{
 			try
 			{
 				// get the public key of the sender
-				BitsharesAccount account = GetAccountFromLedger(l);
+				BitsharesAccount account = GetAccountFromLedger(l.from_account);
 
 				// turn into into a bitshares address
 				return BitsharesAccountToBitcoinAddress(account);
@@ -134,12 +140,6 @@ namespace BtsOnrampDaemon
 			catch (BitsharesRpcException)
 			{
 				throw new RefundBitsharesException("Unregistered acct!");
-
-				//
-				// this may not work
-				//
-				BitsharesPubKey pk = new BitsharesPubKey(l.from_account);
-				return pk.ToBitcoinAddress(true, m_addressByteType);
 			}
 		}
 
@@ -164,9 +164,9 @@ namespace BtsOnrampDaemon
 		/// <param name="l">	The BitsharesLedgerEntry to process. </param>
 		///
 		/// <returns>	The account from ledger. </returns>
-		BitsharesAccount GetAccountFromLedger(BitsharesLedgerEntry l)
+		BitsharesAccount GetAccountFromLedger(string fromAccount)
 		{
-			return m_bitshares.WalletGetAccount(l.from_account);
+			return m_bitshares.WalletGetAccount(fromAccount);
 		}
 
 		/// <summary>	Refund bitshares deposit. </summary>
@@ -177,17 +177,17 @@ namespace BtsOnrampDaemon
 		/// <param name="deposit">	  	The deposit. </param>
 		/// <param name="depositId">  	Identifier for the deposit. </param>
 		/// <param name="memo">		  	The memo. </param>
-		protected virtual void RefundBitsharesDeposit(string fromAccount, BitsharesLedgerEntry deposit, string depositId, string memo)
+		protected virtual void RefundBitsharesDeposit(string fromAccount, ulong larimers, string depositId, string memo)
 		{
 			// make sure failures after this point don't result in multiple refunds
 			MarkTransactionAsRefundedStart(depositId);
 
 			BitsharesTransactionResponse response;
-			decimal amount = m_asset.GetAmountFromLarimers(deposit.amount.amount);
+			decimal amount = m_asset.GetAmountFromLarimers(larimers);
 
 			try
 			{
-				BitsharesAccount account = GetAccountFromLedger(deposit);
+				BitsharesAccount account = GetAccountFromLedger(fromAccount);
 				response = m_bitshares.WalletTransfer(amount, m_asset.symbol, m_bitsharesAccount, fromAccount, memo);
 			}
 			catch (BitsharesRpcException)
@@ -229,30 +229,34 @@ namespace BtsOnrampDaemon
 
 		/// <summary>	Default implementation sends an exactly matching bitcoin transaction to the depositor </summary>
 		///
-		/// <remarks>	Paul, 23/12/2014. </remarks>
+		/// <remarks>	Paul, 28/01/2015. </remarks>
+		///
+		/// <exception cref="RefundBitsharesException">	Thrown when a Refund Bitshares error condition
+		/// 											occurs. </exception>
 		///
 		/// <param name="btcAddress">	The btc address. </param>
-		/// <param name="l">		 	The BitsharesLedgerEntry to process. </param>
+		/// <param name="trxId">	 	Identifier for the trx. </param>
+		/// <param name="amount">	 	The amount. </param>
 		///
 		/// <returns>	A string. </returns>
-		protected virtual string SendBitcoinsToDepositor(string btcAddress, BitsharesWalletTransaction t, BitsharesLedgerEntry l)
+		protected virtual string SendBitcoinsToDepositor(string btcAddress, string trxId, ulong amount)
 		{
 			// make sure failures after this point dont result in multiple credits
-			MarkBitsharesDespositAsCreditedStart(t.trx_id);
+			MarkBitsharesDespositAsCreditedStart(trxId);
 
 			// get the BTC amount we need to transfer
-			decimal btcToTransfer = m_asset.GetAmountFromLarimers(l.amount.amount);
+			decimal btcToTransfer = m_asset.GetAmountFromLarimers(amount) * m_bidPrice;
 
-			if (btcToTransfer > kDepositLimit)
+			if (btcToTransfer > m_bitsharesDepositLimit)
 			{
-				throw new RefundBitsharesException("Over " + kDepositLimit + " BTC!");
+				throw new RefundBitsharesException("Over " + m_bitsharesDepositLimit + " " + m_asset.symbol + "!");
 			}
 
 			// do the transfer
 			string txid = m_bitcoin.SendToAddress(btcAddress, btcToTransfer);
 
 			// mark this in our records
-			MarkBitsharesDespositAsCreditedEnd(t.trx_id, txid, btcToTransfer);
+			MarkBitsharesDespositAsCreditedEnd(trxId, txid, btcToTransfer);
 
 			return txid;
 		}
@@ -263,7 +267,7 @@ namespace BtsOnrampDaemon
 		///
 		/// <exception cref="UnsupportedTransactionException">	Thrown when an Unsupported Transaction
 		/// 													error condition occurs. </exception>
-		void HandleBitsharesDesposits()
+		protected virtual void HandleBitsharesDesposits()
 		{
 			// which block do we start from
 			uint lastBlockBitshares = GetLastBitsharesBlock();
@@ -285,7 +289,10 @@ namespace BtsOnrampDaemon
 																												info.blockchain_head_block_num);
 
 			IEnumerable<BitsharesWalletTransaction> assetDeposits = assetTransactions.Where(t => t.is_confirmed &&
-																							t.ledger_entries.Any(l => l.to_account == m_bitsharesAccount && l.from_account != l.to_account));
+																							t.ledger_entries.Any(	l => l.to_account == m_bitsharesAccount && 
+																													l.from_account != l.to_account && 
+																													l.memo != kFundingMemo &&
+																													l.from_account != BitsharesWallet.kNetworkAccount));
 			foreach (BitsharesWalletTransaction t in assetDeposits)
 			{
 				IEnumerable<BitsharesLedgerEntry> deposits = t.ledger_entries.Where(l => l.to_account == m_bitsharesAccount);
@@ -299,41 +306,39 @@ namespace BtsOnrampDaemon
 					{
 						try
 						{
+							///
 							/// STILL NEED A WAY TO GET SENDER BITCOIN ADDRESS FOR UNREGISTERED ACCOUNTS
-							string btcAddress = BitsharesTransactionToBitcoinAddress(l);
-							
-							if (btcAddress != null)
-							{
-								try
-								{
-									SendBitcoinsToDepositor(btcAddress, t, l);
-								}
-								catch (BitcoinRpcException e)
-								{
-									// problem sending bitcoins, lets log it
-									LogException(t.trx_id, e.Message, DateTime.UtcNow, DaemonTransactionType.bitsharesDeposit);
+							/// 
+							// look up the transaction proper
+							BitsharesTransaction fullT = m_bitshares.BlockchainGetTransaction(t.trx_id);
 
-									// also lets now ignore this transaction so we don't keep failing
-									//IgnoreTransaction(t.trx_id);
-									RefundBitsharesDeposit(l.from_account, l, t.trx_id, e.Message);
-								}
-							}
-							else
+							// get the btc address
+							string btcAddress = BitsharesTransactionToBitcoinAddress(l, fullT);
+							
+							try
 							{
-								throw new RefundBitsharesException("BTC address fail");
+								SendBitcoinsToDepositor(btcAddress, t.trx_id, l.amount.amount);
+							}
+							catch (Exception e)
+							{
+								// problem sending bitcoins, lets log it
+								LogException(t.trx_id, e.Message, DateTime.UtcNow, DaemonTransactionType.bitsharesDeposit);
+
+								// also lets now ignore this transaction so we don't keep failing
+								RefundBitsharesDeposit(l.from_account, l.amount.amount, t.trx_id, e.Message);
 							}
 						}
 						catch (RefundBitsharesException r)
 						{
 							// were unable to get a bitcoin address from the bitshares account, so refund the transaction
-							RefundBitsharesDeposit(l.from_account, l, t.trx_id, r.ToString());
+							RefundBitsharesDeposit(l.from_account, l.amount.amount, t.trx_id, r.Message);
 						}
 					}
 				}
 				else
 				{
 					// fail with unhandled case
-					throw new UnsupportedTransactionException(t);
+					throw new UnsupportedTransactionException(t.trx_id);
 				}
 			}
 
@@ -374,7 +379,7 @@ namespace BtsOnrampDaemon
 		/// <param name="t">	The TransactionSinceBlock to process. </param>
 		///
 		/// <returns>	The bitshares address from bitcoin deposit. </returns>
-		protected virtual string GetBitsharesAddressFromBitcoinDeposit(TransactionSinceBlock t)
+		protected virtual AddressOrAccountName GetBitsharesAddressFromBitcoinDeposit(TransactionSinceBlock t)
 		{
 			IEnumerable<string> allPubKeys = GetAllPubkeysFromBitcoinTransaction(t.TxId);
 
@@ -389,7 +394,7 @@ namespace BtsOnrampDaemon
 
 			string publicKey = allPubKeys.First();
 			BitsharesPubKey btsPk = BitsharesPubKey.FromBitcoinHex(publicKey, m_addressByteType);
-			return btsPk.m_Address;
+			return new AddressOrAccountName { m_text = btsPk.m_Address, m_isAddress = true };
 		}
 
 		/// <summary>	Compute and send the correct amount of bitassets to the depositor
@@ -405,23 +410,26 @@ namespace BtsOnrampDaemon
 			// make sure failures after this point do not result in repeated sending
 			MarkBitcoinDespositAsCreditedStart(t.TxId);
 
-			if (t.Amount > kDepositLimit)
+			if (t.Amount > m_bitcoinDepositLimit)
 			{
-				throw new RefundBitcoinException("Over " + kDepositLimit + " BTC!");
+				throw new RefundBitcoinException("Over " + Numeric.Format2Dps(m_bitcoinDepositLimit) + " BTC!");
 			}
 
-			string bitsharesAddress = GetBitsharesAddressFromBitcoinDeposit(t);
+			AddressOrAccountName bitsharesAddress = GetBitsharesAddressFromBitcoinDeposit(t);
 
-			// send the bitAssets!
-			/*if (m_asset.IsUia())
+			BitsharesTransactionResponse bitsharesTrx;
+			decimal amount = (1 / m_askPrice) * t.Amount;
+
+			if (bitsharesAddress.m_isAddress)
 			{
-				// issue the asset
-				bitsharesTrx = m_bitshares.WalletIssueAsset(t.Amount, m_asset.symbol, m_bitsharesAccount);
-			}*/
+				bitsharesTrx = m_bitshares.WalletTransferToAddress(amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress.m_text);
+			}
+			else
+			{
+				bitsharesTrx = m_bitshares.WalletTransfer(amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress.m_text);
+			}
 
-			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransferToAddress(t.Amount, m_asset.symbol, m_bitsharesAccount, bitsharesAddress);
-			
-			MarkBitcoinDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, t.Amount);
+			MarkBitcoinDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, amount);
 
 			return bitsharesTrx;
 		}
@@ -456,25 +464,43 @@ namespace BtsOnrampDaemon
 						{
 							SendBitAssetsToDepositor(t);
 						}
-						catch (BitsharesRpcException e)
+						catch (Exception e)
 						{
 							// problem sending bitassets, lets log it
 							LogException(t.TxId, e.Message, DateTime.UtcNow, DaemonTransactionType.bitcoinDeposit);
 
 							// also lets now ignore this transaction so we don't keep failing
-							//IgnoreTransaction(t.TxId);
 							RefundBitcoinDeposit(t, e.Message);
-						}
-						catch (RefundBitcoinException e)
-						{
-							// a transaction with multiple inputs was received!
-							RefundBitcoinDeposit(t, e.ToString());
 						}
 					}
 				}
 			}
 
 			UpdateBitcoinBlockHash(latestBlockHash);
+		}
+
+		/// <summary>	Recompute transaction limits and prices. </summary>
+		///
+		/// <remarks>	Paul, 30/01/2015. </remarks>
+		virtual protected void RecomputeTransactionLimitsAndPrices()
+		{
+			Dictionary<string, Dictionary<int, ulong>> accountBalances = m_bitshares.WalletAccountBalance(m_bitsharesAccount);
+			m_bitsharesBalance = m_asset.GetAmountFromLarimers(accountBalances[m_bitsharesAccount][m_asset.id]);
+			m_bitcoinBalance = m_bitcoin.GetBalance();
+
+			m_bitcoinDepositLimit = Numeric.TruncateDecimal(m_bitcoinBalance * kMaxTransactionFactor, 2);
+			m_bitsharesDepositLimit = Numeric.TruncateDecimal(m_bitsharesBalance * kMaxTransactionFactor, 2);
+
+			m_bidPrice = 0.99M;
+			m_askPrice = 1.01M;
+		}
+
+		/// <summary>	Starts this object. </summary>
+		///
+		/// <remarks>	Paul, 25/01/2015. </remarks>
+		public virtual void Start()
+		{
+
 		}
 
 		/// <summary>	Joins the damon thread </summary>
@@ -484,6 +510,8 @@ namespace BtsOnrampDaemon
 		{
 			try
 			{
+				RecomputeTransactionLimitsAndPrices();
+
 				//
 				// handle bitshares->bitcoin
 				//

@@ -8,7 +8,7 @@ using System.Diagnostics;
 using MySql.Data;
 using MySqlDatabase;
 using BitsharesRpc;
-
+using WebDaemonShared;
 
 namespace BtsOnrampDaemon
 {
@@ -16,19 +16,8 @@ namespace BtsOnrampDaemon
 	{
 		public uint last_bitshares_block;
 		public string last_bitcoin_block;
-	}
-
-	public class TransactionsRow : ICoreType
-	{
-		public string bitshares_trx;
-		public string bitcoin_txid;
-
-		public string asset;
-		public decimal amount;
-
-		public DaemonTransactionType type;
-
-		public string notes;
+		public decimal bid_price;
+		public decimal ask_price;
 	}
 
 	public class IgnoreRow : ICoreType
@@ -48,7 +37,7 @@ namespace BtsOnrampDaemon
 
 	public class DaemonMySql : DaemonBase
 	{
-		Database m_database;
+		protected Database m_database;
 
 		public DaemonMySql(RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
 							string bitsharesAccount, string bitsharesAsset,
@@ -141,7 +130,14 @@ namespace BtsOnrampDaemon
 
 		protected override void LogGeneralException(string message)
 		{
-			m_database.Statement("REPLACE INTO general_exceptions (hash,message,date) VALUES(@a,@b,@c);", (uint)message.GetHashCode(), message, DateTime.UtcNow);
+			uint hash = (uint)message.GetHashCode();
+
+			DateTime now = DateTime.UtcNow;
+			int updated = m_database.Statement("UPDATE general_exceptions SET count=count+1,date=@d WHERE hash=@h;", now, hash);
+			if (updated == 0)
+			{
+				m_database.Statement("INSERT INTO general_exceptions (hash,message,date) VALUES(@a,@b,@c);", hash, message, now);
+			}
 		}
 
 		// ------------------------------------------------------------------------------------------------------------

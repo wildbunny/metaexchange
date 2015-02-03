@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 using RestLib;
 using ServiceStack.Text;
@@ -13,7 +14,7 @@ namespace BitsharesRpc
 {
 	public class BitsharesRpcException : Exception
 	{
-		BitsharesError m_error;
+		public BitsharesError m_error;
 
 		public BitsharesRpcException(BitsharesError error)
 		{
@@ -25,7 +26,9 @@ namespace BitsharesRpc
 
     public class BitsharesWallet
     {
-		const int kBitsharesMaxMemoLength = 19;
+		public const int kBitsharesMaxMemoLength = 19;
+		public const int kBitsharesMaxAccountNameLength = 63;
+		public const string kNetworkAccount = "NETWORK";
 
 		string m_rpcUrl;
 		string m_rpcUsername;
@@ -79,6 +82,14 @@ namespace BitsharesRpc
 			return response;
 		}
 
+		/// <summary>	Makes raw batch request synchronise. </summary>
+		///
+		/// <remarks>	Paul, 01/02/2015. </remarks>
+		///
+		/// <typeparam name="T">	Generic type parameter. </typeparam>
+		/// <param name="request">	. </param>
+		///
+		/// <returns>	A List&lt;BitsharesResponse&lt;T&gt;&gt; </returns>
 		public List<BitsharesResponse<T>> MakeRawBatchRequestSync<T>(BitsharesRequest request)
 		{
 			return Rest.JsonApiCallSync<List<BitsharesResponse<T>>>(m_rpcUrl, JsonSerializer.SerializeToString(request),
@@ -99,6 +110,14 @@ namespace BitsharesRpc
 			return response.result;
 		}
 
+		/// <summary>	Makes batch request synchronise. </summary>
+		///
+		/// <remarks>	Paul, 01/02/2015. </remarks>
+		///
+		/// <typeparam name="T">	Generic type parameter. </typeparam>
+		/// <param name="request">	. </param>
+		///
+		/// <returns>	A List&lt;BitsharesResponse&lt;T&gt;&gt; </returns>
 		public List<BitsharesResponse<T>> MakeBatchRequestSync<T>(BitsharesBatchRequest request)
 		{
 			List<BitsharesResponse<T>> responses = MakeRawBatchRequestSync<T>(request);
@@ -129,6 +148,19 @@ namespace BitsharesRpc
 			return ApiPostSync<GetInfoResponse>(BitsharesMethods.get_info);
 		}
 
+		/// <summary>	Query if 'name' is valid account name. </summary>
+		///
+		/// <remarks>	Paul, 01/02/2015. </remarks>
+		///
+		/// <param name="name">	The name. </param>
+		///
+		/// <returns>	true if valid account name, false if not. </returns>
+		public static bool IsValidAccountName(string name)
+		{
+			string regExPattern = @"^([\-\.a-z]+)$";
+			return Regex.IsMatch(name, regExPattern) && name.Length <= kBitsharesMaxAccountNameLength;
+		}
+
 		/// <summary>	Wallet get account. </summary>
 		///
 		/// <remarks>	Paul, 10/12/2014. </remarks>
@@ -138,7 +170,14 @@ namespace BitsharesRpc
 		/// <returns>	A BitsharesAccount. </returns>
 		public BitsharesAccount WalletGetAccount(string accountName)
 		{
-			return ApiPostSync<BitsharesAccount>(BitsharesMethods.wallet_get_account, accountName);
+			if (IsValidAccountName(accountName))
+			{
+				return ApiPostSync<BitsharesAccount>(BitsharesMethods.wallet_get_account, accountName);
+			}
+			else
+			{
+				throw new BitsharesRpcException(new BitsharesError { message = "Invalid account name;"});
+			}
 		}
 
 		/// <summary>	Wallet account transaction history. </summary>
@@ -191,6 +230,22 @@ namespace BitsharesRpc
 			return ApiPostSync<BitsharesBalanceRecord>(BitsharesMethods.get_balance, balanceId);
 		}
 
+		/// <summary>	Gets the batch parameters in this collection. </summary>
+		///
+		/// <remarks>	Paul, 29/01/2015. </remarks>
+		///
+		/// <typeparam name="T">	Generic type parameter. </typeparam>
+		/// <param name="data">	The data. </param>
+		///
+		/// <returns>
+		/// An enumerator that allows foreach to be used to process the batch parameters in this
+		/// collection.
+		/// </returns>
+		IEnumerable<object[]> GetBatchParams<T>(IEnumerable<T> data)
+		{
+			return data.Select<T, object[]>(s => new object[] { s });
+		}
+
 		/// <summary>	Get a batch of transactions </summary>
 		///
 		/// <remarks>	Paul, 10/12/2014. </remarks>
@@ -201,7 +256,7 @@ namespace BitsharesRpc
 		public List<BitsharesTransaction> BlockchainGetTransactionBatch(IEnumerable<string> txids)
 		{
 			// convert into array of parameters
-			IEnumerable<object[]> p = txids.Select<string, object[]>(s=>new object[] {s});
+			IEnumerable<object[]> p = GetBatchParams<string>(txids);
 
 			return MakeRequestSync<List<BitsharesTransaction>>(new BitsharesBatchRequest
 																(
@@ -305,6 +360,73 @@ namespace BitsharesRpc
 			memo = TrucateMemo(memo);
 
 			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue, amount, symbol, toAccount, memo);
+		}
+
+		/// <summary>	Wallet address create. </summary>
+		///
+		/// <remarks>	Paul, 25/01/2015. </remarks>
+		///
+		/// <param name="account">				The account. </param>
+		/// <param name="label">				(Optional) the label. </param>
+		/// <param name="legacyNetworkByte">	(Optional) the legacy network byte. </param>
+		///
+		/// <returns>	A string. </returns>
+		public string WalletAddressCreate(string account, string label="", int legacyNetworkByte=-1)
+		{
+			return ApiPostSync<string>(BitsharesMethods.wallet_address_create, account, label, legacyNetworkByte);
+		}
+
+		/// <summary>	Blockchain get block transactions. </summary>
+		///
+		/// <remarks>	Paul, 28/01/2015. </remarks>
+		///
+		/// <param name="block">	The block. </param>
+		///
+		/// <returns>	A Dictionary&lt;string,BitsharesTransaction&gt;[]. </returns>
+		public Dictionary<string, BitsharesTransaction>[] BlockchainGetBlockTransactions(uint block)
+		{
+			return ApiPostSync<Dictionary<string, BitsharesTransaction>[]>(BitsharesMethods.blockchain_get_block_transactions, block);
+		}
+
+		/// <summary>	Blockchain get block transactions batch. </summary>
+		///
+		/// <remarks>	Paul, 29/01/2015. </remarks>
+		///
+		/// <param name="blocks">	The blocks. </param>
+		///
+		/// <returns>	A List&lt;Dictionary&lt;string,BitsharesTransaction&gt;[]&gt; </returns>
+		public List<Dictionary<string, BitsharesTransaction>[]> BlockchainGetBlockTransactionsBatch(IEnumerable<uint> blocks)
+		{
+			// convert into array of parameters
+			IEnumerable<object[]> p = GetBatchParams<uint>(blocks);
+
+			return	MakeRequestSync<List<Dictionary<string, BitsharesTransaction>[]>>(new BitsharesBatchRequest
+					(
+						BitsharesMethods.blockchain_get_block_transactions,
+						p
+					));
+		}
+
+		/// <summary>	Wallet account balance. </summary>
+		///
+		/// <remarks>	Paul, 30/01/2015. </remarks>
+		///
+		/// <param name="accountName">	name of the account. </param>
+		///
+		/// <returns>	A Dictionary&lt;string,Dictionary&lt;int,ulong&gt;&gt; </returns>
+		public Dictionary<string, Dictionary<int, ulong>> WalletAccountBalance(string accountName)
+		{
+			Dictionary<string, List<ulong[]>>[] mess = ApiPostSync<Dictionary<string, List<ulong[]>>[]>(BitsharesMethods.wallet_account_balance, accountName);
+
+			// try and unmangle the mess we get returned from the RPC call
+			Dictionary<string, Dictionary<int, ulong>> result = new Dictionary<string, Dictionary<int, ulong>>();
+
+			foreach (ulong[] assetBalance in mess[0][accountName])
+			{
+				result[accountName] = new Dictionary<int, ulong>();
+				result[accountName][ (int)assetBalance[0] ] = assetBalance[1];
+			}
+			return result;
 		}
     }
 }

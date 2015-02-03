@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitsharesCoreUnitTests", ".
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestDebugging", "..\UnitTestDebugging\UnitTestDebugging.csproj", "{B6851CFE-3C95-4109-87ED-63F57FC5186A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebDaemonShared", "..\WebDaemonShared\WebDaemonShared.csproj", "{F1F6EE90-CDC5-494B-845F-0203DCE40432}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,12 @@ Global
 		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.mono|Any CPU.Build.0 = mono|Any CPU
 		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B6851CFE-3C95-4109-87ED-63F57FC5186A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1F6EE90-CDC5-494B-845F-0203DCE40432}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1F6EE90-CDC5-494B-845F-0203DCE40432}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1F6EE90-CDC5-494B-845F-0203DCE40432}.mono|Any CPU.ActiveCfg = Release|Any CPU
+		{F1F6EE90-CDC5-494B-845F-0203DCE40432}.mono|Any CPU.Build.0 = Release|Any CPU
+		{F1F6EE90-CDC5-494B-845F-0203DCE40432}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1F6EE90-CDC5-494B-845F-0203DCE40432}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

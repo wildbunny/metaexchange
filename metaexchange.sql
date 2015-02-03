@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 18, 2015 at 08:43 PM
+-- Generation Time: Feb 03, 2015 at 06:37 PM
 -- Server version: 5.1.61
 -- PHP Version: 5.3.3
 
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `exceptions` (
   `date` datetime NOT NULL,
   `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund','none') NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=372 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=379 ;
 
 -- --------------------------------------------------------
 
@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS `general_exceptions` (
   `hash` int(10) unsigned NOT NULL,
   `message` text COLLATE utf8_unicode_ci NOT NULL,
   `date` datetime NOT NULL,
+  `count` int(11) NOT NULL DEFAULT '0',
   UNIQUE KEY `hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -59,7 +60,20 @@ CREATE TABLE IF NOT EXISTS `ignored` (
   `txid` varchar(64) NOT NULL,
   `notes` varchar(255) NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=16 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sender_to_deposit`
+--
+
+CREATE TABLE IF NOT EXISTS `sender_to_deposit` (
+  `sender` varchar(64) NOT NULL,
+  `deposit_address` varchar(36) NOT NULL,
+  UNIQUE KEY `sender` (`sender`),
+  UNIQUE KEY `deposit_address` (`deposit_address`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -71,6 +85,8 @@ CREATE TABLE IF NOT EXISTS `stats` (
   `last_bitshares_block` int(10) unsigned NOT NULL DEFAULT '0',
   `last_bitcoin_block` varchar(64) DEFAULT NULL,
   `uid` int(11) NOT NULL AUTO_INCREMENT,
+  `bid_price` decimal(18,8) NOT NULL,
+  `ask_price` decimal(18,8) NOT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 

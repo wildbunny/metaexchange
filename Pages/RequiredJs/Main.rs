@@ -1,2 +1,1 @@
-﻿/js/bitsharesApi.js
-/js/pages/main.js
+﻿/js/pages/main.js

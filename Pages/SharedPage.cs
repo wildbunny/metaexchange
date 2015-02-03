@@ -60,7 +60,7 @@ namespace MetaExchange.Pages
 		/// <param name="stream"></param>
 		/// <param name="authObj"></param>
 		/// <returns></returns>
-		public override Task Render<T>(RequestContext ctx, StringWriter stream, T authObj)
+		public override Task Render(RequestContext ctx, StringWriter stream, IDummy authObj)
 		{
 			#if !MONO
 			foreach (string name in m_sharedJsFilenames)
@@ -71,6 +71,7 @@ namespace MetaExchange.Pages
 
 			AddResource(new CssResource(Constants.kWebRoot, "/css/site.css", true));
 			AddResource(new CssResource(Constants.kWebRoot, "/css/bootstrap.min.css", true));
+			AddResource(new FavIconResource(Constants.kWebRoot, "/images/favicon.ico"));
 
 			// render head
 			base.Render(ctx, stream, authObj);
@@ -80,11 +81,11 @@ namespace MetaExchange.Pages
 
 			using (new DivContainer(m_stream, HtmlAttributes.@class, "navbar navbar-default navbar-fixed-top"))
 			{
-				using (new DivContainer(m_stream, HtmlAttributes.@class, "container-fluid"))
+				using (new DivContainer(m_stream, HtmlAttributes.@class, "container"))
 				{
 					using (new DivContainer(m_stream, HtmlAttributes.@class, "navbar-header"))
 					{
-						Href(m_stream, "Brand", HtmlAttributes.href, "/", HtmlAttributes.@class, "navbar-brand");
+						Href(m_stream, "Metaexchange", HtmlAttributes.href, "/", HtmlAttributes.@class, "navbar-brand");
 					}
 					using (new DivContainer(m_stream, HtmlAttributes.@class, "navbar-collapse collapse"))
 					{
@@ -93,6 +94,8 @@ namespace MetaExchange.Pages
 						using (var ul = new UL(stream, "nav navbar-nav pull-left"))
 						{
 							WriteLiHref(stream, "Home", GetLiClass(page, ""), "", HtmlAttributes.href, "/");
+							WriteLiHref(stream, "Api", GetLiClass(page, "apiDocs"), "", HtmlAttributes.href, "/apiDocs");
+							WriteLiHref(stream, "Faq", GetLiClass(page, "faq"), "", HtmlAttributes.href, "/faq");
 						}
 					}
 				}
@@ -107,13 +110,17 @@ namespace MetaExchange.Pages
 		public override void Dispose()
 		{
 			// write footer as well
-			using (var mp = new DivContainer(m_stream, "", "container-fluid"))
+			using (var mp = new DivContainer(m_stream, "", "container"))
 			{
 				HR();
 				using (var f = new Footer(m_stream))
 				{
-					f.Out("Copyright 2014 Wildbunny Ltd | ");
-					Href(m_stream, "Terms of use", HtmlAttributes.href, "/terms");
+					f.Out("Copyright 2015 Wildbunny Ltd | ");
+					Href(m_stream, "Support", HtmlAttributes.href, "https://bitsharestalk.org/index.php?topic=12317.0");
+					f.Out(" | ");
+					Href(m_stream, "Github", HtmlAttributes.href, "https://github.com/wildbunny/metaexchange");
+					f.Out(" | Please vote for ");
+					Href(m_stream, "dev-metaexchange.monsterer", HtmlAttributes.href, "bts:dev-metaexchange.monsterer/approve");
 				}
 			}
 

@@ -11,123 +11,277 @@ using WebHost;
 using WebHost.Components;
 using WebHost.WebSystem;
 
+using WebDaemonShared;
+using MetaExchange;
+
 namespace MetaExchange.Pages
 {
 	public class MainPage : SharedPage
 	{
-		public override Task Render<T>(RequestContext ctx, StringWriter stream, T authObj)
+		public override Task Render(RequestContext ctx, StringWriter stream, IDummy authObj)
 		{
+			#if MONO
+			AddResource(new JsResource(Constants.kWebRoot, "/js/mainPageCompiled.js", true));
+			#endif
+
+			AddResource(new MetaResource("bitsharesAccount", authObj.m_bitsharesAccount));
+
 			// render head
 			base.Render(ctx, stream, authObj);
 
-			using (new DivContainer(stream, HtmlAttributes.@class, "container"))
-			{
-				using (new DivContainer(stream, HtmlAttributes.@class, "row",
-												"ng-app", "BitShares"))
-				{
-					/*using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-2",
-													"ng-controller", "GetMarkets"))
-					{
-						using (new DivContainer(stream, HtmlAttributes.@class, "list-group smallFont"))
-						{
-							H5("Markets");
+			SiteStatsRow stats = authObj.m_database.Query<SiteStatsRow>("SELECT * FROM stats;").FirstOrDefault();
 
-							Href(	stream, "<span class=\"pull-left\">{{m.m_base}}/{{m.m_quote}}</span><span class=\"pull-right\">{{m.m_lastPrice}}</span>", 
-									HtmlAttributes.@class, "list-group-item clearfix",
-									"ng-repeat", "m in results",
-									HtmlAttributes.href, "/markets/{{m.m_base}}/{{m.m_quote}}");
+			using (new DivContainer(stream, "ng-app", "myApp", "ng-controller", "StatsController"))
+			{
+				using (new DivContainer(stream, HtmlAttributes.@class, "jumbotron clearfix"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "container"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.@class, "row"))
+						{
+							using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
+							{
+								BaseComponent.SPAN(stream, "Metaexchange<sup>beta</sup>", HtmlAttributes.@class, "noTopMargin h1");
+
+								P("The place to buy and sell bitBTC.");
+
+								using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
+								{
+									SPAN("Service status: ");
+									SPAN("{{status}}", "", "label label-{{label}}");
+								}
+							}
 						}
 					}
-					using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-10"))
-					{
-					
-					}*/
-					/*using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-12"))
-					{
-						using (new Panel(stream, "Please enter your Bitshares account name"))
-						{
-							using (var fm = new FormContainer(stream, HtmlAttributes.method, "post",
-																		HtmlAttributes.ajax, true,
-																		HtmlAttributes.action, "/validateAccount"))
-							{					
-								using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
-								{
-									fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-														HtmlAttributes.name, "account_name",
-														HtmlAttributes.@class, "form-control",
-														HtmlAttributes.placeholder, "Bitshares account name");
+				}
 
-									using (new Span(stream, HtmlAttributes.@class, "input-group-btn"))
+				//
+				// buy and sell section
+				//
+				// 
+				using (new DivContainer(stream, HtmlAttributes.@class, "container"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "row"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
+						{
+							Button("Buy bitBTC<br/><span class='badge'>1.00 BTC</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{1/stats.ask_price | number:3}} bitBTC</span>", HtmlAttributes.@class, "btn btn-success btn-lg btn-block",
+													"data-toggle", "collapse",
+													"aria-expanded", "false",
+													"aria-controls", "buyId",
+													"data-target", "#buyId");
+
+							
+						}
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
+						{
+							Button("Sell bitBTC<br/><span class='badge'>1.00 bitBTC</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{stats.bid_price | number:3}} BTC</span>", HtmlAttributes.@class, "btn btn-danger btn-lg btn-block",
+													"data-toggle", "collapse",
+													"aria-expanded", "false",
+													"aria-controls", "sellId",
+													"data-target", "#sellId");
+						}
+					}
+					using (new DivContainer(stream, HtmlAttributes.@class, "row"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
+						{
+							using (new Panel(stream, "Buy bitBTC", "panel panel-success collapse", false, "buyId"))
+							{
+								P("Once you enter your bitshares account name, we will generate your deposit address and send your bitBTC to you after 1 confirmation.");
+
+								using (var fm = new FormContainer(stream, HtmlAttributes.method, "post",
+																			HtmlAttributes.ajax, true,
+																			HtmlAttributes.handler, "OnSubmitAddressBts",
+																			HtmlAttributes.action, Routes.kSubmitAddress))
+								{
+									using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
 									{
-										Button("<span class='glyphicon glyphicon-info-sign'></span>", HtmlAttributes.@class, "btn btn-info");
+										fm.Label(stream, "Where shall we send your bitBTC?");
+
+
+										using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
+										{
+											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
+																HtmlAttributes.name, WebForms.kAccountName,
+																HtmlAttributes.minlength, 1,
+																HtmlAttributes.maxlength, 63,
+																HtmlAttributes.required, true,
+																HtmlAttributes.@class, "form-control",
+																HtmlAttributes.placeholder, "Bitshares account name");
+
+											using (new Span(stream, HtmlAttributes.@class, "input-group-btn"))
+											{
+												Button("Submit", HtmlAttributes.@class, "btn btn-info");
+											}
+										}
+									}
+
+									Alert("", "alert alert-danger", "bitsharesErrorId", true);
+								}
+
+								using (var fm = new FormContainer(stream))
+								{
+									using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success",
+																	HtmlAttributes.style, "display:none",
+																	HtmlAttributes.id, "unhideBtsId"))
+									{
+										fm.Label(stream, "Your bitcoin deposit address");
+										fm.Input(stream, HtmlAttributes.type, InputTypes.text,
+															HtmlAttributes.id, "bitcoinDespositId",
+															HtmlAttributes.@class, "form-control",
+															HtmlAttributes.@readonly, "readonly",
+															HtmlAttributes.style, "cursor:text;");
+									}
+
+									//SPAN("1.00 BTC -> {{1/stats.ask_price | number:3}} bitBTC", "buyPriceId", "label label-success");
+									SPAN("Maximum {{stats.max_btc | number:2}} BTC per transaction", "maxBtcId", "label label-info");
+								}
+							}
+						}
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
+						{
+							using (new Panel(stream, "Sell bitBTC", "panel panel-danger collapse", false, "sellId"))
+							{
+								P("Once you enter your bitcoin receiving address, we will generate your deposit address and send your bitcoins to you the instant we receive your bitBTC.");
+
+								using (var fm = new FormContainer(stream, HtmlAttributes.method, "post",
+																			HtmlAttributes.ajax, true,
+																			HtmlAttributes.action, Routes.kSubmitAddress,
+																			HtmlAttributes.handler, "OnSubmitAddressBtc"))
+								{
+									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+														HtmlAttributes.name, "memo",
+														HtmlAttributes.value, "true");
+
+									using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
+									{
+										fm.Label(stream, "Where shall we send your bitcoins?");
+										using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
+										{
+											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
+																HtmlAttributes.name, WebForms.kBitcoinAddress,
+																HtmlAttributes.minlength, 25,
+																HtmlAttributes.maxlength, 34,
+																HtmlAttributes.required, true,
+																HtmlAttributes.@class, "form-control",
+																HtmlAttributes.placeholder, "Bitcoin address from your wallet");
+
+											using (new Span(stream, HtmlAttributes.@class, "input-group-btn"))
+											{
+												Button("Submit", HtmlAttributes.@class, "btn btn-info");
+											}
+										}
+									}
+
+									Alert("", "alert alert-danger", "bitcoinErrorId", true);
+								}
+
+								using (var fm = new FormContainer(stream))
+								{
+									using (new DivContainer(stream, HtmlAttributes.style, "display:none",
+																	HtmlAttributes.id, "unhideBtcId"))
+									{
+										using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success"))
+										{
+											fm.Label(stream, "Your bitshares deposit account");
+											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
+																HtmlAttributes.id, "bitsharesDespositAccountId",
+																HtmlAttributes.@class, "form-control",
+																HtmlAttributes.@readonly, "readonly",
+																HtmlAttributes.style, "cursor:text;");
+										}
+
+										using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success"))
+										{
+											fm.Label(stream, "Your bitshares deposit memo");
+											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
+																HtmlAttributes.id, "bitsharesDespositId",
+																HtmlAttributes.@class, "form-control",
+																HtmlAttributes.@readonly, "readonly",
+																HtmlAttributes.style, "cursor:text;");
+										}
+									}
+
+									//SPAN("1.00 bitBTC -> {{stats.bid_price | number:3}} BTC", "sellPriceId", "label label-danger");
+									SPAN("Maximum {{stats.max_bitassets | number:2}} bitBTC per transaction", "maxbitBtcId", "label label-info");
+								}
+							}
+						}
+					}
+				}
+
+				//
+				// bullet points
+				// 
+
+				using (new DivContainer(stream, HtmlAttributes.@class, "container",
+												HtmlAttributes.style, "margin-top:20px"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "row"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+						{
+							H4("<i class=\"glyphicon glyphicon-ok text-info\"></i>  No registration required");
+							P("There is no need to register an account, just tell us where you'd like to receive the coins that you buy or sell.");
+						}
+
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+						{
+							H4("<i class=\"glyphicon glyphicon-flash text-info\"></i>  Fast transactions");
+							P("Only one confirmation is neccessary for buying or selling, which is around 7 minutes for a buy and around 3 seconds for a sell.");
+						}
+
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+						{
+							H4("<i class=\"glyphicon glyphicon-lock text-info\"></i>  Safe");
+							P("We don't hold any of our customer's funds, so there is nothing to get lost or stolen.");
+						}
+					}
+				}
+
+				using (new DivContainer(stream, HtmlAttributes.@class, "bg-primary hidden-xs",
+												HtmlAttributes.style, "margin-top:20px"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "container"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.style, "margin:30px 0px 30px 0px"))
+						{
+							using (new DivContainer(stream, HtmlAttributes.@class, "row"))
+							{
+								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+								{
+									using (new Table(stream, "", 4, 4, "table noMargin", "Transaction"))
+									{
+										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
+										{
+											tr.TD("{{t.from}} -> {{t.to}}");
+										}
+									}
+								}
+
+								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+								{
+									using (new Table(stream, "", 4, 4, "table noMargin", "Amount"))
+									{
+										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
+										{
+											tr.TD("{{t.amount}}");
+										}
+									}
+								}
+
+								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+								{
+									using (new Table(stream, "", 4, 4, "table noMargin", "Date"))
+									{
+										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
+										{
+											tr.TD("{{t.date|date:'MMM d, HH:mm'}}");
+										}
 									}
 								}
 							}
-						}
-					}*/
-				}
-				using (new DivContainer(stream, HtmlAttributes.@class, "row"))
-				{
-					using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
-					{
-						using (new Panel(stream, "Buy bitBTC", "panel panel-warning"))
-						{
-							P("Once you enter your bitshares account name, we will generate your deposit address and send your bitBTC to you after 1 confirmation.");
-
-							using (var fm = new FormContainer(stream, HtmlAttributes.method, "post",
-																		HtmlAttributes.ajax, true,
-																		HtmlAttributes.action, "/validateAccount"))
-							{
-								using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
-								{
-									fm.Label(stream, "Please enter your registered bitshares account name");
-									fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-														HtmlAttributes.name, "account_name",
-														HtmlAttributes.@class, "form-control",
-														HtmlAttributes.placeholder, "Registered Bitshares account name");
-								}
-							}
-
-							using (var fm = new FormContainer(stream))
-							{
-								fm.Label(stream, "Your bitcoin deposit address");
-								fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-													HtmlAttributes.id, "bitcoinDespositId",
-													HtmlAttributes.@class, "form-control",
-													HtmlAttributes.@readonly, "readonly");
-							}
-						}
-					}
-					using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
-					{
-						using (new Panel(stream, "Buy bitcoin", "panel panel-success"))
-						{
-							P("Once you enter your bitcoin receiving address, we will generate your deposit address and send your bitcoins to you the instant we receive your bitBTC.");
-
-							using (var fm = new FormContainer(stream, HtmlAttributes.method, "post",
-																		HtmlAttributes.ajax, true,
-																		HtmlAttributes.action, "/validateAccount"))
-							{
-								using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
-								{
-									fm.Label(stream, "Please enter your bitcoin receiving address");
-									fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-														HtmlAttributes.name, "bitcoin_address",
-														HtmlAttributes.@class, "form-control",
-														HtmlAttributes.placeholder, "Bitcoin address from your wallet");
-								}
-							}
-
-							using (var fm = new FormContainer(stream))
-							{
-								fm.Label(stream, "Your bitshares deposit address");
-								fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-													HtmlAttributes.id, "bitsharesDespositId",
-													HtmlAttributes.@class, "form-control",
-													HtmlAttributes.@readonly, "readonly");
-							}
-
-							
 						}
 					}
 				}
@@ -142,7 +296,7 @@ namespace MetaExchange.Pages
 		/// <returns></returns>
 		protected override string GetPageSpecificJsFilename()
 		{
-			return "pages/requiredjs/main.rs";
+			return "Pages/RequiredJs/Main.rs";
 		}
 	}
 }

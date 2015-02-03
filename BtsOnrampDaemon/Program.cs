@@ -18,7 +18,7 @@ namespace BtsOnrampDaemon
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length == 13)
+			if (args.Length == 14)
 			{
 				string bitsharesUrl = args[0];
 				string bitsharesUser = args[1];
@@ -36,15 +36,18 @@ namespace BtsOnrampDaemon
 				string databaseUser = args[11];
 				string databasePassword = args[12];
 
+				string apiListen = args[13];
+
 				// create a scheduler so we can be sure of thread affinity
 				AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
-				DaemonMySql daemon = new DaemonMySql(new RpcConfig { m_url = bitsharesUrl, m_rpcUser = bitsharesUser, m_rpcPassword = bitsharesPassword },
+				DaemonApi daemon = new DaemonApi(		new RpcConfig { m_url = bitsharesUrl, m_rpcUser = bitsharesUser, m_rpcPassword = bitsharesPassword },
 														new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
 														bitsharesAccount, bitsharesAssetName, bitcoinDepositAddress,
-														database, databaseUser, databasePassword);
+														database, databaseUser, databasePassword,
+														apiListen);
 
-				scheduler.RunWithUpdate(()=>{}, daemon.Update, 1 );
+				scheduler.RunWithUpdate(daemon.Start, daemon.Update, 1 );
 
 				Console.WriteLine("Exiting...");
 			}
@@ -52,7 +55,7 @@ namespace BtsOnrampDaemon
 			{
 				Console.WriteLine("Error, usage: BtsOnRampDamon.exe <bitshares rpc url> <bitshares rpc user> <bitshares rpc password> " +
 									"<bitshares asset name> <bitcoin rpc url> <bitcoin rpc user> <bitcoin rpc password> <use bitcoin testnet> <bitcoin deposit address> " +
-									"<myql database name> <mysql database user> <mysql database password>");
+									"<myql database name> <mysql database user> <mysql database password> <api listen address>");
 			}
 		}
 

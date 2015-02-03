@@ -41,6 +41,13 @@ namespace RestLib
 		public const string kContentTypeForm = "application/x-www-form-urlencoded";
 		public const string kContentTypeJson = "application/json";
 		public const string kContentTypePlain = "text/plain";
+
+		static int m_gTimeoutSeconds = 30;
+
+		static public void SetTimeoutSeconds(int seconds)
+		{
+			m_gTimeoutSeconds = seconds;
+		}
 		
 		static public Task<string> ExecutePostAsync(string url, string query, string contentType = kContentTypeForm)
 		{
@@ -61,7 +68,7 @@ namespace RestLib
 		static public string ExecutePostSync(string url, string query, string contentType = kContentTypeForm, 
 											string username=null, string password=null)
 		{
-			WebClientTimeout client = new WebClientTimeout(30000);
+			WebClientTimeout client = new WebClientTimeout(m_gTimeoutSeconds*1000);
 			client.Encoding = System.Text.Encoding.UTF8;
 			if (username != null)
 			{

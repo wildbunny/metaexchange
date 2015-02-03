@@ -364,7 +364,7 @@ namespace BitsharesRpc
 	/// <remarks>	Paul, 01/12/2014. </remarks>
 	public class BitsharesOpCondition
 	{
-		public ulong asset_id;
+		public int asset_id;
 		public ulong slate_id;
 		public BitsharesWithdrawCondition type;
 		public BitsharesMemoOwner data;
@@ -475,7 +475,7 @@ namespace BitsharesRpc
 	/// <remarks>	Paul, 10/12/2014. </remarks>
 	public class BitsharesAccount
 	{
-		public uint id;
+		public int id;
 		public string name;
 		public string public_data;
 		public string owner_key;

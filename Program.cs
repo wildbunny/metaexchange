@@ -21,14 +21,15 @@ namespace MetaExchange
 	public class Constants
 	{
 		public const string kWebRoot = ".";
-		public const string kSharedJsListName = "pages/requiredjs/shared.rs";
+		public const string kSharedJsListName = "Pages/RequiredJs/Shared.rs";
+		public const double kUpdateTimeoutSeconds = 5;
 	}
 	
 	class Program
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length == 12)
+			if (args.Length >= 13 && args.Length < 15)
 			{
 				string httpUrl = args[0];
 
@@ -46,6 +47,13 @@ namespace MetaExchange
 				string databaseUser = args[10];
 				string databasePassword = args[11];
 
+				string apiBaseUrl = args[12];
+				string ipLock = null;
+				if (args.Length == 14)
+				{
+					ipLock = args[13];
+				}
+
 				using (var server = new MetaServer(httpUrl, Constants.kWebRoot, new RpcConfig
 																				{
 																					m_rpcPassword = bitsharesPassword,
@@ -59,13 +67,21 @@ namespace MetaExchange
 																					m_rpcUser = bitcoinUser,
 																					m_url = bitcoinUrl,
 																					m_useTestnet = bitcoinUseTestNet
-																				}))
+																				},
+																				apiBaseUrl,
+																				database, databaseUser, databasePassword,
+																				bitsharesAccount))
 				{
 					AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
 					server.ExceptionEvent += OnServerException;
 
-					scheduler.Run(server.Start);
+					if (ipLock != null)
+					{
+						server.SetIpLock(ipLock);
+					}
+
+					scheduler.RunWithUpdate(server.Start, server.Update, Constants.kUpdateTimeoutSeconds);
 
 					Console.WriteLine("Exiting...");
 				}	
@@ -79,12 +95,14 @@ namespace MetaExchange
 
 		static void OnServerException(object sender, ExceptionWithCtx e)
 		{
-			throw e.m_e;
+			Console.WriteLine(e.m_e.ToString());
+			//throw e.m_e;
 		}
 
 		static void OnException(Exception e)
 		{
-			throw e;
+			Console.WriteLine(e.ToString());
+			//throw e;
 		}
 	}
 }

@@ -31,6 +31,16 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'mono|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\mono\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;MONO</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="ApiHost, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -42,6 +52,12 @@
     <Reference Include="Monsterer, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>libs\Monsterer.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data">
+      <HintPath>libs\MySql.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="MySqlDatabase">
+      <HintPath>libs\MySqlDatabase.dll</HintPath>
     </Reference>
     <Reference Include="RedisCache, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -65,7 +81,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MetaServer.cs" />
+    <Compile Include="Pages\ApiPage.cs" />
     <Compile Include="Pages\BootstrapBase.cs" />
+    <Compile Include="Pages\Faq.cs" />
     <Compile Include="Pages\MainPage.cs" />
     <Compile Include="Pages\SharedPage.cs" />
     <Compile Include="Program.cs" />
@@ -73,6 +91,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Pages\RequiredJs\Api.rs" />
+    <None Include="Pages\RequiredJs\Faq.rs" />
     <None Include="Pages\RequiredJs\Main.rs" />
     <None Include="Pages\RequiredJs\Markets.rs" />
     <None Include="Pages\RequiredJs\Shared.rs" />
@@ -86,6 +106,8 @@
     <Content Include="js\global.js" />
     <Content Include="js\jquery-1.10.2.min.js" />
     <Content Include="js\jquery.jsonrpc.js" />
+    <Content Include="js\Pages\api.js" />
+    <Content Include="js\Pages\faq.js" />
     <Content Include="js\Pages\main.js" />
     <Content Include="js\Pages\markets.js" />
     <Content Include="js\metaApi.js" />
@@ -95,8 +117,28 @@
       <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
       <Name>BitsharesRpc</Name>
     </ProjectReference>
+    <ProjectReference Include="RestLib\RestLib.csproj">
+      <Project>{c2755a02-d80a-4fb2-8210-45c181dd6785}</Project>
+      <Name>RestLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="WebDaemonShared\WebDaemonShared.csproj">
+      <Project>{f1f6ee90-cdc5-494b-845f-0203dce40432}</Project>
+      <Name>WebDaemonShared</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup Condition="'$(Configuration)' == 'mono'">
+    <PostBuildEvent>cd $(TargetDir) | pdb2mdb $(TargetName).exe
+
+cd $(ProjectDir)
+for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\main.rs') do @set gameFiles=%25%25a
+for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\api.rs') do @set apiFiles=%25%25a
+for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\faq.rs') do @set faqFiles=%25%25a
+java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25gameFiles%25 --js_output_file js\mainPageCompiled.js --warning_level QUIET --summary_detail_level 3 
+java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25apiFiles%25 --js_output_file js\apiPageCompiled.js --warning_level QUIET --summary_detail_level 3 
+java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25faqFiles%25 --js_output_file js\faqPageCompiled.js --warning_level QUIET --summary_detail_level 3 
+</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

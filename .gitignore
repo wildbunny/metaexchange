@@ -33,3 +33,15 @@
 /RestLib/obj/mono
 /UnitTestDebugging/bin/mono
 /UnitTestDebugging/obj/mono
+/BitsharesRpc/obj/Release
+/RestLib/obj/Release
+/WebDaemonShared/bin/Debug
+/bin/mono
+/bin/Release
+/obj/Release
+/obj/mono
+/WebDaemonShared/obj/Debug
+/WebDaemonShared/bin/Release
+/WebDaemonShared/obj/Release
+/WebDaemonShared/bin/mono
+/WebDaemonShared/obj/mono

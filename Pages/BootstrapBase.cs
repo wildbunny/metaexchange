@@ -10,7 +10,7 @@ using WebHost.Components;
 
 namespace MetaExchange.Pages
 {
-	public class BootstrapBase : BasePage
+	public class BootstrapBase : BasePage<IDummy>
 	{
 		/// <summary>
 		/// 

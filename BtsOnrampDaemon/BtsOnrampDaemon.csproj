@@ -42,6 +42,9 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ApiHost">
+      <HintPath>..\libs\ApiHost.dll</HintPath>
+    </Reference>
     <Reference Include="BitcoinRpcSharp">
       <HintPath>..\libs\BitcoinRpcSharp.dll</HintPath>
     </Reference>
@@ -71,9 +74,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DaemonApi.cs" />
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />
     <Compile Include="Exceptions.cs" />
+    <Compile Include="GlostenMilgromSimple.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -88,6 +93,10 @@
     <ProjectReference Include="..\BitsharesRpc\BitsharesRpc.csproj">
       <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
       <Name>BitsharesRpc</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\WebDaemonShared\WebDaemonShared.csproj">
+      <Project>{f1f6ee90-cdc5-494b-845f-0203dce40432}</Project>
+      <Name>WebDaemonShared</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
