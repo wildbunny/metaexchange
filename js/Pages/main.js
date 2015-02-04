@@ -67,6 +67,12 @@ countryApp.controller('StatsController', controlFunc);
 function OnLoad()
 {
 	$(document).on('click', 'input[type=text]', function () { this.select(); });
+
+	$('.unhideBtcId').hide();
+	$('.unhideBtsId').hide();
+
+	$('#gtxAmountId').bind("input",CreateLink);
+	$('#gtxAccountId').bind("input",CreateLink);
 }
 
 function OnSubmitAddressBts(data)
@@ -75,13 +81,13 @@ function OnSubmitAddressBts(data)
 	{
 		$('#bitsharesErrorId').show();
 		$('#bitsharesErrorId').text(data.m_errorMsg);
-		$('#unhideBtsId').hide();
+		$('.unhideBtsId').hide();
 	}
 	else
 	{
 		$('#bitsharesErrorId').hide();
 		$('#bitcoinDespositId').val(data.deposit_address);
-		$('#unhideBtsId').show();
+		$('.unhideBtsId').show();
 	}
 }
 
@@ -91,14 +97,32 @@ function OnSubmitAddressBtc(data)
 	{
 		$('#bitcoinErrorId').show();
 		$('#bitcoinErrorId').text(data.m_errorMsg);
-		$('#unhideBtcId').hide();
+		$('.unhideBtcId').hide();
 	}
 	else
 	{
 		$('#bitcoinErrorId').hide();
 		$('#bitsharesDespositId').val(data.deposit_address);
 		$('#bitsharesDespositAccountId').val($('meta[name=bitsharesAccount]').attr("content"));
-		$('#unhideBtcId').show();
+		$('.unhideBtcId').show();
 		$('#bitsharesDespositId').popover({ html: true, trigger: "hover", content: "Make sure to include this memo in the transaction otherwise your deposit wont credit.", placement: "auto" });
 	}
+}
+
+function GenerateTransactionModal()
+{
+	$('#bitsharesModalId').modal();
+}
+
+function CreateLink()
+{
+	var fromAccount = $('#gtxAccountId').val();
+	var amount = $('#gtxAmountId').val();
+	var memo = $('#bitsharesDespositId').val();
+	var toAccount = $('#bitsharesDespositAccountId').val();
+
+	var url = "bts:" + fromAccount+"/transfer/amount/"+amount+"/memo/"+memo+"/"+toAccount+"/asset/BTC";
+
+	$('#bitsharesLinkId').attr("href", url);
+	$('#bitsharesLinkId').text(url);
 }

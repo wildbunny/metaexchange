@@ -72,6 +72,7 @@ namespace MetaExchange.Pages
 			AddResource(new CssResource(Constants.kWebRoot, "/css/site.css", true));
 			AddResource(new CssResource(Constants.kWebRoot, "/css/bootstrap.min.css", true));
 			AddResource(new FavIconResource(Constants.kWebRoot, "/images/favicon.ico"));
+			AddResource(new TitleResource("Metaexchange"));
 
 			// render head
 			base.Render(ctx, stream, authObj);

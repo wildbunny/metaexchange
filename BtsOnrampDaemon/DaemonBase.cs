@@ -488,8 +488,8 @@ namespace BtsOnrampDaemon
 			m_bitsharesBalance = m_asset.GetAmountFromLarimers(accountBalances[m_bitsharesAccount][m_asset.id]);
 			m_bitcoinBalance = m_bitcoin.GetBalance();
 
-			m_bitcoinDepositLimit = Numeric.TruncateDecimal(m_bitcoinBalance * kMaxTransactionFactor, 2);
-			m_bitsharesDepositLimit = Numeric.TruncateDecimal(m_bitsharesBalance * kMaxTransactionFactor, 2);
+			m_bitcoinDepositLimit = Numeric.TruncateDecimal(m_bitsharesBalance * kMaxTransactionFactor, 2);
+			m_bitsharesDepositLimit = Numeric.TruncateDecimal(m_bitcoinBalance * kMaxTransactionFactor, 2);
 
 			m_bidPrice = 0.99M;
 			m_askPrice = 1.01M;

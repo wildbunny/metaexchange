@@ -122,9 +122,7 @@ namespace MetaExchange.Pages
 
 								using (var fm = new FormContainer(stream))
 								{
-									using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success",
-																	HtmlAttributes.style, "display:none",
-																	HtmlAttributes.id, "unhideBtsId"))
+									using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success unhideBtsId"))
 									{
 										fm.Label(stream, "Your bitcoin deposit address");
 										fm.Input(stream, HtmlAttributes.type, InputTypes.text,
@@ -134,7 +132,6 @@ namespace MetaExchange.Pages
 															HtmlAttributes.style, "cursor:text;");
 									}
 
-									//SPAN("1.00 BTC -> {{1/stats.ask_price | number:3}} bitBTC", "buyPriceId", "label label-success");
 									SPAN("Maximum {{stats.max_btc | number:2}} BTC per transaction", "maxBtcId", "label label-info");
 								}
 							}
@@ -179,8 +176,7 @@ namespace MetaExchange.Pages
 
 								using (var fm = new FormContainer(stream))
 								{
-									using (new DivContainer(stream, HtmlAttributes.style, "display:none",
-																	HtmlAttributes.id, "unhideBtcId"))
+									using (new DivContainer(stream, HtmlAttributes.@class, "unhideBtcId"))
 									{
 										using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success"))
 										{
@@ -203,8 +199,9 @@ namespace MetaExchange.Pages
 										}
 									}
 
-									//SPAN("1.00 bitBTC -> {{stats.bid_price | number:3}} BTC", "sellPriceId", "label label-danger");
-									SPAN("Maximum {{stats.max_bitassets | number:2}} bitBTC per transaction", "maxbitBtcId", "label label-info");
+									Button("Click to generate transaction", HtmlAttributes.@class, "btn btn-warning btn-xs pull-right unhideBtcId",
+																			HtmlAttributes.onclick, "GenerateTransactionModal()");
+									SPAN("Maximum {{stats.max_bitassets | number:2}} bitBTC per transaction", "maxbitBtcId", "label label-info pull-left");
 								}
 							}
 						}
@@ -285,6 +282,43 @@ namespace MetaExchange.Pages
 						}
 					}
 				}
+
+				Modal("Generate Bitshares transaction", "bitsharesModalId", () =>
+				{
+					using (var fm = new FormContainer(stream))
+					{
+						using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
+						{
+							fm.Label(stream, "Sending amount");
+
+							using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
+							{
+								fm.Input(stream, HtmlAttributes.type, InputTypes.number,
+												HtmlAttributes.name, "amount",
+												HtmlAttributes.@class, "form-control",
+												HtmlAttributes.required, true,
+												HtmlAttributes.id, "gtxAmountId",
+												HtmlAttributes.placeholder, "bitAsset quantity");
+
+								SPAN("BTC", "", "input-group-addon");
+							}
+						}
+
+						using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
+						{
+							fm.Label(stream, "Account name to send from");
+
+							fm.Input(stream, HtmlAttributes.type, InputTypes.text,
+											HtmlAttributes.name, "account",
+											HtmlAttributes.@class, "form-control",
+											HtmlAttributes.required, true,
+											HtmlAttributes.id, "gtxAccountId",
+											HtmlAttributes.placeholder, "Sending acount");
+						}
+
+						Href(stream, "", HtmlAttributes.id, "bitsharesLinkId");
+					}
+				});
 			}
 
 			return null;
