@@ -21,17 +21,22 @@ namespace BtsOnrampDaemon
 	public class ApiError
 	{
 		public string m_errorMsg;
+
+		public ApiError(string msg)
+		{
+			m_errorMsg = msg;
+		}
 	}
 
 	public class SenderToDepositRow : ICoreType
 	{
+		public string receiving_address;
 		public string deposit_address;
-		public string sender;
 	}
 
 	public class DaemonApi : DaemonMySql
 	{
-		const int kNumBitsharesConfirmations = 2;
+		//const int kNumBitsharesConfirmations = 2;
 
 		ApiServer<IDummy> m_server;
 		//GlostenMilgromSimple m_glosten;
@@ -46,10 +51,9 @@ namespace BtsOnrampDaemon
 		{
 			m_server = new ApiServer<IDummy>(new string[] { listenAddress });
 			m_server.ExceptionEvent += OnApiException;
-
-
+			
 			m_server.HandlePostRoute(Routes.kSubmitAddress, OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandleGetRoute(Routes.kGetStats, OnGetStats, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandlePostRoute(Routes.kGetStats, OnGetStats, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 		}
 
 		/// <summary>	Starts this object. </summary>
@@ -124,7 +128,7 @@ namespace BtsOnrampDaemon
 			SenderToDepositRow senderToDeposit = GetSenderDepositFromDeposit(l.memo);
 			if (senderToDeposit != null)
 			{
-				return senderToDeposit.sender;
+				return senderToDeposit.receiving_address;
 			}
 			else
 			{
@@ -145,7 +149,7 @@ namespace BtsOnrampDaemon
 			SenderToDepositRow senderToDeposit = GetSenderDepositFromDeposit(t.Address);
 			if (senderToDeposit != null)
 			{
-				return new AddressOrAccountName { m_text = senderToDeposit.sender, m_isAddress = false };
+				return new AddressOrAccountName { m_text = senderToDeposit.receiving_address, m_isAddress = false };
 			}
 			else
 			{
@@ -260,16 +264,21 @@ namespace BtsOnrampDaemon
 
 		/// <summary>	Inserts a sender to deposit. </summary>
 		///
-		/// <remarks>	Paul, 25/01/2015. </remarks>
+		/// <remarks>	Paul, 04/02/2015. </remarks>
 		///
-		/// <param name="sender"> 	The sender. </param>
-		/// <param name="deposit">	The deposit. </param>
+		/// <param name="receivingAddress">	The receiving address. </param>
+		/// <param name="depositAddress">  	The deposit address. </param>
+		/// <param name="memo">			   	(Optional) the memo. </param>
 		///
 		/// <returns>	A SenderToDepositRow. </returns>
-		SenderToDepositRow InsertSenderToDeposit(string sender, string deposit)
+		SenderToDepositRow InsertSenderToDeposit(string receivingAddress, string depositAddress)
 		{
-			m_database.Statement("INSERT INTO sender_to_deposit (deposit_address, sender) VALUES(@a,@b);", deposit, sender);
-			return new SenderToDepositRow { deposit_address = deposit, sender = sender };
+			m_database.Statement("INSERT INTO sender_to_deposit (receiving_address, deposit_address) VALUES(@a,@b);", receivingAddress, depositAddress);
+			return	new SenderToDepositRow 
+					{ 
+						deposit_address = depositAddress, 
+						receiving_address = receivingAddress
+					};
 		}
 
 		/// <summary>	Gets sender deposit from deposit. </summary>
@@ -311,17 +320,19 @@ namespace BtsOnrampDaemon
 		/// <returns>	A Task. </returns>
 		Task OnSubmitAddress(RequestContext ctx, IDummy dummy)
 		{
-			string accountName = RestHelpers.GetPostArg<string>(ctx, WebForms.kAccountName);
-			string bitcoinAddress = RestHelpers.GetPostArg<string>(ctx, WebForms.kBitcoinAddress);
-			bool isMemo = RestHelpers.GetPostArg<bool>(ctx, WebForms.kMemo);
+			CurrencyTypes fromCurrency = RestHelpers.GetPostArg<CurrencyTypes, ApiExceptionMissingParameter>(ctx, WebForms.kFromCurrency);
+			CurrencyTypes toCurrency = RestHelpers.GetPostArg<CurrencyTypes, ApiExceptionMissingParameter>(ctx, WebForms.kToCurrency);
+			string receivingAddress = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kReceivingAddress);
 
-			SenderToDepositRow senderToDeposit;
+			SubmitAddressResponse response;
 
-			if (accountName != null)
+			if (fromCurrency == CurrencyTypes.BTC && toCurrency == CurrencyTypes.bitBTC)
 			{
+				string accountName = receivingAddress;
+
 				// try and retrieve a previous entry
-				senderToDeposit = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE sender=@s;", accountName).FirstOrDefault();
-				if (senderToDeposit == null)
+				SenderToDepositRow senderToDeposit = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@s;", accountName).FirstOrDefault();
+				if (senderToDeposit == null || !BitsharesWallet.IsValidAccountName(accountName))
 				{
 					// no dice, create a new entry
 
@@ -339,11 +350,15 @@ namespace BtsOnrampDaemon
 						throw new ApiExceptionMessage(accountName + " is not an existing account! Are you sure it is registered?");
 					}
 				}
+
+				response = new SubmitAddressResponse { deposit_address = senderToDeposit.deposit_address };
 			}
-			else if (bitcoinAddress != null)
+			else if (fromCurrency == CurrencyTypes.bitBTC && toCurrency == CurrencyTypes.BTC)
 			{
+				string bitcoinAddress = receivingAddress;
+
 				// try and retrieve a previous entry
-				senderToDeposit = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE sender=@s;", bitcoinAddress).FirstOrDefault();
+				SenderToDepositRow senderToDeposit = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@s;", bitcoinAddress).FirstOrDefault();
 				if (senderToDeposit == null)
 				{
 					// validate bitcoin address
@@ -353,29 +368,20 @@ namespace BtsOnrampDaemon
 						throw new ApiExceptionMessage(bitcoinAddress + " is not a valid bitcoin address!");
 					}
 
-					if (isMemo)
-					{
-						// generate a memo field to use instead
-						string start = "meta-";
-
-						string memo = start + bitcoinAddress.Substring(0, BitsharesWallet.kBitsharesMaxMemoLength - start.Length);
-
-						senderToDeposit = InsertSenderToDeposit(bitcoinAddress, memo);
-					}
-					else
-					{
-						// now generate a new bitshares address and tie it to this account
-						string bitsharesAddress = m_bitshares.WalletAddressCreate(m_bitsharesAccount, bitcoinAddress);
-						senderToDeposit = InsertSenderToDeposit(bitcoinAddress, bitsharesAddress);
-					}
+					// generate a memo field to use instead
+					string start = "meta-";
+					string memo = start + bitcoinAddress.Substring(0, BitsharesWallet.kBitsharesMaxMemoLength - start.Length);
+					senderToDeposit = InsertSenderToDeposit(bitcoinAddress, memo);
 				}
+
+				response = new SubmitAddressResponse { deposit_address = m_bitsharesAccount, memo = senderToDeposit.deposit_address };
 			}
 			else
 			{
-				throw new ApiExceptionMissingParameter();
+				throw new ApiExceptionUnsupportedTrade(fromCurrency, toCurrency);
 			}
 
-			ctx.Respond<SenderToDepositRow>(senderToDeposit);
+			ctx.Respond<SubmitAddressResponse>(response);
 
 			return null;
 		}
@@ -390,7 +396,9 @@ namespace BtsOnrampDaemon
 		/// <returns>	A Task. </returns>
 		Task OnGetStats(RequestContext ctx, IDummy dummy)
 		{
-			List<TransactionsRow> lastTransactions = m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE type=@a OR type=@b ORDER BY date DESC LIMIT 6;", DaemonTransactionType.bitcoinDeposit, DaemonTransactionType.bitsharesDeposit);
+			uint sinceTid = RestHelpers.GetPostArg<uint, ApiExceptionMissingParameter>(ctx, WebForms.kSince);
+
+			List<TransactionsRow> lastTransactions = m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE uid>@uid ORDER BY uid;", sinceTid);
 			SiteStatsRow stats =	new SiteStatsRow
 									{
 										bid_price = m_bidPrice,

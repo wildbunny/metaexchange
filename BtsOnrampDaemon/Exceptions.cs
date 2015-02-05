@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using BitcoinRpcSharp.Responses;
 using BitsharesRpc;
+using WebDaemonShared;
 
 namespace BtsOnrampDaemon
 {
@@ -61,16 +62,21 @@ namespace BtsOnrampDaemon
 
 	public class ApiExceptionGeneral : ApiException
 	{
-		public ApiExceptionGeneral() : base(new ApiError { m_errorMsg = "Ooops, a general API exception occured!" }) { }
+		public ApiExceptionGeneral() : base(new ApiError("Ooops, a general API exception occured!")) { }
 	}
 
 	public class ApiExceptionMissingParameter : ApiException
 	{
-		public ApiExceptionMissingParameter() : base(new ApiError{m_errorMsg ="Missing parameter"}){}
+		public ApiExceptionMissingParameter() : base(new ApiError("Missing parameter")){}
+	}
+
+	public class ApiExceptionUnsupportedTrade : ApiException
+	{
+		public ApiExceptionUnsupportedTrade(CurrencyTypes from, CurrencyTypes to) : base(new ApiError( from + "->" + to + " is an unsupported trade!")) { }
 	}
 
 	public class ApiExceptionMessage : ApiException
 	{
-		public ApiExceptionMessage(string message) : base(new ApiError { m_errorMsg = message }) { }
+		public ApiExceptionMessage(string message) : base(new ApiError(message)) { }
 	}
 }

@@ -102,10 +102,10 @@ function OnSubmitAddressBtc(data)
 	else
 	{
 		$('#bitcoinErrorId').hide();
-		$('#bitsharesDespositId').val(data.deposit_address);
-		$('#bitsharesDespositAccountId').val($('meta[name=bitsharesAccount]').attr("content"));
+		$('#bitsharesMemoId').val(data.memo);
+		$('#bitsharesDespositAccountId').val(data.deposit_address);
 		$('.unhideBtcId').show();
-		$('#bitsharesDespositId').popover({ html: true, trigger: "hover", content: "Make sure to include this memo in the transaction otherwise your deposit wont credit.", placement: "auto" });
+		$('#bitsharesMemoId').popover({ html: true, trigger: "hover", content: "Make sure to include this memo in the transaction otherwise your deposit wont credit.", placement: "auto" });
 	}
 }
 
@@ -118,7 +118,7 @@ function CreateLink()
 {
 	var fromAccount = $('#gtxAccountId').val();
 	var amount = $('#gtxAmountId').val();
-	var memo = $('#bitsharesDespositId').val();
+	var memo = $('#bitsharesMemoId').val();
 	var toAccount = $('#bitsharesDespositAccountId').val();
 
 	var url = "bts:" + fromAccount+"/transfer/amount/"+amount+"/memo/"+memo+"/"+toAccount+"/asset/BTC";

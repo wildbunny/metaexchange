@@ -10,5 +10,6 @@ namespace WebDaemonShared
     {
 		public const string kSubmitAddress = "/submitAddress";
 		public const string kGetStats = "/getStats";
+		public const string kStatus = "/status";
     }
 }

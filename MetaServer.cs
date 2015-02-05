@@ -162,24 +162,44 @@ namespace MetaExchange
 			// call out to the daemon to get stats on transaction sizes and pricing info
 			try
 			{
-				StatsPacket statsPacket = await Rest.JsonApiGetAsync<StatsPacket>(ApiUrl(Routes.kGetStats));
+				uint lastTid = m_authenticate.m_Database.QueryScalar<uint>("SELECT last_tid FROM stats;");
+
+				StatsPacket statsPacket = await Rest.JsonApiCallAsync<StatsPacket>(ApiUrl(Routes.kGetStats), "since="+lastTid);
 
 				SiteStatsRow stats = statsPacket.m_stats;
 
-				// stuff it in our database
-				m_authenticate.m_Database.Statement("UPDATE stats SET bid_price=@b, ask_price=@s, max_btc=@maxbtc, max_bitassets=@maxBit, last_update=@last;",
-														stats.bid_price,
-														stats.ask_price,
-														stats.max_btc,
-														stats.max_bitassets,
-														DateTime.UtcNow);
-
-				m_authenticate.m_Database.Statement("TRUNCATE transactions;");
-
-				foreach (TransactionsRow t in statsPacket.m_lastTransactions)
+				if (statsPacket.m_lastTransactions.Count > 0)
 				{
-					m_authenticate.m_Database.Statement("INSERT INTO transactions (received_txid, sent_txid, amount,type,asset,date) VALUES(@a,@b,@c,@d,@e,@f);",
-															t.received_txid, t.sent_txid, t.amount, t.type, t.asset, t.date);
+					// update this if we have new data
+					lastTid = statsPacket.m_lastTransactions.Last().uid;
+				}
+
+				try
+				{
+					m_authenticate.m_Database.BeginTransaction();
+
+						// stuff it in our database
+						m_authenticate.m_Database.Statement("UPDATE stats SET bid_price=@b, ask_price=@s, max_btc=@maxbtc, max_bitassets=@maxBit, last_update=@last, last_tid=@tid;",
+																stats.bid_price,
+																stats.ask_price,
+																stats.max_btc,
+																stats.max_bitassets,
+																DateTime.UtcNow,
+																lastTid);
+
+
+						foreach (TransactionsRow t in statsPacket.m_lastTransactions)
+						{
+							m_authenticate.m_Database.Statement("INSERT INTO transactions (received_txid, sent_txid, amount,type,asset,date,uid) VALUES(@a,@b,@c,@d,@e,@f,@g);",
+																	t.received_txid, t.sent_txid, t.amount, t.type, t.asset, t.date, t.uid);
+						}
+
+					m_authenticate.m_Database.EndTransaction();
+				}
+				catch (Exception)
+				{
+					m_authenticate.m_Database.RollbackTransaction();
+					throw;
 				}
 			}
 			catch (WebException) { }
@@ -224,7 +244,7 @@ namespace MetaExchange
 		{
 			SiteStatsRow stats = dummy.m_database.Query<SiteStatsRow>("SELECT * FROM stats;").FirstOrDefault();
 
-			List<TransactionsRow> lastTransactions = dummy.m_database.Query<TransactionsRow>("SELECT * FROM transactions ORDER BY date DESC;");
+			List<TransactionsRow> lastTransactions = dummy.m_database.Query<TransactionsRow>("SELECT * FROM transactions ORDER BY date DEsC LIMIT 6;");
 
 			StatsPacket packet = new StatsPacket { m_stats = stats, m_lastTransactions = lastTransactions };
 

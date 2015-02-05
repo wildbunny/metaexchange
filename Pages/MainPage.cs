@@ -102,8 +102,16 @@ namespace MetaExchange.Pages
 
 										using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
 										{
+											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+																HtmlAttributes.name, WebForms.kFromCurrency,
+																HtmlAttributes.value, CurrencyTypes.BTC);
+
+											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+																HtmlAttributes.name, WebForms.kToCurrency,
+																HtmlAttributes.value, CurrencyTypes.bitBTC);
+
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-																HtmlAttributes.name, WebForms.kAccountName,
+																HtmlAttributes.name, WebForms.kReceivingAddress,
 																HtmlAttributes.minlength, 1,
 																HtmlAttributes.maxlength, 63,
 																HtmlAttributes.required, true,
@@ -156,8 +164,16 @@ namespace MetaExchange.Pages
 										fm.Label(stream, "Where shall we send your bitcoins?");
 										using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
 										{
+											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+																HtmlAttributes.name, WebForms.kFromCurrency,
+																HtmlAttributes.value, CurrencyTypes.bitBTC);
+
+											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+																HtmlAttributes.name, WebForms.kToCurrency,
+																HtmlAttributes.value, CurrencyTypes.BTC);
+
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-																HtmlAttributes.name, WebForms.kBitcoinAddress,
+																HtmlAttributes.name, WebForms.kReceivingAddress,
 																HtmlAttributes.minlength, 25,
 																HtmlAttributes.maxlength, 34,
 																HtmlAttributes.required, true,
@@ -192,7 +208,7 @@ namespace MetaExchange.Pages
 										{
 											fm.Label(stream, "Your bitshares deposit memo");
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
-																HtmlAttributes.id, "bitsharesDespositId",
+																HtmlAttributes.id, "bitsharesMemoId",
 																HtmlAttributes.@class, "form-control",
 																HtmlAttributes.@readonly, "readonly",
 																HtmlAttributes.style, "cursor:text;");

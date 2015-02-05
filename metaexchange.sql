@@ -1,14 +1,13 @@
 -- phpMyAdmin SQL Dump
--- version 3.4.9
+-- version 3.2.4
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Feb 03, 2015 at 06:37 PM
--- Server version: 5.1.61
--- PHP Version: 5.3.3
+-- Generation Time: Feb 05, 2015 at 02:10 PM
+-- Server version: 5.1.41
+-- PHP Version: 5.3.1
 
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -23,6 +22,17 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `assets`
+--
+
+CREATE TABLE IF NOT EXISTS `assets` (
+  `symbol` varchar(10) NOT NULL,
+  PRIMARY KEY (`symbol`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `exceptions`
 --
 
@@ -33,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `exceptions` (
   `date` datetime NOT NULL,
   `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund','none') NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=379 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=371 ;
 
 -- --------------------------------------------------------
 
@@ -58,9 +68,24 @@ CREATE TABLE IF NOT EXISTS `general_exceptions` (
 CREATE TABLE IF NOT EXISTS `ignored` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `txid` varchar(64) NOT NULL,
-  `notes` varchar(255) NOT NULL,
+  `notes` text,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=16 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=14 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `markets`
+--
+
+CREATE TABLE IF NOT EXISTS `markets` (
+  `symbol_pair` varchar(20) NOT NULL,
+  `ask` decimal(18,8) NOT NULL,
+  `bid` decimal(18,8) NOT NULL,
+  `ask_max` decimal(18,8) NOT NULL,
+  `bid_max` decimal(18,8) NOT NULL,
+  PRIMARY KEY (`symbol_pair`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -69,9 +94,9 @@ CREATE TABLE IF NOT EXISTS `ignored` (
 --
 
 CREATE TABLE IF NOT EXISTS `sender_to_deposit` (
-  `sender` varchar(64) NOT NULL,
+  `receiving_address` varchar(64) NOT NULL,
   `deposit_address` varchar(36) NOT NULL,
-  UNIQUE KEY `sender` (`sender`),
+  UNIQUE KEY `sender` (`receiving_address`),
   UNIQUE KEY `deposit_address` (`deposit_address`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -88,7 +113,7 @@ CREATE TABLE IF NOT EXISTS `stats` (
   `bid_price` decimal(18,8) NOT NULL,
   `ask_price` decimal(18,8) NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
 
 -- --------------------------------------------------------
 
@@ -97,6 +122,7 @@ CREATE TABLE IF NOT EXISTS `stats` (
 --
 
 CREATE TABLE IF NOT EXISTS `transactions` (
+  `uid` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `received_txid` varchar(64) NOT NULL,
   `sent_txid` varchar(64) DEFAULT NULL,
   `asset` varchar(8) NOT NULL,
@@ -104,8 +130,9 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `date` datetime NOT NULL,
   `type` enum('bitcoinDeposit','bitsharesDeposit','bitcoinRefund','bitsharesRefund','none') NOT NULL,
   `notes` varchar(64) DEFAULT NULL,
-  PRIMARY KEY (`received_txid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  PRIMARY KEY (`uid`),
+  UNIQUE KEY `received_txid` (`received_txid`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=30 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

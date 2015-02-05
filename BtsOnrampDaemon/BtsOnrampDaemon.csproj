@@ -74,6 +74,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiReponses.cs" />
     <Compile Include="DaemonApi.cs" />
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />

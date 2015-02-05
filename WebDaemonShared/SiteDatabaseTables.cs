@@ -29,8 +29,28 @@ namespace WebDaemonShared
 		none
 	}
 
+	public class MarketRow : ICoreType
+	{
+		public string symbol_pair;
+		public decimal ask;
+		public decimal bid;
+		public decimal ask_max;
+		public decimal bid_max;
+
+		public CurrencyTypes GetBase()
+		{
+			return CurrencyHelpers.FromBitsharesSymbol(symbol_pair.Split('_')[0]);
+		}
+
+		public CurrencyTypes GetQuote()
+		{
+			return CurrencyHelpers.FromBitsharesSymbol(symbol_pair.Split('_')[1]);
+		}
+	}
+
 	public class TransactionsRow : ICoreType
 	{
+		public uint uid;
 		public string received_txid;
 		public string sent_txid;
 
