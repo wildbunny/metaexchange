@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{0E9292A7-858F-4DB6-B1F4-A3026F6A5F57}</ProjectGuid>
+    <ProjectGuid>{9CF7295A-645B-4996-9FF8-C09D27AAF786}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BtsOnrampDaemon</RootNamespace>
-    <AssemblyName>BtsOnrampDaemon</AssemblyName>
+    <RootNamespace>MetaDaemon</RootNamespace>
+    <AssemblyName>MetaDaemon</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -27,14 +27,14 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;MONO</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'mono|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\mono\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;MONO</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -48,8 +48,7 @@
     <Reference Include="BitcoinRpcSharp">
       <HintPath>..\libs\BitcoinRpcSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Casascius, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Casascius">
       <HintPath>..\libs\Casascius.dll</HintPath>
     </Reference>
     <Reference Include="Monsterer">
@@ -64,9 +63,12 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\libs\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="ServiceStack.Text, Version=3.9.54.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\libs\ServiceStack.Text.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -74,12 +76,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DaemonApi.cs" />
+    <Compile Include="Api.cs" />
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />
-    <Compile Include="DatabaseTables.cs" />
-    <Compile Include="Exceptions.cs" />
-    <Compile Include="GlostenMilgromSimple.cs" />
+    <Compile Include="Markets\InternalMarket.cs" />
+    <Compile Include="Markets\MarketBase.cs" />
+    <Compile Include="MetaDaemonApi.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -94,6 +96,10 @@
     <ProjectReference Include="..\BitsharesRpc\BitsharesRpc.csproj">
       <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
       <Name>BitsharesRpc</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\RestLib\RestLib.csproj">
+      <Project>{c2755a02-d80a-4fb2-8210-45c181dd6785}</Project>
+      <Name>RestLib</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebDaemonShared\WebDaemonShared.csproj">
       <Project>{f1f6ee90-cdc5-494b-845f-0203dce40432}</Project>

@@ -12,6 +12,7 @@ using WebHost.Components;
 using WebHost.WebSystem;
 
 using WebDaemonShared;
+using WebDaemonSharedTables;
 using MetaExchange;
 
 namespace MetaExchange.Pages
@@ -24,12 +25,10 @@ namespace MetaExchange.Pages
 			AddResource(new JsResource(Constants.kWebRoot, "/js/mainPageCompiled.js", true));
 			#endif
 
-			AddResource(new MetaResource("bitsharesAccount", authObj.m_bitsharesAccount));
+			//AddResource(new MetaResource("bitsharesAccount", authObj.m_bitsharesAccount));
 
 			// render head
 			base.Render(ctx, stream, authObj);
-
-			SiteStatsRow stats = authObj.m_database.Query<SiteStatsRow>("SELECT * FROM stats;").FirstOrDefault();
 
 			using (new DivContainer(stream, "ng-app", "myApp", "ng-controller", "StatsController"))
 			{
@@ -65,7 +64,7 @@ namespace MetaExchange.Pages
 					{
 						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
 						{
-							Button("Buy bitBTC<br/><span class='badge'>1.00 BTC</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{1/stats.ask_price | number:3}} bitBTC</span>", HtmlAttributes.@class, "btn btn-success btn-lg btn-block",
+							Button("Buy bitBTC<br/><span class='badge'>1.00 BTC</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{1/market.ask | number:3}} bitBTC</span>", HtmlAttributes.@class, "btn btn-success btn-lg btn-block",
 													"data-toggle", "collapse",
 													"aria-expanded", "false",
 													"aria-controls", "buyId",
@@ -75,7 +74,7 @@ namespace MetaExchange.Pages
 						}
 						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
 						{
-							Button("Sell bitBTC<br/><span class='badge'>1.00 bitBTC</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{stats.bid_price | number:3}} BTC</span>", HtmlAttributes.@class, "btn btn-danger btn-lg btn-block",
+							Button("Sell bitBTC<br/><span class='badge'>1.00 bitBTC</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{market.bid | number:3}} BTC</span>", HtmlAttributes.@class, "btn btn-danger btn-lg btn-block",
 													"data-toggle", "collapse",
 													"aria-expanded", "false",
 													"aria-controls", "sellId",
@@ -99,17 +98,16 @@ namespace MetaExchange.Pages
 									{
 										fm.Label(stream, "Where shall we send your bitBTC?");
 
+										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+														HtmlAttributes.name, WebForms.kOrderType,
+														HtmlAttributes.value, MetaOrderType.buy.ToString());
+
+										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+														HtmlAttributes.name, WebForms.kSymbolPair,
+														HtmlAttributes.value, CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC));
 
 										using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
 										{
-											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
-																HtmlAttributes.name, WebForms.kFromCurrency,
-																HtmlAttributes.value, CurrencyTypes.BTC);
-
-											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
-																HtmlAttributes.name, WebForms.kToCurrency,
-																HtmlAttributes.value, CurrencyTypes.bitBTC);
-
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
 																HtmlAttributes.name, WebForms.kReceivingAddress,
 																HtmlAttributes.minlength, 1,
@@ -140,7 +138,7 @@ namespace MetaExchange.Pages
 															HtmlAttributes.style, "cursor:text;");
 									}
 
-									SPAN("Maximum {{stats.max_btc | number:2}} BTC per transaction", "maxBtcId", "label label-info");
+									SPAN("Maximum {{market.ask_max | number:2}} BTC per transaction", "maxBtcId", "label label-info");
 								}
 							}
 						}
@@ -156,22 +154,19 @@ namespace MetaExchange.Pages
 																			HtmlAttributes.handler, "OnSubmitAddressBtc"))
 								{
 									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
-														HtmlAttributes.name, "memo",
-														HtmlAttributes.value, "true");
+														HtmlAttributes.name, WebForms.kOrderType,
+														HtmlAttributes.value, MetaOrderType.sell.ToString());
+
+									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+														HtmlAttributes.id, "symbolPairId",
+														HtmlAttributes.name, WebForms.kSymbolPair,
+														HtmlAttributes.value, CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC));
 
 									using (new DivContainer(stream, HtmlAttributes.@class, "form-group"))
 									{
 										fm.Label(stream, "Where shall we send your bitcoins?");
 										using (new DivContainer(stream, HtmlAttributes.@class, "input-group"))
 										{
-											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
-																HtmlAttributes.name, WebForms.kFromCurrency,
-																HtmlAttributes.value, CurrencyTypes.bitBTC);
-
-											fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
-																HtmlAttributes.name, WebForms.kToCurrency,
-																HtmlAttributes.value, CurrencyTypes.BTC);
-
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
 																HtmlAttributes.name, WebForms.kReceivingAddress,
 																HtmlAttributes.minlength, 25,
@@ -217,7 +212,7 @@ namespace MetaExchange.Pages
 
 									Button("Click to generate transaction", HtmlAttributes.@class, "btn btn-warning btn-xs pull-right unhideBtcId",
 																			HtmlAttributes.onclick, "GenerateTransactionModal()");
-									SPAN("Maximum {{stats.max_bitassets | number:2}} bitBTC per transaction", "maxbitBtcId", "label label-info pull-left");
+									SPAN("Maximum {{market.bid_max | number:2}} bitBTC per transaction", "maxbitBtcId", "label label-info pull-left");
 								}
 							}
 						}
@@ -260,10 +255,55 @@ namespace MetaExchange.Pages
 					{
 						using (new DivContainer(stream, HtmlAttributes.style, "margin:30px 0px 30px 0px"))
 						{
+							using (new DivContainer(stream, HtmlAttributes.@class, "row unhideBtsId unhideBtcId",
+															HtmlAttributes.id, "myTransactionsId"))
+							{
+								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-12"))
+								{
+									H3("Your transactions");
+
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Amount", "Date", "Status", "Notes"))
+									{
+										using (var tr = new TR(stream, "ng-repeat", "t in myTransactions"))
+										{
+											tr.TD("{{t.symbol_pair}}");
+											tr.TD("{{t.order_type}}");
+											tr.TD("{{t.amount}}");
+											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
+											tr.TD("{{t.status}}");
+											tr.TD("{{t.notes}}");
+										}
+									}
+								}
+							}
+
+							using (new DivContainer(stream, HtmlAttributes.@class, "unhideBtsId unhideBtcId"))
+							{
+								HR();
+							}
+							
 							using (new DivContainer(stream, HtmlAttributes.@class, "row"))
 							{
-								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-12"))
 								{
+									H3("All transactions");
+
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Amount", "Date"))
+									{
+										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
+										{
+											tr.TD("{{t.symbol_pair}}");
+											tr.TD("{{t.order_type}}");
+											tr.TD("{{t.amount}}");
+											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
+										}
+									}
+								}
+
+								/*using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+								{
+									H3("All transactions");
+
 									using (new Table(stream, "", 4, 4, "table noMargin", "Transaction"))
 									{
 										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
@@ -293,7 +333,7 @@ namespace MetaExchange.Pages
 											tr.TD("{{t.date|date:'MMM d, HH:mm'}}");
 										}
 									}
-								}
+								}*/
 							}
 						}
 					}
@@ -332,9 +372,11 @@ namespace MetaExchange.Pages
 											HtmlAttributes.placeholder, "Sending acount");
 						}
 
-						Href(stream, "", HtmlAttributes.id, "bitsharesLinkId");
+						Href(stream, "",	HtmlAttributes.id, "bitsharesLinkId",
+											HtmlAttributes.style, "display:none",
+											HtmlAttributes.@class, "btn btn-success");
 					}
-				});
+				}, true, "", "modal", "close", false);
 			}
 
 			return null;

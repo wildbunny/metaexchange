@@ -21,6 +21,16 @@ namespace WebDaemonShared
 			return value / step;
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="d"></param>
+		/// <returns></returns>
+		static public string SerialisedDecimal(decimal d)
+		{
+			return d.ToString("0.##########");
+		}
+
 		/// <summary>	Random between. </summary>
 		///
 		/// <remarks>	Paul, 10/01/2015. </remarks>

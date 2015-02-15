@@ -7,21 +7,17 @@ using System.Net;
 
 using Monsterer.Util;
 using Monsterer.Request;
-
 using WebHost;
 using WebHost.Components;
 using WebHost.WebSystem;
-
 using ApiHost;
-
-using BitsharesRpc;
-using BitcoinRpcSharp;
-
+//using BitsharesRpc;
+//using BitcoinRpcSharp;
 using MetaExchange.Pages;
-
 using WebDaemonShared;
+using WebDaemonSharedTables;
 using RestLib;
-
+using RedisCache;
 using MySqlDatabase;
 
 namespace MetaExchange
@@ -30,42 +26,6 @@ namespace MetaExchange
 	{
 		public Database m_database;
 		public string m_bitsharesAccount;
-	}
-
-	/// <summary>	Dummy authenticator to give pages access to the database </summary>
-	///
-	/// <remarks>	Paul, 27/01/2015. </remarks>
-	class MysqlAuthenticator : Authentication<IDummy>
-	{
-		Database m_database;
-		string m_bitsharesAccount;
-
-		public MysqlAuthenticator(string database, string databaseUser, string password, 
-									int allowedThreadId, string bitsharesAccount)
-			: base()
-		{
-			m_database = new Database(database, databaseUser, password, allowedThreadId);
-			m_bitsharesAccount = bitsharesAccount;
-		}
-
-		public override string GenerateToken(RequestContext ctx, IDummy authObj)
-		{
-			return "token";
-		}
-
-		public override void PostAuthorise(RequestContext ctx, IDummy authObj)
-		{
-		}
-
-		public override IDummy Authorise(RequestContext ctx)
-		{
-			return new IDummy { m_database = m_database, m_bitsharesAccount = m_bitsharesAccount };
-		}
-
-		public Database m_Database
-		{
-			get { return m_database; }
-		}
 	}
 
 	/// <summary>	Concrete implementation taking our auth object </summary>
@@ -77,9 +37,10 @@ namespace MetaExchange
 								bool considerBanOnApiException = true, 
 								eDdosMaxRequests maxDdosAccesses = eDdosMaxRequests.Ten, 
 								eDdosInSeconds inThisManySecondsDdos = eDdosInSeconds.One, 
-								int maxExceptions = 10, int maxMultipartBodySize = 50000) :
+								int maxExceptions = 10, int maxMultipartBodySize = 50000,
+								bool forwardToSsl = false) :
 								base(listenOn, webRoot, authenticator, considerBanOnApiException, maxDdosAccesses, inThisManySecondsDdos,
-										maxExceptions, maxMultipartBodySize)
+										maxExceptions, maxMultipartBodySize, forwardToSsl)
 		{ 
 		}
 	}
@@ -91,27 +52,32 @@ namespace MetaExchange
 	{
 		public static string m_gUrlBase;
 
-		BitsharesWallet m_bitshares;
-		BitcoinWallet m_bitcoin;
+		//BitsharesWallet m_bitshares;
+		//BitcoinWallet m_bitcoin;
 
 		MetaWebServer m_server;
 
 		public EventHandler<ExceptionWithCtx> ExceptionEvent;
 
-		MysqlAuthenticator m_authenticate;
-
-		public MetaServer(	string uri, string webroot, RpcConfig bitsharesConfig, RpcConfig bitcoinRpcConfig, string apiBaseUrl,
-							string database, string databaseUser, string databasePassword,
-							string bitsharesAccount)
+		public MetaServer(string uri, string webroot, string apiBaseUrl, bool maintenance)
 		{
-			m_bitshares = new BitsharesWallet(bitsharesConfig.m_url, bitsharesConfig.m_rpcUser, bitsharesConfig.m_rpcPassword);
-			m_bitcoin = new BitcoinWallet(bitcoinRpcConfig.m_url, bitcoinRpcConfig.m_rpcUser, bitcoinRpcConfig.m_rpcPassword, false);
+			RedisWrapper.Initialise("meta");
+			Serialisation.Defaults();
+
+			//m_bitshares = new BitsharesWallet(bitsharesConfig.m_url, bitsharesConfig.m_rpcUser, bitsharesConfig.m_rpcPassword);
+			//m_bitcoin = new BitcoinWallet(bitcoinRpcConfig.m_url, bitcoinRpcConfig.m_rpcUser, bitcoinRpcConfig.m_rpcPassword, false);
 
 			m_gUrlBase = apiBaseUrl.TrimEnd('/');
 
-			m_authenticate = new MysqlAuthenticator(database, databaseUser, databasePassword, System.Threading.Thread.CurrentThread.ManagedThreadId, bitsharesAccount);
+			string[] listenOn = uri.Split(',');
 
-			m_server = new MetaWebServer(new string[] { uri }, webroot, m_authenticate);
+			#if MONO
+			bool forwardToSsl=true;
+			#else
+			bool forwardToSsl=false;
+			#endif
+
+			m_server = new MetaWebServer(listenOn, webroot, null, true, eDdosMaxRequests.Ten, eDdosInSeconds.One, 10, 50000, forwardToSsl);
 			
 			m_server.ExceptionEvent += OnServerException;
 			m_server.ExceptionOnWebServer += OnServerException;
@@ -123,14 +89,26 @@ namespace MetaExchange
 			fonts.Add(new FontResource(webroot, "/fonts/glyphicons-halflings-regular.woff", FontResource.kWoffTypeMime, true));
 			m_server.AddGlobalResources(fonts);
 
-			// forwarding routes on to actual api server
-			m_server.HandlePostRoute(Routes.kSubmitAddress, ForwardPost, eDdosMaxRequests.Two, eDdosInSeconds.One, false, true);
-			m_server.HandleGetRoute(Routes.kGetStats, OnGetStats, eDdosMaxRequests.Two, eDdosInSeconds.One, true, false);
+			if (maintenance)
+			{
+				m_server.m_HttpServer.ReplaceUnhandledRouteObserver( async ctx => ctx.Respond( await m_server.HandleRequest<MaintenancePage>(ctx, null), HttpStatusCode.OK));
+			}
+			else
+			{
+				// forwarding routes on to actual api server
+				m_server.HandlePostRoute(Routes.kSubmitAddress, ForwardPost, eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandlePostRoute(Routes.kGetOrderStatus, ForwardPost, eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandlePostRoute(Routes.kGetMarket, ForwardPost, eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandlePostRoute(Routes.kGetLastTransactions, ForwardPost, eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandlePostRoute(Routes.kGetMyLastTransactions, ForwardPost, eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandleGetRoute(Routes.kGetAllMarkets, ForwardGet, eDdosMaxRequests.Two, eDdosInSeconds.One, false);
 
-			// serve the pages
-			m_server.HandlePageRequest<MainPage>("/", eDdosMaxRequests.Two, eDdosInSeconds.One, true);
-			m_server.HandlePageRequest<ApiPage>("/apiDocs", eDdosMaxRequests.Two, eDdosInSeconds.One, true);
-			m_server.HandlePageRequest<FaqPage>("/faq", eDdosMaxRequests.Two, eDdosInSeconds.One, true);
+
+				// serve the pages
+				m_server.HandlePageRequest<MainPage>("/", eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandlePageRequest<ApiPage>("/apiDocs", eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+				m_server.HandlePageRequest<FaqPage>("/faq", eDdosMaxRequests.Two, eDdosInSeconds.One, false);
+			}
 		}
 
 		public void Dispose()
@@ -159,50 +137,7 @@ namespace MetaExchange
 		/// <remarks>	Paul, 31/01/2015. </remarks>
 		public async void Update()
 		{
-			// call out to the daemon to get stats on transaction sizes and pricing info
-			try
-			{
-				uint lastTid = m_authenticate.m_Database.QueryScalar<uint>("SELECT last_tid FROM stats;");
-
-				StatsPacket statsPacket = await Rest.JsonApiCallAsync<StatsPacket>(ApiUrl(Routes.kGetStats), "since="+lastTid);
-
-				SiteStatsRow stats = statsPacket.m_stats;
-
-				if (statsPacket.m_lastTransactions.Count > 0)
-				{
-					// update this if we have new data
-					lastTid = statsPacket.m_lastTransactions.Last().uid;
-				}
-
-				try
-				{
-					m_authenticate.m_Database.BeginTransaction();
-
-						// stuff it in our database
-						m_authenticate.m_Database.Statement("UPDATE stats SET bid_price=@b, ask_price=@s, max_btc=@maxbtc, max_bitassets=@maxBit, last_update=@last, last_tid=@tid;",
-																stats.bid_price,
-																stats.ask_price,
-																stats.max_btc,
-																stats.max_bitassets,
-																DateTime.UtcNow,
-																lastTid);
-
-
-						foreach (TransactionsRow t in statsPacket.m_lastTransactions)
-						{
-							m_authenticate.m_Database.Statement("INSERT INTO transactions (received_txid, sent_txid, amount,type,asset,date,uid) VALUES(@a,@b,@c,@d,@e,@f,@g);",
-																	t.received_txid, t.sent_txid, t.amount, t.type, t.asset, t.date, t.uid);
-						}
-
-					m_authenticate.m_Database.EndTransaction();
-				}
-				catch (Exception)
-				{
-					m_authenticate.m_Database.RollbackTransaction();
-					throw;
-				}
-			}
-			catch (WebException) { }
+			
 		}
 
 		/// <summary>	API URL. </summary>
@@ -228,63 +163,37 @@ namespace MetaExchange
 		async Task ForwardPost(RequestContext ctx, IDummy dummy)
 		{
 			// forward request on
-			string result = await Rest.ExecutePostAsync(ApiUrl(ctx.Request.Url.LocalPath), ctx.Request.PostArgString);
-			ctx.RespondJsonFromString(result);
+			try
+			{
+				string result = await Rest.ExecutePostAsync(ApiUrl(ctx.Request.Url.LocalPath), ctx.Request.PostArgString);
+				ctx.RespondJsonFromString(result);
+			}
+			catch (WebException)
+			{
+				ctx.Respond(HttpStatusCode.InternalServerError);
+			}
 		}
 
-		/// <summary>	Executes the get statistics action. </summary>
+		/// <summary>	Forward get. </summary>
 		///
-		/// <remarks>	Paul, 31/01/2015. </remarks>
+		/// <remarks>	Paul, 06/02/2015. </remarks>
 		///
 		/// <param name="ctx">  	The context. </param>
 		/// <param name="dummy">	The dummy. </param>
 		///
 		/// <returns>	A Task. </returns>
-		Task OnGetStats(RequestContext ctx, IDummy dummy)
+		async Task ForwardGet(RequestContext ctx, IDummy dummy)
 		{
-			SiteStatsRow stats = dummy.m_database.Query<SiteStatsRow>("SELECT * FROM stats;").FirstOrDefault();
-
-			List<TransactionsRow> lastTransactions = dummy.m_database.Query<TransactionsRow>("SELECT * FROM transactions ORDER BY date DEsC LIMIT 6;");
-
-			StatsPacket packet = new StatsPacket { m_stats = stats, m_lastTransactions = lastTransactions };
-
-			ctx.Respond<StatsPacket>(packet);
-			return null;
-		}
-
-		/*async Task GetMarkets(RequestContext ctx, IDummy authObj)
-		{
-			AllMetaMarkets markets = await m_api.GetAllMarkets();
-
-			ctx.Respond<AllMetaMarkets>(markets);
-		}
-
-		async Task GetTrades(RequestContext ctx, IDummy authObj)
-		{
-			string market = RestHelpers.GetPostArg<string, ApiRuntimeExceptionMissingParameter>(ctx, "market");
-			ctx.Respond<List<MetaTrade>>(await m_api.GetTrades(market));
-		}
-
-		async Task GetOrderbook(RequestContext ctx, IDummy authObj)
-		{
-			string market = RestHelpers.GetPostArg<string, ApiRuntimeExceptionMissingParameter>(ctx, "market");
-
-			ctx.Respond<MetaOrderbook>( await m_api.GetOrderbook(market, 20) );
-		}
-
-		async Task GetOhlc(RequestContext ctx, IDummy authObj)
-		{
-			string market = RestHelpers.GetPostArg<string, ApiRuntimeExceptionMissingParameter>(ctx, "market");
-			DateTime start = RestHelpers.GetPostArg<DateTime, ApiRuntimeExceptionMissingParameter>(ctx, "start");
-			Timeframe timeframe = RestHelpers.GetPostArg<Timeframe, ApiRuntimeExceptionMissingParameter>(ctx, "timeframe");
-			int numBars = RestHelpers.GetPostArg<int, ApiRuntimeExceptionMissingParameter>(ctx, "bars");
-
-			ctx.Respond<List<MetaOhlc>>(await m_api.GetOlhc(market, start, timeframe, numBars));
-		}*/
-
-		public BitsharesWallet m_Wallet
-		{
-			get { return m_bitshares; }
+			// forward request on
+			try
+			{
+				string result = await Rest.ExecuteGetAsync(ApiUrl(ctx.Request.Url.LocalPath) + "?" + ctx.Request.Url.Query);
+				ctx.RespondJsonFromString(result);
+			}
+			catch (WebException)
+			{
+				ctx.Respond(HttpStatusCode.InternalServerError);
+			}
 		}
 
 		/// <summary>	IP lock. </summary>

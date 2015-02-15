@@ -26,7 +26,7 @@ namespace BitsharesRpc
 
     public class BitsharesWallet
     {
-		public const int kBitsharesMaxMemoLength = 19;
+		public const int kBitsharesMaxMemoLength = 51;
 		public const int kBitsharesMaxAccountNameLength = 63;
 		public const string kNetworkAccount = "NETWORK";
 
@@ -275,6 +275,19 @@ namespace BitsharesRpc
 		public BitsharesAsset BlockchainGetAsset(string name)
 		{
 			return ApiPostSync<BitsharesAsset>(BitsharesMethods.blockchain_get_asset, name);
+		}
+
+		/// <summary>	Blockchain list assets. </summary>
+		///
+		/// <remarks>	Paul, 15/02/2015. </remarks>
+		///
+		/// <param name="firstSymbol">	(Optional) the first symbol. </param>
+		/// <param name="limit">	  	(Optional) the limit. </param>
+		///
+		/// <returns>	A List&lt;BitsharesAsset&gt; </returns>
+		public List<BitsharesAsset> BlockchainListAssets(string firstSymbol="", int limit=20)
+		{
+			return ApiPostSync<List<BitsharesAsset>>(BitsharesMethods.blockchain_list_assets, firstSymbol, limit);
 		}
 
 		/// <summary>	Trucate memo. </summary>

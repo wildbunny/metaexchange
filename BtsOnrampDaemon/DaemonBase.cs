@@ -9,8 +9,9 @@ using BitsharesRpc;
 using BitcoinRpcSharp;
 using BitsharesCore;
 using Casascius.Bitcoin;
-using WebDaemonShared;
+using DatabaseTables;
 using BitcoinRpcSharp.Responses;
+using WebDaemonShared;
 
 namespace BtsOnrampDaemon
 {

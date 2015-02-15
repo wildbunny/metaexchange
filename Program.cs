@@ -12,7 +12,7 @@ using Monsterer.Request;
 using WebHost;
 using WebHost.Components;
 using ApiHost;
-using BitsharesRpc;
+//using BitsharesRpc;
 
 using MetaExchange.Pages;
 
@@ -29,48 +29,20 @@ namespace MetaExchange
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length >= 13 && args.Length < 15)
+			if (args.Length >= 3 && args.Length < 4)
 			{
 				string httpUrl = args[0];
 
-				string bitsharesUrl = args[1];
-				string bitsharesUser = args[2];
-				string bitsharesPassword = args[3];
-				string bitsharesAccount = args[4];
-				
-				string bitcoinUrl = args[5];
-				string bitcoinUser = args[6];
-				string bitcoinPassword = args[7];
-				bool bitcoinUseTestNet = bool.Parse(args[8]);
-
-				string database = args[9];
-				string databaseUser = args[10];
-				string databasePassword = args[11];
-
-				string apiBaseUrl = args[12];
+				string apiBaseUrl = args[1];
+				bool maintenance = bool.Parse(args[2]);
 				string ipLock = null;
-				if (args.Length == 14)
+				if (args.Length == 4)
 				{
-					ipLock = args[13];
+					ipLock = args[3];
 				}
 
-				using (var server = new MetaServer(httpUrl, Constants.kWebRoot, new RpcConfig
-																				{
-																					m_rpcPassword = bitsharesPassword,
-																					m_rpcUser = bitsharesUser,
-																					m_url = bitsharesUrl,
-																					m_useTestnet = false
-																				},
-																				new RpcConfig
-																				{
-																					m_rpcPassword = bitcoinPassword,
-																					m_rpcUser = bitcoinUser,
-																					m_url = bitcoinUrl,
-																					m_useTestnet = bitcoinUseTestNet
-																				},
-																				apiBaseUrl,
-																				database, databaseUser, databasePassword,
-																				bitsharesAccount))
+				using (var server = new MetaServer(httpUrl, Constants.kWebRoot, apiBaseUrl,
+																				maintenance))
 				{
 					AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 

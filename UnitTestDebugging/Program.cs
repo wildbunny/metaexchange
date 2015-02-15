@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using BitsharesCoreUnitTests;
+using MetaDaemonUnitTests;
 
 namespace UnitTestDebugging
 {
@@ -12,9 +13,10 @@ namespace UnitTestDebugging
 	{
 		static void Main(string[] args)
 		{
-			AddressAndPubKeyTests test = new AddressAndPubKeyTests();
-
-			test.CheckBtsAddressFromBitcoinPubKeyHex();
+			using (MiscTest test = new MiscTest())
+			{
+				test.GetMyLastTransactionsNoMemoOrDepositAddress();
+			}
 		}
 	}
 }

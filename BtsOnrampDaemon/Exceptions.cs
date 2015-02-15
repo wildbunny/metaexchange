@@ -10,6 +10,16 @@ using WebDaemonShared;
 
 namespace BtsOnrampDaemon
 {
+	/*public class ApiError
+	{
+		public string m_errorMsg;
+
+		public ApiError(string e)
+		{
+			m_errorMsg = e;
+		}
+	}*/
+
 	public class UnsupportedTransactionException : Exception
 	{
 		string m_trxId;
@@ -25,7 +35,7 @@ namespace BtsOnrampDaemon
 		}
 	}
 
-	public class RefundBitcoinException : RefundBitsharesException 
+	public class RefundBitcoinException : RefundBitsharesException
 	{
 		public RefundBitcoinException(string memo) : base(memo) { }
 	}
@@ -49,7 +59,7 @@ namespace BtsOnrampDaemon
 	{
 		public ApiError m_error;
 
-		public ApiException( ApiError error )
+		public ApiException(ApiError error)
 		{
 			m_error = error;
 		}
@@ -67,12 +77,12 @@ namespace BtsOnrampDaemon
 
 	public class ApiExceptionMissingParameter : ApiException
 	{
-		public ApiExceptionMissingParameter() : base(new ApiError("Missing parameter")){}
+		public ApiExceptionMissingParameter() : base(new ApiError("Missing parameter")) { }
 	}
 
 	public class ApiExceptionUnsupportedTrade : ApiException
 	{
-		public ApiExceptionUnsupportedTrade(CurrencyTypes from, CurrencyTypes to) : base(new ApiError( from + "->" + to + " is an unsupported trade!")) { }
+		public ApiExceptionUnsupportedTrade(CurrencyTypes from, CurrencyTypes to) : base(new ApiError(from + "->" + to + " is not a recognised market!")) { }
 	}
 
 	public class ApiExceptionMessage : ApiException

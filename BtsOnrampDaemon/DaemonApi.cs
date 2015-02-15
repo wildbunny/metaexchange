@@ -13,6 +13,7 @@ using Monsterer.Request;
 using Monsterer.Util;
 using Casascius.Bitcoin;
 using MySqlDatabase;
+using DatabaseTables;
 
 namespace BtsOnrampDaemon
 {
@@ -396,7 +397,7 @@ namespace BtsOnrampDaemon
 		/// <returns>	A Task. </returns>
 		Task OnGetStats(RequestContext ctx, IDummy dummy)
 		{
-			uint sinceTid = RestHelpers.GetPostArg<uint, ApiExceptionMissingParameter>(ctx, WebForms.kSince);
+			uint sinceTid = RestHelpers.GetPostArg<uint, ApiExceptionMissingParameter>(ctx, WebForms.kLimit);
 
 			List<TransactionsRow> lastTransactions = m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE uid>@uid ORDER BY uid;", sinceTid);
 			SiteStatsRow stats =	new SiteStatsRow

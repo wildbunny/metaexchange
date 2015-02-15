@@ -1,60 +1,68 @@
 ﻿var countryApp = angular.module('myApp', []);
 
+function PostForm($http, url, paramsObj, onSuccess)
+{
+	return $http({
+		method: 'POST',
+		url: url,
+		data: $.param(paramsObj),
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+	}).success(onSuccess);
+}
+
 /**
 	@ngInject
 */
 var controlFunc = function ($scope, $http, $timeout)
 {
+	var lastResponse = new Date().getTime();
 	var get = function()
 	{
-		$http.get("/getStats").success(function (data)
+		var now = new Date().getTime();
+
+		if (now - lastResponse > 30 * 1000)
 		{
-			$scope.stats = data.m_stats;
+			$scope.status = "Down";
+			$scope.label = "danger";
+		}
+		else
+		{
+			$scope.status = "Green";
+			$scope.label = "success";
+		}
 
-			var prettyTrans = [];
-			for (var i = 0; i < data.m_lastTransactions.length; i++)
+		return PostForm($http, "/api/1/getMarket", { symbol_pair: $('#symbolPairId').val() }, function (data)
+		{
+			lastResponse = now;
+			$scope.market = data;
+		}).finally(function (response)
+		{
+			PostForm($http, "/api/1/getLastTransactions", { limit: 6 }, function (data)
 			{
-				var t = data.m_lastTransactions[i];
-				var o = {};
-				var bitAsset = "bit" + t.asset;
-				if (t.type=='bitcoinDeposit')
+				$scope.transactions = data;
+			}).finally(function(reponse)
+			{
+				var memo = $('#bitsharesMemoId').val();
+				var depositAddress = $('#bitcoinDespositId').val();
+
+				if (memo.length > 0 || depositAddress.length > 0)
 				{
-					o.from = "BTC";
-					o.to = bitAsset;
+					PostForm($http, "/api/1/getMyLastTransactions", { limit: 6, memo: memo, deposit_address: depositAddress }, function (data)
+					{
+						$scope.myTransactions = data;
+					});
 				}
-				else
-				{
-					o.from = bitAsset;
-					o.to = "BTC";
-				}
-
-				o.amount = t.amount;
-				o.date = t.date;
-
-				prettyTrans.push(o);
-			}
-
-			$scope.transactions = prettyTrans;
-			var delta = new Date().getTime() - new Date(data.m_stats.last_update).getTime();
-			if (delta < 30000)
-			{
-				$scope.status = "Green";
-				$scope.label = "success";
-			}
-			else
-			{
-				$scope.status = "Down";
-				$scope.label = "danger";
-			}
+			});
 		});
 	}
 	var poll = function ()
 	{
 		$timeout(function ()
 		{
-			get();
-
-			poll();
+			get().finally(function (response)
+			{
+				poll();
+			});
 		}, 5000);
 	};
 
@@ -77,10 +85,10 @@ function OnLoad()
 
 function OnSubmitAddressBts(data)
 {
-	if (data.m_errorMsg != undefined)
+	if (data.message != undefined)
 	{
 		$('#bitsharesErrorId').show();
-		$('#bitsharesErrorId').text(data.m_errorMsg);
+		$('#bitsharesErrorId').text(data.message);
 		$('.unhideBtsId').hide();
 	}
 	else
@@ -93,10 +101,10 @@ function OnSubmitAddressBts(data)
 
 function OnSubmitAddressBtc(data)
 {
-	if (data.m_errorMsg != undefined)
+	if (data.message != undefined)
 	{
 		$('#bitcoinErrorId').show();
-		$('#bitcoinErrorId').text(data.m_errorMsg);
+		$('#bitcoinErrorId').text(data.message);
 		$('.unhideBtcId').hide();
 	}
 	else
@@ -121,8 +129,17 @@ function CreateLink()
 	var memo = $('#bitsharesMemoId').val();
 	var toAccount = $('#bitsharesDespositAccountId').val();
 
-	var url = "bts:" + fromAccount+"/transfer/amount/"+amount+"/memo/"+memo+"/"+toAccount+"/asset/BTC";
+	var url = "bts:" + toAccount + "/transfer/amount/" + amount + "/memo/" + memo + "/from/" + fromAccount + "/asset/BTC";
 
+	if (fromAccount.length > 0 && amount > 0)
+	{
+		$('#bitsharesLinkId').show();
+	}
+	else
+	{
+		$('#bitsharesLinkId').hide();
+	}
+	
 	$('#bitsharesLinkId').attr("href", url);
-	$('#bitsharesLinkId').text(url);
+	$('#bitsharesLinkId').text("Click to open in bitshares");
 }
