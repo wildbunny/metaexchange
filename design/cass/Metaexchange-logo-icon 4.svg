@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+    <!-- Generator: Sketch 3.2 (9961) - http://www.bohemiancoding.com/sketch -->
+    <title>Metaexchange-logo-icon 4</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-1">
+            <feOffset dx="10" dy="10" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="10" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0.290221632   0 0 0 0 0.290175289   0 0 0 0 0.290237457  0 0 0 0.157226562 0" in="shadowBlurOuter1" type="matrix" result="shadowMatrixOuter1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="shadowMatrixOuter1"></feMergeNode>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+            </feMerge>
+        </filter>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-2">
+            <feOffset dx="0" dy="5" in="SourceAlpha" result="shadowOffsetInner1"></feOffset>
+            <feGaussianBlur stdDeviation="5" in="shadowOffsetInner1" result="shadowBlurInner1"></feGaussianBlur>
+            <feComposite in="shadowBlurInner1" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowInnerInner1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.35 0" in="shadowInnerInner1" type="matrix" result="shadowMatrixInner1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+                <feMergeNode in="shadowMatrixInner1"></feMergeNode>
+            </feMerge>
+        </filter>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-3">
+            <feOffset dx="0" dy="5" in="SourceAlpha" result="shadowOffsetInner1"></feOffset>
+            <feGaussianBlur stdDeviation="5" in="shadowOffsetInner1" result="shadowBlurInner1"></feGaussianBlur>
+            <feComposite in="shadowBlurInner1" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowInnerInner1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.35 0" in="shadowInnerInner1" type="matrix" result="shadowMatrixInner1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+                <feMergeNode in="shadowMatrixInner1"></feMergeNode>
+            </feMerge>
+        </filter>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-4">
+            <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetInner1"></feOffset>
+            <feGaussianBlur stdDeviation="1.5" in="shadowOffsetInner1" result="shadowBlurInner1"></feGaussianBlur>
+            <feComposite in="shadowBlurInner1" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowInnerInner1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.7 0" in="shadowInnerInner1" type="matrix" result="shadowMatrixInner1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+                <feMergeNode in="shadowMatrixInner1"></feMergeNode>
+            </feMerge>
+        </filter>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
+        <g id="Metaexchange-logo-icon-4" sketch:type="MSArtboardGroup">
+            <rect id="Rectangle-1" fill="#D8D8D8" sketch:type="MSShapeGroup" x="0" y="0" width="1024" height="1024"></rect>
+            <g id="Polygon-2-+->&lt;-+->&lt;-2" sketch:type="MSLayerGroup" transform="translate(279.000000, 220.000000)">
+                <path d="M216.24707,61.3661364 L86.7529298,136.321494 C76.6955818,142.143009 70.5,152.901612 70.5,164.544643 L70.5,314.455357 C70.5,326.098388 76.6955818,336.856991 86.7529298,342.678506 L216.24707,417.633864 C226.304418,423.455379 238.695582,423.455379 248.75293,417.633864 L378.24707,342.678506 C388.304418,336.856991 394.5,326.098388 394.5,314.455357 L394.5,164.544643 C394.5,152.901612 388.304418,142.143009 378.24707,136.321494 L248.75293,61.3661364 C238.695582,55.5446212 226.304418,55.5446212 216.24707,61.3661364 L216.24707,61.3661364 L216.24707,61.3661364 Z" id="Polygon-2" fill="#2C3E50" filter="url(#filter-1)" sketch:type="MSShapeGroup" transform="translate(232.500000, 239.500000) rotate(-30.000000) translate(-232.500000, -239.500000) "></path>
+                <path d="M290.912946,169.588621 L232.908482,284.676149 L174.495536,169.588621 C171.636161,164.091904 165.100446,161 158.564732,161 C147.944196,161 141,168.214442 141,175.428884 C141,177.490153 141.408482,179.207877 142.225446,180.925602 L208.399554,304.945295 C212.484375,312.846827 222.287946,318 232.091518,318 C243.120536,318 252.924107,312.846827 257.008929,304.945295 L322.774554,180.925602 C323.591518,179.207877 324,177.490153 324,175.428884 C324,168.557987 317.464286,161 306.84375,161 C299.899554,161 293.772321,164.091904 290.912946,169.588621 L290.912946,169.588621 Z" id=">&lt;" opacity="0.800139925" fill="#FFFFFF" filter="url(#filter-2)" sketch:type="MSShapeGroup"></path>
+                <path d="M290.912946,309.411379 L232.908482,194.323851 L174.495536,309.411379 C171.636161,314.908096 165.100446,318 158.564732,318 C147.944196,318 141,310.785558 141,303.571116 C141,301.509847 141.408482,299.792123 142.225446,298.074398 L208.399554,174.054705 C212.484375,166.153173 222.287946,161 232.091518,161 C243.120536,161 252.924107,166.153173 257.008929,174.054705 L322.774554,298.074398 C323.591518,299.792123 324,301.509847 324,303.571116 C324,310.442013 317.464286,318 306.84375,318 C299.899554,318 293.772321,314.908096 290.912946,309.411379 L290.912946,309.411379 Z" id=">&lt;-2" opacity="0.800139925" fill="#18BC9C" filter="url(#filter-3)" sketch:type="MSShapeGroup"></path>
+            </g>
+            <text id="metaexchange" fill="white" filter="url(#filter-4)" sketch:type="MSTextLayer" font-family="Proxima Nova Soft" font-size="78" font-weight="bold">
+                <tspan x="252" y="827" fill="#2C3E50">metaexchange</tspan>
+            </text>
+        </g>
+    </g>
+</svg>

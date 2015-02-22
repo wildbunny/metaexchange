@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+    <!-- Generator: Sketch 3.2 (9961) - http://www.bohemiancoding.com/sketch -->
+    <title>Metaexchange-logo-icon</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-1">
+            <feOffset dx="10" dy="10" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="10" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0.290221632   0 0 0 0 0.290175289   0 0 0 0 0.290237457  0 0 0 0.157226562 0" in="shadowBlurOuter1" type="matrix" result="shadowMatrixOuter1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="shadowMatrixOuter1"></feMergeNode>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+            </feMerge>
+        </filter>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-2">
+            <feOffset dx="0" dy="5" in="SourceAlpha" result="shadowOffsetInner1"></feOffset>
+            <feGaussianBlur stdDeviation="5" in="shadowOffsetInner1" result="shadowBlurInner1"></feGaussianBlur>
+            <feComposite in="shadowBlurInner1" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowInnerInner1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.35 0" in="shadowInnerInner1" type="matrix" result="shadowMatrixInner1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+                <feMergeNode in="shadowMatrixInner1"></feMergeNode>
+            </feMerge>
+        </filter>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-3">
+            <feOffset dx="0" dy="5" in="SourceAlpha" result="shadowOffsetInner1"></feOffset>
+            <feGaussianBlur stdDeviation="5" in="shadowOffsetInner1" result="shadowBlurInner1"></feGaussianBlur>
+            <feComposite in="shadowBlurInner1" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowInnerInner1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.35 0" in="shadowInnerInner1" type="matrix" result="shadowMatrixInner1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+                <feMergeNode in="shadowMatrixInner1"></feMergeNode>
+            </feMerge>
+        </filter>
+        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-4">
+            <feOffset dx="0" dy="1" in="SourceAlpha" result="shadowOffsetInner1"></feOffset>
+            <feGaussianBlur stdDeviation="1.5" in="shadowOffsetInner1" result="shadowBlurInner1"></feGaussianBlur>
+            <feComposite in="shadowBlurInner1" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowInnerInner1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.171373981 0" in="shadowInnerInner1" type="matrix" result="shadowMatrixInner1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+                <feMergeNode in="shadowMatrixInner1"></feMergeNode>
+            </feMerge>
+        </filter>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
+        <g id="Metaexchange-logo-icon" sketch:type="MSArtboardGroup">
+            <rect id="Rectangle-1" fill="#D8D8D8" sketch:type="MSShapeGroup" x="0" y="0" width="1024" height="1024"></rect>
+            <g id="Polygon-2-+->&lt;-+->&lt;-2" sketch:type="MSLayerGroup" transform="translate(349.000000, 277.000000)">
+                <path d="M146.24707,4.36613639 L16.7529298,79.3214935 C6.69558182,85.1430087 0.5,95.9016125 0.5,107.544643 L0.5,257.455357 C0.5,269.098388 6.69558182,279.856991 16.7529298,285.678506 L146.24707,360.633864 C156.304418,366.455379 168.695582,366.455379 178.75293,360.633864 L308.24707,285.678506 C318.304418,279.856991 324.5,269.098388 324.5,257.455357 L324.5,107.544643 C324.5,95.9016125 318.304418,85.1430087 308.24707,79.3214935 L178.75293,4.36613639 C168.695582,-1.4553788 156.304418,-1.4553788 146.24707,4.36613639 L146.24707,4.36613639 L146.24707,4.36613639 Z" id="Polygon-2" fill="#ECF0F1" filter="url(#filter-1)" sketch:type="MSShapeGroup"></path>
+                <path d="M220.912946,112.588621 L162.908482,227.676149 L104.495536,112.588621 C101.636161,107.091904 95.1004464,104 88.5647321,104 C77.9441964,104 71,111.214442 71,118.428884 C71,120.490153 71.4084821,122.207877 72.2254464,123.925602 L138.399554,247.945295 C142.484375,255.846827 152.287946,261 162.091518,261 C173.120536,261 182.924107,255.846827 187.008929,247.945295 L252.774554,123.925602 C253.591518,122.207877 254,120.490153 254,118.428884 C254,111.557987 247.464286,104 236.84375,104 C229.899554,104 223.772321,107.091904 220.912946,112.588621 L220.912946,112.588621 Z" id=">&lt;" opacity="0.800139925" fill="#ECF0F2" filter="url(#filter-2)" sketch:type="MSShapeGroup"></path>
+                <path d="M220.912946,252.411379 L162.908482,137.323851 L104.495536,252.411379 C101.636161,257.908096 95.1004464,261 88.5647321,261 C77.9441964,261 71,253.785558 71,246.571116 C71,244.509847 71.4084821,242.792123 72.2254464,241.074398 L138.399554,117.054705 C142.484375,109.153173 152.287946,104 162.091518,104 C173.120536,104 182.924107,109.153173 187.008929,117.054705 L252.774554,241.074398 C253.591518,242.792123 254,244.509847 254,246.571116 C254,253.442013 247.464286,261 236.84375,261 C229.899554,261 223.772321,257.908096 220.912946,252.411379 L220.912946,252.411379 Z" id=">&lt;-2" opacity="0.800139925" fill="#18BC9C" filter="url(#filter-3)" sketch:type="MSShapeGroup"></path>
+            </g>
+            <text id="metaexchange" fill="white" filter="url(#filter-4)" sketch:type="MSTextLayer" font-family="Proxima Nova Soft" font-size="78" font-weight="bold">
+                <tspan x="252" y="827" fill="#FFFFFF">metaexchange</tspan>
+            </text>
+        </g>
+    </g>
+</svg>

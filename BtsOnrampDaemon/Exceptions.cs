@@ -6,9 +6,20 @@ using System.Threading.Tasks;
 
 using BitcoinRpcSharp.Responses;
 using BitsharesRpc;
+using WebDaemonShared;
 
 namespace BtsOnrampDaemon
 {
+	/*public class ApiError
+	{
+		public string m_errorMsg;
+
+		public ApiError(string e)
+		{
+			m_errorMsg = e;
+		}
+	}*/
+
 	public class UnsupportedTransactionException : Exception
 	{
 		string m_trxId;
@@ -24,7 +35,7 @@ namespace BtsOnrampDaemon
 		}
 	}
 
-	public class RefundBitcoinException : RefundBitsharesException 
+	public class RefundBitcoinException : RefundBitsharesException
 	{
 		public RefundBitcoinException(string memo) : base(memo) { }
 	}
@@ -48,7 +59,7 @@ namespace BtsOnrampDaemon
 	{
 		public ApiError m_error;
 
-		public ApiException( ApiError error )
+		public ApiException(ApiError error)
 		{
 			m_error = error;
 		}
@@ -61,16 +72,21 @@ namespace BtsOnrampDaemon
 
 	public class ApiExceptionGeneral : ApiException
 	{
-		public ApiExceptionGeneral() : base(new ApiError { m_errorMsg = "Ooops, a general API exception occured!" }) { }
+		public ApiExceptionGeneral() : base(new ApiError("Ooops, a general API exception occured!")) { }
 	}
 
 	public class ApiExceptionMissingParameter : ApiException
 	{
-		public ApiExceptionMissingParameter() : base(new ApiError{m_errorMsg ="Missing parameter"}){}
+		public ApiExceptionMissingParameter() : base(new ApiError("Missing parameter")) { }
+	}
+
+	public class ApiExceptionUnsupportedTrade : ApiException
+	{
+		public ApiExceptionUnsupportedTrade(CurrencyTypes from, CurrencyTypes to) : base(new ApiError(from + "->" + to + " is not a recognised market!")) { }
 	}
 
 	public class ApiExceptionMessage : ApiException
 	{
-		public ApiExceptionMessage(string message) : base(new ApiError { m_errorMsg = message }) { }
+		public ApiExceptionMessage(string message) : base(new ApiError(message)) { }
 	}
 }

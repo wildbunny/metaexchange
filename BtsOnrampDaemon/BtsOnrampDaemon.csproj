@@ -41,6 +41,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'debug2nd|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\debug2nd\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="ApiHost">
       <HintPath>..\libs\ApiHost.dll</HintPath>
@@ -77,6 +87,7 @@
     <Compile Include="DaemonApi.cs" />
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />
+    <Compile Include="DatabaseTables.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="GlostenMilgromSimple.cs" />
     <Compile Include="Program.cs" />

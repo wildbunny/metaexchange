@@ -3,49 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 using MySqlDatabase;
 
-namespace WebDaemonShared
+namespace WebDaemonSharedTables
 {
-	public class SiteStatsRow : ICoreType
+	public enum MetaOrderStatus
 	{
-		public decimal bid_price;
-		public decimal ask_price;
-		public decimal max_btc;
-		public decimal max_bitassets;
-		public DateTime last_update;
+		none = 1,
+		processing,
+		completed,
+		refunded
 	}
 
-	/// <summary>	Transaction types for logging purposes </summary>
-	///
-	/// <remarks>	Paul, 17/01/2015. </remarks>
-	public enum DaemonTransactionType
+	public enum MetaOrderType
 	{
-		bitcoinDeposit = 1,
-		bitsharesDeposit,
-		bitcoinRefund,
-		bitsharesRefund,
-		none
+		none = 1,
+		buy,
+		sell
 	}
 
-	public class TransactionsRow : ICoreType
+	public class TransactionsRow : TransactionsRowNoUid
+	{
+		public uint uid;
+	}
+
+	public class TransactionsRowNoUid : ICoreType
 	{
 		public string received_txid;
 		public string sent_txid;
 
-		public string asset;
+		public MetaOrderType order_type;
+		public string symbol_pair;
 		public decimal amount;
+		public decimal price;
+		public decimal fee;
 
-		public DaemonTransactionType type;
+		public MetaOrderStatus status;
 
 		public string notes;
 		public DateTime date;
+
+		public string deposit_address;
 	}
 
-	public class StatsPacket
+	/*public class StatsPacket
 	{
 		public SiteStatsRow m_stats;
 		public List<TransactionsRow> m_lastTransactions;
-	}
+	}*/
 }

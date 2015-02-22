@@ -24,7 +24,7 @@ namespace RestLib
 		{
 			this.Timeout = timeout;
 		}
-
+		
 		protected override WebRequest GetWebRequest(Uri address)
 		{
 			var request = base.GetWebRequest(address);
@@ -48,19 +48,23 @@ namespace RestLib
 		{
 			m_gTimeoutSeconds = seconds;
 		}
+
+		static public WebClientTimeout ConfigurePost(string url, string query, string contentType = kContentTypeForm)
+		{
+			WebClientTimeout client = new WebClientTimeout();
+			client.Encoding = System.Text.Encoding.UTF8;
+			client.Headers[HttpRequestHeader.ContentType] = contentType;
+			return client;
+		}
 		
 		static public Task<string> ExecutePostAsync(string url, string query, string contentType = kContentTypeForm)
 		{
-			WebClient client = new WebClient();
-			client.Encoding = System.Text.Encoding.UTF8;
-			client.Headers[HttpRequestHeader.ContentType] = contentType;
-
-			return client.UploadStringTaskAsync(url, query);
+			return ConfigurePost(url, query, contentType).UploadStringTaskAsync(url, query);
 		}
 
-		static public Task<string> ExecuteGetAsync(string url)
+		static public Task<string> ExecuteGetAsync(string url, int timeoutMillis = 20000)
 		{
-			WebClient client = new WebClient();
+			WebClientTimeout client = new WebClientTimeout(timeoutMillis);
 			client.Encoding = System.Text.Encoding.UTF8;
 			return client.DownloadStringTaskAsync(url);
 		}
@@ -93,9 +97,9 @@ namespace RestLib
 			}
 		}
 
-		static public string ExecuteGetSync(string url)
+		static public string ExecuteGetSync(string url, int timeoutMillis=20000)
 		{
-			WebClient client = new WebClient();
+			WebClientTimeout client = new WebClientTimeout(timeoutMillis);
 			client.Encoding = System.Text.Encoding.UTF8;
 			return client.DownloadString(url);
 		}

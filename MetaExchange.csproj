@@ -46,9 +46,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>libs\ApiHost.dll</HintPath>
     </Reference>
-    <Reference Include="BitcoinRpcSharp">
-      <HintPath>libs\BitcoinRpcSharp.dll</HintPath>
-    </Reference>
     <Reference Include="Monsterer, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>libs\Monsterer.dll</HintPath>
@@ -80,11 +77,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MetaApi.cs" />
     <Compile Include="MetaServer.cs" />
+    <Compile Include="MySqlLayer.cs" />
     <Compile Include="Pages\ApiPage.cs" />
     <Compile Include="Pages\BootstrapBase.cs" />
     <Compile Include="Pages\Faq.cs" />
     <Compile Include="Pages\MainPage.cs" />
+    <Compile Include="Pages\Maintenance.cs" />
     <Compile Include="Pages\SharedPage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -113,10 +113,6 @@
     <Content Include="js\metaApi.js" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="BitsharesRpc\BitsharesRpc.csproj">
-      <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
-      <Name>BitsharesRpc</Name>
-    </ProjectReference>
     <ProjectReference Include="RestLib\RestLib.csproj">
       <Project>{c2755a02-d80a-4fb2-8210-45c181dd6785}</Project>
       <Name>RestLib</Name>

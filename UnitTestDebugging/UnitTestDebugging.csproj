@@ -41,6 +41,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'debug2nd|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\debug2nd\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -61,6 +71,10 @@
     <ProjectReference Include="..\BitsharesCoreUnitTests\BitsharesCoreUnitTests.csproj">
       <Project>{c38f76df-ffcc-4877-8b1e-4adccb134a58}</Project>
       <Name>BitsharesCoreUnitTests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MetaDaemonUnitTests\MetaDaemonUnitTests.csproj">
+      <Project>{5bdfc2da-d529-42ea-9bcb-e6a001d511d2}</Project>
+      <Name>MetaDaemonUnitTests</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
