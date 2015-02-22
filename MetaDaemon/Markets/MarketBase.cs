@@ -16,14 +16,19 @@ namespace MetaDaemon.Markets
 {
 	public abstract class MarketBase
 	{
+		protected const int kMaxTransactionsBeforeCollectFees = 10;
+
 		protected MarketRow m_market;
-		protected DaemonMySql m_daemon;
+		protected MetaDaemonApi m_daemon;
 
 		protected BitsharesWallet m_bitshares;
 		protected BitcoinWallet m_bitcoin;
 		protected string m_bitsharesAccount;
 
-		public MarketBase(DaemonMySql daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount)
+		protected bool m_isDirty;
+		protected bool m_flipped;
+
+		public MarketBase(MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount)
 		{
 			m_daemon = daemon;
 			m_market = market;
@@ -32,16 +37,27 @@ namespace MetaDaemon.Markets
 			m_bitcoin = bitcoin;
 			m_bitsharesAccount = bitsharesAccount;
 		}
-		
+
+		/// <summary>	Calculates the market prices and limits./ </summary>
+		///
+		/// <remarks>	Paul, 19/02/2015. </remarks>
+		///
+		/// <param name="market">				[in,out] The market. </param>
+		/// <param name="bitsharesBalances">	The bitshares balances. </param>
+		/// <param name="bitcoinBalances">  	The bitcoin balances. </param>
+		///
+		/// <returns>	Whether the prices were updated </returns>
 		public virtual void ComputeMarketPricesAndLimits(ref MarketRow market, Dictionary<int, ulong> bitsharesBalances, decimal bitcoinBalances)
 		{
 			m_market = market;
+			m_isDirty = false;
 		}
 
 		public abstract void HandleBitsharesDeposit(KeyValuePair<string, BitsharesLedgerEntry> kvp);
 		public abstract void HandleBitcoinDeposit(TransactionSinceBlock t);
 		public abstract SubmitAddressResponse OnSubmitAddress(string receivingAddress, MetaOrderType orderType);
 		public abstract bool CanDepositAsset(CurrencyTypes asset);
+		public abstract void CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount);
 		
 		/// <summary>	Sends the bitcoins to depositor. </summary>
 		///
@@ -58,24 +74,39 @@ namespace MetaDaemon.Markets
 		/// <returns>	A string. </returns>
 		protected virtual string SendBitcoinsToDepositor(string btcAddress, string trxId, ulong amount, BitsharesAsset asset, string depositAddress, MetaOrderType orderType)
 		{
+			// make sure failures after this point dont result in multiple credits
+			m_daemon.MarkDespositAsCreditedStart(trxId, depositAddress, m_market.symbol_pair, orderType);
+
 			decimal bitAssetAmount = asset.GetAmountFromLarimers(amount);
 
-			// make sure failures after this point dont result in multiple credits
-			m_daemon.MarkDespositAsCreditedStart(trxId, depositAddress, m_market.symbol_pair, orderType, bitAssetAmount);
-
-			// get the BTC amount we need to transfer
-			decimal btcToTransfer = bitAssetAmount * m_market.bid;
-
-			if (btcToTransfer > m_market.bid_max)
+			if (bitAssetAmount > m_market.bid_max)
 			{
 				throw new RefundBitsharesException("Over " + m_market.bid_max + " " + asset.symbol + "!");
 			}
 
+			// get the BTC amount we need to transfer
+			decimal btcNoFee;
+
+			if (m_flipped)
+			{
+				btcNoFee = bitAssetAmount / m_market.bid;
+			}
+			else
+			{
+				btcNoFee = bitAssetAmount * m_market.bid;
+			}
+
+			// when selling, the fee is charged in BTC,
+			// the amount recorded in the transaction is the amount of bitAssets sans fee, obv
+
+			decimal fee = (m_market.bid_fee_percent / 100) * btcNoFee;
+			decimal btcTotal = Numeric.TruncateDecimal(btcNoFee - fee, 8);
+						
 			// do the transfer
-			string txid = m_bitcoin.SendToAddress(btcAddress, btcToTransfer);
+			string txid = m_bitcoin.SendToAddress(btcAddress, btcTotal);
 
 			// mark this in our records
-			m_daemon.MarkDespositAsCreditedEnd(trxId, txid, MetaOrderStatus.completed);
+			m_daemon.MarkDespositAsCreditedEnd(trxId, txid, MetaOrderStatus.completed, bitAssetAmount, m_market.bid, fee);
 
 			return txid;
 		}
@@ -94,19 +125,37 @@ namespace MetaDaemon.Markets
 		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, SenderToDepositRow s2d, MetaOrderType orderType)
 		{
 			// make sure failures after this point do not result in repeated sending
-			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType, t.Amount);
+			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType);
 
 			if (t.Amount > m_market.ask_max)
 			{
-				throw new RefundBitcoinException("Over " + Numeric.Format2Dps(m_market.ask_max) + " BTC!");
+				throw new RefundBitcoinException("Over " + m_market.ask_max + " " + asset.symbol + "!");
 			}
 
 			string bitsharesAccount = s2d.receiving_address;
-			decimal amount = (1 / m_market.ask) * t.Amount;
+			decimal amountNoFee;
 
-			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, bitsharesAccount);
+			if (m_flipped)
+			{
+				amountNoFee = t.Amount * m_market.ask;
+			}
+			else
+			{
+				amountNoFee = t.Amount / m_market.ask;
+			}
 
-			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed);
+			// when buying, the fee is charged in bitAssets,
+			// the amount recorded in the transaction is the amount of bitAssets purchased sans fee
+
+			amountNoFee = asset.Truncate(amountNoFee);
+
+			decimal fee = (m_market.ask_fee_percent / 100) * amountNoFee;
+			decimal amountAsset = amountNoFee - fee;
+
+			amountAsset = asset.Truncate(amountAsset);
+			
+			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
+			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, amountNoFee, m_market.ask, fee);
 
 			return bitsharesTrx;
 		}
@@ -128,9 +177,9 @@ namespace MetaDaemon.Markets
 			// look that address up in our map of sender->deposit address
 			
 			// pull the market uid out of the memo
-			uint marketUid = MemoGetUid(l.memo);
+			string symbolPair = MemoGetUid(l.memo);
 
-			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(l.memo, marketUid);
+			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(l.memo, symbolPair);
 			if (senderToDeposit != null)
 			{
 				return senderToDeposit;
@@ -151,7 +200,7 @@ namespace MetaDaemon.Markets
 		protected SenderToDepositRow GetBitsharesAccountFromBitcoinDeposit(TransactionSinceBlock t)
 		{
 			// look up the deposit address in our map of sender->deposit
-			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(t.Address, m_market.uid);
+			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(t.Address, m_market.symbol_pair);
 			if (senderToDeposit != null)
 			{
 				return senderToDeposit;
@@ -188,12 +237,12 @@ namespace MetaDaemon.Markets
 			decimal amount = asset.GetAmountFromLarimers(larimers);
 
 			// make sure failures after this point don't result in multiple refunds
-			m_daemon.MarkTransactionAsRefundedStart(depositId, depositAddress, m_market.symbol_pair, orderType, amount);
+			m_daemon.MarkTransactionAsRefundedStart(depositId, depositAddress, m_market.symbol_pair, orderType);
 			
 			BitsharesAccount account = GetAccountFromLedger(fromAccount);
 			BitsharesTransactionResponse response = m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, fromAccount, memo);
 			
-			m_daemon.MarkTransactionAsRefundedEnd(depositId, response.record_id, MetaOrderStatus.refunded, memo);
+			m_daemon.MarkTransactionAsRefundedEnd(depositId, response.record_id, MetaOrderStatus.refunded, amount, memo);
 		}
 
 		/// <summary>	Gets all pubkeys from bitcoin transactions in this collection. </summary>
@@ -219,7 +268,7 @@ namespace MetaDaemon.Markets
 		/// <param name="t">	The TransactionSinceBlock to process. </param>
 		protected void RefundBitcoinDeposit(TransactionSinceBlock t, string notes, SenderToDepositRow s2d, MetaOrderType orderType)
 		{
-			m_daemon.MarkTransactionAsRefundedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType, t.Amount);
+			m_daemon.MarkTransactionAsRefundedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType);
 
 			// get public key out of transaction
 			string firstPubKey = GetAllPubkeysFromBitcoinTransaction(t.TxId).First();
@@ -229,7 +278,7 @@ namespace MetaDaemon.Markets
 			string sentTxid = m_bitcoin.SendToAddress(pk.AddressBase58, t.Amount);
 
 			// mark as such
-			m_daemon.MarkTransactionAsRefundedEnd(t.TxId, sentTxid, MetaOrderStatus.refunded, notes);
+			m_daemon.MarkTransactionAsRefundedEnd(t.TxId, sentTxid, MetaOrderStatus.refunded, t.Amount, notes);
 		}
 
 		/// <summary>	Sets prices from single unit quantities. </summary>
@@ -251,7 +300,7 @@ namespace MetaDaemon.Markets
 				throw new Exception("New prices are too different!");
 			}
 
-			int updated = m_daemon.UpdateMarketPrices(m_market.uid, bid, ask);
+			int updated = m_daemon.UpdateMarketPrices(m_market.symbol_pair, bid, ask);
 			if (updated == 0)
 			{
 				throw new Exception("No market row updated!");
@@ -261,6 +310,32 @@ namespace MetaDaemon.Markets
 				m_market.ask = ask;
 				m_market.bid = bid;
 			}
+
+			m_isDirty = true;
+		}
+
+		/// <summary>	Gets the market UID. </summary>
+		///
+		/// <value>	The m market UID. </value>
+		public string m_MarketSymbolPair
+		{
+			get { return m_market.symbol_pair; }
+		}
+
+		/// <summary>	Gets a value indicating whether this object is dirty. </summary>
+		///
+		/// <value>	true if dirty, false if not. </value>
+		public bool m_IsDirty
+		{
+			get { return m_isDirty; }
+		}
+
+		/// <summary>	Gets the market. </summary>
+		///
+		/// <value>	The m market. </value>
+		public MarketRow m_Market
+		{
+			get { return m_market; }
 		}
 
 		/// <summary>	Memo get UID. </summary>
@@ -270,9 +345,9 @@ namespace MetaDaemon.Markets
 		/// <param name="memo">	The memo. </param>
 		///
 		/// <returns>	An uint. </returns>
-		static public uint MemoGetUid(string memo)
+		static public string MemoGetUid(string memo)
 		{
-			return uint.Parse(memo.Split('-')[0]);
+			return memo.Split('-')[0];
 		}
 
 		/// <summary>	Creates a memo. </summary>
@@ -283,9 +358,9 @@ namespace MetaDaemon.Markets
 		/// <param name="marketUid">	 	The market UID. </param>
 		///
 		/// <returns>	The new memo. </returns>
-		static public string CreateMemo(string bitcoinAddress, uint marketUid)
+		static public string CreateMemo(string bitcoinAddress, string symbolPair)
 		{
-			string start = marketUid.ToString() + "-";
+			string start = symbolPair + "-";
 			string memo = start + bitcoinAddress.Substring(0, Math.Min(BitsharesWallet.kBitsharesMaxMemoLength, bitcoinAddress.Length) - start.Length);
 			return memo;
 		}

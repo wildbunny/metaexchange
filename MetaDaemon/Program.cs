@@ -18,7 +18,7 @@ namespace MetaDaemon
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length == 12)
+			if (args.Length == 17)
 			{
 				string bitsharesUrl = args[0];
 				string bitsharesUser = args[1];
@@ -36,6 +36,13 @@ namespace MetaDaemon
 
 				string apiListen = args[11];
 
+				string bitcoinFeeAddress = args[12];
+				string bitsharesFeeAccount = args[13];
+				string adminUsernames = args[14];
+
+				string masterSiteUrl = args[15];
+				string masterSiteIp = args[16];
+
 				// create a scheduler so we can be sure of thread affinity
 				AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
@@ -43,7 +50,9 @@ namespace MetaDaemon
 															new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
 															bitsharesAccount, 
 															database, databaseUser, databasePassword,
-															apiListen);
+															apiListen,
+															bitcoinFeeAddress, bitsharesFeeAccount, adminUsernames,
+															masterSiteUrl, masterSiteIp);
 
 				scheduler.RunWithUpdate(daemon.Start, daemon.Update, 5);
 
@@ -51,9 +60,7 @@ namespace MetaDaemon
 			}
 			else
 			{
-				Console.WriteLine("Error, usage: MetaDamon.exe <bitshares rpc url> <bitshares rpc user> <bitshares rpc password> " +
-									"<bitshares asset name> <bitcoin rpc url> <bitcoin rpc user> <bitcoin rpc password> <use bitcoin testnet> " +
-									"<myql database name> <mysql database user> <mysql database password> <api listen address>");
+				Console.WriteLine("Error, usage.");
 			}
 		}
 

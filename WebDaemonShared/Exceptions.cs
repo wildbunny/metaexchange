@@ -8,6 +8,7 @@ namespace WebDaemonShared
 {
 	public enum ApiErrorCode
 	{
+		None=0,
 		GeneralException,
 		MissingParameter,
 		UnknownMarket,

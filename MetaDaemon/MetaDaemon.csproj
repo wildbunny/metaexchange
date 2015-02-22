@@ -41,6 +41,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'debug2nd|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\debug2nd\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="ApiHost">
       <HintPath>..\libs\ApiHost.dll</HintPath>
@@ -69,6 +79,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Net" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -79,6 +90,7 @@
     <Compile Include="Api.cs" />
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />
+    <Compile Include="Markets\BitbtcDexMarket.cs" />
     <Compile Include="Markets\InternalMarket.cs" />
     <Compile Include="Markets\MarketBase.cs" />
     <Compile Include="MetaDaemonApi.cs" />
@@ -96,6 +108,10 @@
     <ProjectReference Include="..\BitsharesRpc\BitsharesRpc.csproj">
       <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
       <Name>BitsharesRpc</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Pathfinder\Pathfinder.csproj">
+      <Project>{2e963d4c-ffa3-4a3c-bb0e-5a180c5fa46a}</Project>
+      <Name>Pathfinder</Name>
     </ProjectReference>
     <ProjectReference Include="..\RestLib\RestLib.csproj">
       <Project>{c2755a02-d80a-4fb2-8210-45c181dd6785}</Project>

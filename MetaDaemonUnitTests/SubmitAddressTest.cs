@@ -100,7 +100,7 @@ namespace MetaDaemonUnitTests
 		{
 			string content = SubmitAddress(kBitcoinAddress, MetaOrderType.sell, market);
 
-			string memo = MarketBase.CreateMemo(kBitcoinAddress, GetMarket(market).uid);
+			string memo = MarketBase.CreateMemo(kBitcoinAddress, GetMarket(market).symbol_pair);
 
 			string reality = JsonSerializer.SerializeToString<SubmitAddressResponse>(new SubmitAddressResponse { deposit_address = m_api.m_DaemonAccount, memo = memo });
 
@@ -115,7 +115,7 @@ namespace MetaDaemonUnitTests
 
 			MarketRow m = GetMarket(market);
 
-			SenderToDepositRow s2d = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@r AND market_uid=@m;", kBitsharesAccount, m.uid).FirstOrDefault();
+			SenderToDepositRow s2d = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@r AND symbol_pair=@m;", kBitsharesAccount, m.symbol_pair).FirstOrDefault();
 
 			string reality = JsonSerializer.SerializeToString<SubmitAddressResponse>(new SubmitAddressResponse { deposit_address = s2d.deposit_address });
 

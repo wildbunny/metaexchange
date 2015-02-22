@@ -77,7 +77,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MetaApi.cs" />
     <Compile Include="MetaServer.cs" />
+    <Compile Include="MySqlLayer.cs" />
     <Compile Include="Pages\ApiPage.cs" />
     <Compile Include="Pages\BootstrapBase.cs" />
     <Compile Include="Pages\Faq.cs" />

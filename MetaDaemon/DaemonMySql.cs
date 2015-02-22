@@ -18,85 +18,74 @@ namespace MetaDaemon
 
 	public class DaemonMySql : DaemonBase
 	{
-		protected Database m_database;
+		protected MySqlData m_dataAccess;
 
 		public DaemonMySql(RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
-							string bitsharesAccount,
-							string databaseName, string databaseUser, string databasePassword) : base(bitsharesConfig, bitcoinConfig, bitsharesAccount)
+							string bitsharesAccount, string adminUsernames,
+							string databaseName, string databaseUser, string databasePassword)
+			: base(bitsharesConfig, bitcoinConfig, bitsharesAccount, adminUsernames)
 		{
-			m_database = new Database(databaseName, databaseUser, databasePassword, System.Threading.Thread.CurrentThread.ManagedThreadId);
+			m_dataAccess = new MySqlData(databaseName, databaseUser, databasePassword);
 		}
 
 		protected override uint GetLastBitsharesBlock()
 		{
-			StatsRow stats = m_database.Query<StatsRow>("SELECT * FROM stats;").First();
-			return stats.last_bitshares_block;
+			return m_dataAccess.GetLastBitsharesBlock();
 		}
 
 		protected override void UpdateBitsharesBlock(uint blockNum)
 		{
-			int updated = m_database.Statement("UPDATE stats SET last_bitshares_block=@block;", blockNum);
-			Debug.Assert(updated > 0);
+			m_dataAccess.UpdateBitsharesBlock(blockNum);
 		}
 
 		public override bool HasDepositBeenCredited(string trxId)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@trx;", trxId) > 0;
+			return m_dataAccess.HasDepositBeenCredited(trxId);
 		}
 
-		public void MarkDespositAsCreditedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType, decimal amount)
+		public void MarkDespositAsCreditedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType)
 		{
-			MarkTransactionStart(receivedTxid, depositAddress, symbolPair, orderType, amount);
+			m_dataAccess.MarkDespositAsCreditedStart(receivedTxid, depositAddress, symbolPair, orderType);
 		}
 
-		public void MarkDespositAsCreditedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status)
+		public void MarkDespositAsCreditedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, decimal price, decimal fee)
 		{
-			MarkTransactionEnd(receivedTxid, sentTxid, status);
+			m_dataAccess.MarkDespositAsCreditedEnd(receivedTxid, sentTxid, status, amount, price, fee);
 		}
 
 		protected override string GetLastBitcoinBlockHash()
 		{
-			return m_database.Query<StatsRow>("SELECT * FROM stats;").First().last_bitcoin_block;
+			return m_dataAccess.GetLastBitcoinBlockHash();
 		}
 
 		protected override void UpdateBitcoinBlockHash(string lastBlock)
 		{
-			m_database.Statement("UPDATE stats SET last_bitcoin_block=@block;", lastBlock);
+			m_dataAccess.UpdateBitcoinBlockHash(lastBlock);
 		}
 
-		public override void MarkTransactionAsRefundedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType, decimal amount)
+		public override void MarkTransactionAsRefundedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType)
 		{
-			if (!IsPartTransaction(receivedTxid))
-			{
-				MarkTransactionStart(receivedTxid, depositAddress, symbolPair, orderType, amount);
-			}
+			m_dataAccess.MarkTransactionAsRefundedStart(receivedTxid, depositAddress, symbolPair, orderType);
 		}
 
-		public override void MarkTransactionAsRefundedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, string notes)
+		public override void MarkTransactionAsRefundedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, string notes)
 		{
-			MarkTransactionEnd(receivedTxid, sentTxid, status, notes);
+			m_dataAccess.MarkTransactionAsRefundedEnd(receivedTxid, sentTxid, status, amount, notes);
 		}
 
 		protected override bool IsTransactionIgnored(string txid)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM ignored WHERE ignored.txid=@txid;", txid) > 0;
+			return m_dataAccess.IsTransactionIgnored(txid);
 		}
 
 		protected override void IgnoreTransaction(string txid)
 		{
-			m_database.Statement("INSERT INTO ignored (txid) VALUES(@txid);", txid);
+			m_dataAccess.IgnoreTransaction(txid);
 		}
 		
 		protected override void LogGeneralException(string message)
 		{
-			uint hash = (uint)message.GetHashCode();
-
-			DateTime now = DateTime.UtcNow;
-			int updated = m_database.Statement("UPDATE general_exceptions SET count=count+1,date=@d WHERE hash=@h;", now, hash);
-			if (updated == 0)
-			{
-				m_database.Statement("INSERT INTO general_exceptions (hash,message,date) VALUES(@a,@b,@c);", hash, message, now);
-			}
+			m_dataAccess.LogGeneralException(message);
 		}
 
 		// ------------------------------------------------------------------------------------------------------------
@@ -113,11 +102,10 @@ namespace MetaDaemon
 		/// <param name="type">		   	The type. </param>
 		/// <param name="notes">	   	(Optional) the notes. </param>
 		void InsertTransaction(	string symbolPair, string depositAddress, MetaOrderType orderType, 
-								string receivedTxid, string sentTxid, decimal amount, 
-								MetaOrderStatus status, string notes = null)
+								string receivedTxid, string sentTxid, decimal amount, decimal price, decimal fee,
+								MetaOrderStatus status, DateTime date, string notes = null)
 		{
-			m_database.Statement(	"INSERT INTO transactions (received_txid, deposit_address, sent_txid, symbol_pair, amount, date, status, notes, order_type) VALUES(@a,@b,@c,@d,@e,@f,@g,@h,@i);",
-									receivedTxid, depositAddress, sentTxid, symbolPair, amount, DateTime.UtcNow, status, notes, orderType);
+			m_dataAccess.InsertTransaction(symbolPair, depositAddress, orderType, receivedTxid, sentTxid, amount, price, fee, status, date, notes);
 		}
 
 		/// <summary>	Mark transaction start. </summary>
@@ -129,9 +117,9 @@ namespace MetaDaemon
 		/// <param name="symbolPair">	 	The symbol pair. </param>
 		/// <param name="orderType">	 	Type of the order. </param>
 		/// <param name="amount">		 	The amount. </param>
-		void MarkTransactionStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType, decimal amount)
+		void MarkTransactionStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType)
 		{
-			InsertTransaction(symbolPair, depositAddress, orderType, receivedTxid, null, amount, MetaOrderStatus.processing);
+			m_dataAccess.MarkTransactionStart(receivedTxid, depositAddress, symbolPair, orderType);
 		}
 
 		/// <summary>	Mark transaction end./ </summary>
@@ -142,10 +130,9 @@ namespace MetaDaemon
 		/// <param name="sentTxid">	   	The sent txid. </param>
 		/// <param name="status">	   	The status. </param>
 		/// <param name="notes">	   	(Optional) the notes. </param>
-		void MarkTransactionEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, string notes = null)
+		void MarkTransactionEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, decimal price, decimal fee, string notes = null)
 		{
-			m_database.Statement(	"UPDATE transactions SET sent_txid=@sent, status=@status, notes=@notes WHERE received_txid=@txid;",
-									sentTxid, status, notes, receivedTxid);
+			m_dataAccess.MarkTransactionEnd(receivedTxid, sentTxid, status, amount, price, fee, notes);
 		}
 
 		/// <summary>	Query if 'receivedTxid' is part transaction. </summary>
@@ -157,7 +144,7 @@ namespace MetaDaemon
 		/// <returns>	true if part transaction, false if not. </returns>
 		bool IsPartTransaction(string receivedTxid)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@txid AND sent_txid IS NULL;", receivedTxid) > 0;
+			return m_dataAccess.IsPartTransaction(receivedTxid);
 		}
 
 		/// <summary>	Gets all markets. </summary>
@@ -167,7 +154,7 @@ namespace MetaDaemon
 		/// <returns>	all markets. </returns>
 		protected List<MarketRow> GetAllMarkets()
 		{
-			return m_database.Query<MarketRow>("SELECT * FROM markets;");
+			return m_dataAccess.GetAllMarkets();
 		}
 
 		/// <summary>	Gets a market. </summary>
@@ -179,7 +166,7 @@ namespace MetaDaemon
 		/// <returns>	The market. </returns>
 		public MarketRow GetMarket(string symbolPair)
 		{
-			return m_database.Query<MarketRow>("SELECT * FROM markets WHERE symbol_pair=@s;", symbolPair).FirstOrDefault();
+			return m_dataAccess.GetMarket(symbolPair);
 		}
 
 		/// <summary>	Updates the market in database described by market. </summary>
@@ -189,10 +176,8 @@ namespace MetaDaemon
 		/// <param name="market">	The market. </param>
 		protected void UpdateMarketInDatabase(MarketRow market)
 		{
-			int updated = m_database.Statement(	"UPDATE markets SET ask=@a, bid=@b, ask_max=@c, bid_max=@d WHERE symbol_pair=@e;",
-												market.ask, market.bid, market.ask_max, market.bid_max, market.symbol_pair);
-
-			Debug.Assert(updated > 0);
+			bool updated = m_dataAccess.UpdateMarketInDatabase(market);
+			Debug.Assert(updated);
 		}
 
 		/// <summary>	Query if 'identifier' is deposit for market. </summary>
@@ -203,9 +188,9 @@ namespace MetaDaemon
 		/// <param name="marketUid"> 	The market UID. </param>
 		///
 		/// <returns>	true if deposit for market, false if not. </returns>
-		protected bool IsDepositForMarket(string identifier, uint marketUid)
+		protected bool IsDepositForMarket(string identifier, string symbolPair)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM sender_to_deposit WHERE deposit_address=@d AND market_uid=@m;", identifier, marketUid) > 0;
+			return m_dataAccess.IsDepositForMarket(identifier, symbolPair);
 		}
 
 		/// <summary>	Gets sender deposit from deposit. </summary>
@@ -216,9 +201,9 @@ namespace MetaDaemon
 		/// <param name="marketUid">	 	The market UID. </param>
 		///
 		/// <returns>	The sender deposit from deposit. </returns>
-		public SenderToDepositRow GetSenderDepositFromDeposit(string depositAddress, uint marketUid)
+		public SenderToDepositRow GetSenderDepositFromDeposit(string depositAddress, string symbolPair)
 		{
-			return m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE deposit_address=@d AND market_uid=@m;", depositAddress, marketUid).FirstOrDefault();
+			return m_dataAccess.GetSenderDepositFromDeposit(depositAddress, symbolPair);
 		}
 
 		/// <summary>	Gets sender deposit from receiver. </summary>
@@ -229,9 +214,9 @@ namespace MetaDaemon
 		/// <param name="marketUid">	  	The market UID. </param>
 		///
 		/// <returns>	The sender deposit from receiver. </returns>
-		public SenderToDepositRow GetSenderDepositFromReceiver(string recevingAddress, uint marketUid)
+		public SenderToDepositRow GetSenderDepositFromReceiver(string recevingAddress, string symbolPair)
 		{
-			return m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@r AND market_uid=@m;", recevingAddress, marketUid).FirstOrDefault();
+			return m_dataAccess.GetSenderDepositFromReceiver(recevingAddress, symbolPair);
 		}
 
 		/// <summary>	Inserts a sender to deposit. </summary>
@@ -243,16 +228,9 @@ namespace MetaDaemon
 		/// <param name="marketUid">	  	The market UID. </param>
 		///
 		/// <returns>	A SenderToDepositRow. </returns>
-		public SenderToDepositRow InsertSenderToDeposit(string recevingAddress, string depositAddress, uint marketUid)
+		public SenderToDepositRow InsertSenderToDeposit(string recevingAddress, string depositAddress, string symbolPair)
 		{
-			m_database.Statement(	"INSERT INTO sender_to_deposit (deposit_address, receiving_address, market_uid) VALUES(@a,@b,@c);", 
-									depositAddress, recevingAddress, marketUid);
-			return	new SenderToDepositRow 
-					{ 
-						deposit_address = depositAddress, 
-						receiving_address = recevingAddress, 
-						market_uid = marketUid 
-					};
+			return m_dataAccess.InsertSenderToDeposit(recevingAddress, depositAddress, symbolPair);
 		}
 
 		/// <summary>	Gets a transaction. </summary>
@@ -264,7 +242,7 @@ namespace MetaDaemon
 		/// <returns>	The transaction. </returns>
 		public TransactionsRow GetTransaction(string txid)
 		{
-			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE received_txid=@txid;", txid).FirstOrDefault();
+			return m_dataAccess.GetTransaction(txid);
 		}
 
 		/// <summary>	Gets the last transactions from deposit. </summary>
@@ -275,9 +253,9 @@ namespace MetaDaemon
 		/// <param name="limit">		 	The limit. </param>
 		///
 		/// <returns>	The last transactions from deposit. </returns>
-		public List<TransactionsRow> GetLastTransactionsFromDeposit(string memo, string depositAddress, uint limit)
+		public List<TransactionsRowNoUid> GetLastTransactionsFromDeposit(string memo, string depositAddress, uint limit)
 		{
-			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE deposit_address=@a OR deposit_address=@b ORDER BY date DESC LIMIT @l;", memo, depositAddress, limit);
+			return m_dataAccess.GetLastTransactionsFromDeposit(memo, depositAddress, limit);
 		}
 
 		/// <summary>	Gets the last transactions. </summary>
@@ -288,16 +266,9 @@ namespace MetaDaemon
 		/// <param name="market">	(Optional) The market. </param>
 		///
 		/// <returns>	The last transactions. </returns>
-		public List<TransactionsRow> GetLastTransactions(uint limit, string market=null)
+		public List<TransactionsRowNoUid> GetLastTransactions(uint limit, string market = null)
 		{
-			if (market != null)
-			{
-				return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE symbol_pair=@s AND status=@s ORDER BY date DESC LIMIT @l;", market, MetaOrderStatus.completed, limit);
-			}
-			else
-			{
-				return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE status=@s ORDER BY date DESC LIMIT @l;", MetaOrderStatus.completed, limit);
-			}
+			return m_dataAccess.GetLastTransactions(limit, market);
 		}
 
 		/// <summary>	Updates the market prices. </summary>
@@ -307,9 +278,52 @@ namespace MetaDaemon
 		/// <param name="marketUid">	The market UID. </param>
 		/// <param name="bid">			The bid. </param>
 		/// <param name="ask">			The ask. </param>
-		public int UpdateMarketPrices(uint marketUid, decimal bid, decimal ask)
+		public int UpdateMarketPrices(string symbolPair, decimal bid, decimal ask)
 		{
-			return m_database.Statement("UPDATE markets SET bid=@b, ask=@a WHERE uid=@u;", bid, ask, marketUid);
+			return m_dataAccess.UpdateMarketPrices(symbolPair, bid, ask);
+		}
+
+		/// <summary>	Gets transactions in market since. </summary>
+		///
+		/// <remarks>	Paul, 18/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">	The symbol pair. </param>
+		/// <param name="lastUid">   	The last UID. </param>
+		///
+		/// <returns>	The transactions in market since. </returns>
+		public List<TransactionsRow> GetTransactionsInMarketSince(string symbolPair, uint lastUid)
+		{
+			return m_dataAccess.GetTransactionsInMarketSince(symbolPair, lastUid);
+		}
+
+		/// <summary>	Updates the transaction processed for market. </summary>
+		///
+		/// <remarks>	Paul, 18/02/2015. </remarks>
+		///
+		/// <param name="market">	The market. </param>
+		/// <param name="last">  	The last. </param>
+		///
+		/// <returns>	An int. </returns>
+		public int UpdateTransactionProcessedForMarket(string market, uint last)
+		{
+			return m_dataAccess.UpdateTransactionProcessedForMarket(market, last);
+		}
+
+		/// <summary>	Inserts a fee transaction. </summary>
+		///
+		/// <remarks>	Paul, 19/02/2015. </remarks>
+		///
+		/// <param name="market">				  	The market. </param>
+		/// <param name="buyTrxId">				  	Identifier for the buy trx. </param>
+		/// <param name="sellTrxId">			  	Identifier for the sell trx. </param>
+		/// <param name="buyFee">				  	The buy fee. </param>
+		/// <param name="sellFee">				  	The sell fee. </param>
+		/// <param name="transactionProcessedUid">	The transaction processed UID. </param>
+		/// <param name="exception">			  	The exception. </param>
+		public void InsertFeeTransaction(	string market, string buyTrxId, string sellTrxId, decimal buyFee, decimal sellFee, 
+											uint transactionProcessedUid, string exception)
+		{
+			m_dataAccess.InsertFeeTransaction(market, buyTrxId, sellTrxId, buyFee, sellFee, transactionProcessedUid, exception);
 		}
 	}
 }

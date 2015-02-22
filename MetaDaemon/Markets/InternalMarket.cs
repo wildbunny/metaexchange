@@ -23,12 +23,14 @@ namespace MetaDaemon.Markets
 	{
 		#if MONO
 		public const decimal kMaxTransactionFactor = 10.0M / 100.0M;
+		public const decimal kMinBtcFee = 0.1M;
 		#else
 		public const decimal kMaxTransactionFactor = 0.1M;
+		public const decimal kMinBtcFee = 0.00000M;
 		#endif
 
-		BitsharesAsset m_baseAsset;
-
+		protected BitsharesAsset m_asset;
+		
 		/// <summary>	Constructor. </summary>
 		///
 		/// <remarks>	Paul, 05/02/2015. </remarks>
@@ -39,10 +41,12 @@ namespace MetaDaemon.Markets
 		/// <param name="bitshares">	   	The bitshares. </param>
 		/// <param name="bitcoin">		   	The bitcoin. </param>
 		/// <param name="bitsharesAccount">	The bitshares account. </param>
-		public InternalMarket(	DaemonMySql daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount) : 
+		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount, CurrencyTypes bitsharesAsset) : 
 								base(daemon, market, bitshares, bitcoin, bitsharesAccount)
 		{
-			m_baseAsset = m_bitshares.BlockchainGetAsset(CurrencyHelpers.ToBitsharesSymbol(market.GetBase()));
+			m_flipped = m_market.GetBase() != bitsharesAsset;
+
+			m_asset = m_bitshares.BlockchainGetAsset(CurrencyHelpers.ToBitsharesSymbol(bitsharesAsset));
 		}
 
 		/// <summary>	Calculates the market prices and limits. </summary>
@@ -61,20 +65,34 @@ namespace MetaDaemon.Markets
 			decimal baseBalance = 0;
 			decimal quoteBalance = bitcoinBalance;
 
-			if (bitsharesBalances.ContainsKey(m_baseAsset.id))
+			if (bitsharesBalances.ContainsKey(m_asset.id))
 			{
 				// only non zero balances return data, so this guard is necessary
-				baseBalance = m_baseAsset.GetAmountFromLarimers(bitsharesBalances[m_baseAsset.id]);
+				baseBalance = m_asset.GetAmountFromLarimers(bitsharesBalances[m_asset.id]);
 			}
+
+			decimal newAskMax, newBidMax;
 
 			#if MONO
 			int dps=2;
 			#else
 			int dps = 8;
 			#endif
+
+			if (m_flipped)
+			{
+				decimal t = baseBalance;
+				baseBalance = quoteBalance;
+				quoteBalance = t;
+			}
 			
-			market.ask_max = Numeric.TruncateDecimal(baseBalance * kMaxTransactionFactor, dps);
-			market.bid_max = Numeric.TruncateDecimal(quoteBalance * kMaxTransactionFactor, dps);
+			newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * kMaxTransactionFactor, dps);
+			newBidMax = Numeric.TruncateDecimal(quoteBalance * kMaxTransactionFactor, dps);
+			
+			m_isDirty |= market.ask_max != newAskMax || market.bid_max != newBidMax;
+			
+			market.ask_max = newAskMax;
+			market.bid_max = newBidMax;
 		}
 
 		/// <summary>	Determine if we can deposit asset. </summary>
@@ -92,6 +110,27 @@ namespace MetaDaemon.Markets
 			return baseSymbol == asset || quoteSymbol == asset;
 		}
 
+		/// <summary>	Sell bit asset. </summary>
+		///
+		/// <remarks>	Paul, 16/02/2015. </remarks>
+		///
+		/// <param name="l">		The BitsharesLedgerEntry to process. </param>
+		/// <param name="s2d">  	The 2D. </param>
+		/// <param name="trxId">	Identifier for the trx. </param>
+		protected virtual void SellBitAsset(BitsharesLedgerEntry l, SenderToDepositRow s2d, string trxId)
+		{
+			try
+			{
+				string btcAddress = s2d.receiving_address;
+				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_asset, s2d.deposit_address, MetaOrderType.sell);
+			}
+			catch (Exception e)
+			{
+				// also lets now ignore this transaction so we don't keep failing
+				RefundBitsharesDeposit(l.from_account, l.amount.amount, trxId, e.Message, m_asset, s2d.deposit_address, MetaOrderType.sell);
+			}
+		}
+
 		/// <summary>	Handles the bitshares deposit described by kvp. </summary>
 		///
 		/// <remarks>	Paul, 05/02/2015. </remarks>
@@ -105,15 +144,25 @@ namespace MetaDaemon.Markets
 
 			SenderToDepositRow s2d = BitsharesTransactionToBitcoinAddress(l);
 
+			SellBitAsset(l, s2d, trxId);
+		}
+
+		/// <summary>	Buy bit asset. </summary>
+		///
+		/// <remarks>	Paul, 16/02/2015. </remarks>
+		///
+		/// <param name="t">  	The TransactionSinceBlock to process. </param>
+		/// <param name="s2d">	The 2D. </param>
+		protected virtual void BuyBitAsset(TransactionSinceBlock t, SenderToDepositRow s2d)
+		{
 			try
 			{
-				string btcAddress = s2d.receiving_address;
-				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_baseAsset, s2d.deposit_address, MetaOrderType.sell);
+				SendBitAssetsToDepositor(t, m_asset, s2d, MetaOrderType.buy);
 			}
 			catch (Exception e)
 			{
 				// also lets now ignore this transaction so we don't keep failing
-				RefundBitsharesDeposit(l.from_account, l.amount.amount, trxId, e.Message, m_baseAsset, s2d.deposit_address, MetaOrderType.sell);
+				RefundBitcoinDeposit(t, e.Message, s2d, MetaOrderType.buy);
 			}
 		}
 
@@ -126,15 +175,7 @@ namespace MetaDaemon.Markets
 		{
 			SenderToDepositRow s2d = GetBitsharesAccountFromBitcoinDeposit(t);
 
-			try
-			{
-				SendBitAssetsToDepositor(t, m_baseAsset, s2d, MetaOrderType.buy);
-			}
-			catch (Exception e)
-			{
-				// also lets now ignore this transaction so we don't keep failing
-				RefundBitcoinDeposit(t, e.Message, s2d, MetaOrderType.buy);
-			}
+			BuyBitAsset(t, s2d);
 		}
 
 		/// <summary>	Executes the submit address action. </summary>
@@ -165,7 +206,7 @@ namespace MetaDaemon.Markets
 				}
 
 				// try and retrieve a previous entry
-				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(accountName, m_market.uid);
+				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(accountName, m_market.symbol_pair);
 				if (senderToDeposit == null)
 				{
 					// no dice, create a new entry
@@ -177,7 +218,7 @@ namespace MetaDaemon.Markets
 
 						// generate a new bitcoin address and tie it to this account
 						string depositAdress = m_bitcoin.GetNewAddress();
-						senderToDeposit = m_daemon.InsertSenderToDeposit(account.name, depositAdress, m_market.uid);
+						senderToDeposit = m_daemon.InsertSenderToDeposit(account.name, depositAdress, m_market.symbol_pair);
 					}
 					catch (BitsharesRpcException)
 					{
@@ -185,7 +226,11 @@ namespace MetaDaemon.Markets
 					}
 				}
 
-				response = new SubmitAddressResponse { deposit_address = senderToDeposit.deposit_address };
+				response =	new SubmitAddressResponse 
+							{ 
+								deposit_address = senderToDeposit.deposit_address,
+								receiving_address = senderToDeposit.receiving_address
+							};
 			}
 			else if (orderType == MetaOrderType.sell)
 			{
@@ -199,16 +244,17 @@ namespace MetaDaemon.Markets
 				}
 
 				// try and retrieve a previous entry
-				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(bitcoinAddress, m_market.uid);
+				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(bitcoinAddress, m_market.symbol_pair);
 				if (senderToDeposit == null)
 				{
 					// generate a memo field to use instead
-					senderToDeposit = m_daemon.InsertSenderToDeposit(bitcoinAddress, MarketBase.CreateMemo(bitcoinAddress, m_market.uid), m_market.uid);
+					senderToDeposit = m_daemon.InsertSenderToDeposit(bitcoinAddress, MarketBase.CreateMemo(bitcoinAddress, m_market.symbol_pair), m_market.symbol_pair);
 				}
 
 				response =	new SubmitAddressResponse 
 							{ 
 								deposit_address = m_bitsharesAccount, 
+								receiving_address = senderToDeposit.receiving_address,
 								memo = senderToDeposit.deposit_address 
 							};
 			}
@@ -218,6 +264,51 @@ namespace MetaDaemon.Markets
 			}
 			
 			return response;
+		}
+
+		/// <summary>	Collect fees. </summary>
+		///
+		/// <remarks>	Paul, 18/02/2015. </remarks>
+		///
+		/// <param name="bitcoinFeeAddress">  	The bitcoin fee address. </param>
+		/// <param name="bitsharesFeeAccount">	The bitshares fee account. </param>
+		public override void CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount)
+		{
+			List<TransactionsRow> transSince = m_daemon.GetTransactionsInMarketSince(m_market.symbol_pair, m_market.transaction_processed_uid);
+
+			if (transSince.Count > kMaxTransactionsBeforeCollectFees)
+			{
+				decimal buyFees = transSince.Where(t => t.order_type == MetaOrderType.buy).Sum(t => t.fee);
+				decimal sellFees = transSince.Where(t => t.order_type == MetaOrderType.sell).Sum(t => t.fee);
+
+				// make sure these are in range
+				buyFees = m_asset.Truncate(buyFees);
+				sellFees = Numeric.TruncateDecimal(sellFees, 8);
+
+				if (buyFees / m_market.ask > kMinBtcFee &&
+					sellFees > kMinBtcFee)
+				{
+					// update this here to prevent failures from continually sending fees
+					m_daemon.UpdateTransactionProcessedForMarket(m_market.symbol_pair, transSince.Last().uid);
+
+					string bitsharesTrxId = null, bitcoinTxId = null;
+					string exception = null;
+					try
+					{
+						BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(buyFees, m_asset.symbol, m_bitsharesAccount, bitsharesFeeAccount);
+						bitsharesTrxId = bitsharesTrx.record_id;
+						
+						// WTUPID BTC DUST SIZE PREVENTS SMALL TRANSACGTIOJNs
+						bitcoinTxId = m_bitcoin.SendToAddress(bitcoinFeeAddress, sellFees);
+					}
+					catch (Exception e)
+					{
+						exception = e.ToString();
+					}
+
+					m_daemon.InsertFeeTransaction(m_market.symbol_pair, bitsharesTrxId, bitcoinTxId, buyFees, sellFees, transSince.Last().uid, exception);
+				}
+			}
 		}
 	}
 }

@@ -19,5 +19,6 @@ namespace WebDaemonShared
 		public const string kToCurrency = "to_currency";
 		public const string kTxId = "txid";
 		public const string kOrderBucket = "order_bucket";
+		public const string kSince = "since";
 	}
 }

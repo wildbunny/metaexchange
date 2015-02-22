@@ -25,23 +25,21 @@ namespace MetaDaemon
 	abstract public class DaemonBase
 	{
 		const int kSleepTimeSeconds = 10;
-		const int kBitcoinConfirms = 1;
-
-		
+				
 		const string kFundingMemo = "FUND";
 		public const string kSetPricesMemoStart = "SET";
-		const string kAdminAUsername = "shentist";
 
 		#if MONO
-		const string kAdminBUsername = "monsterer";
+		const int kBitcoinConfirms = 1;
 		#else
-		const string kAdminBUsername = "gatewayclient";
+		const int kBitcoinConfirms = 0;
 		#endif
 		
 		protected BitsharesWallet m_bitshares;
 		protected BitcoinWallet m_bitcoin;
 
 		protected string m_bitsharesAccount;
+		protected string[] m_adminUsernames;
 
 		protected byte m_addressByteType;
 
@@ -55,12 +53,13 @@ namespace MetaDaemon
 		/// <param name="bitsharesAsset">		 	The bitshares asset. </param>
 		/// <param name="bitcoinDespositAddress">	The bitcoin desposit address. </param>
 		public DaemonBase(	RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
-							string bitsharesAccount)
+							string bitsharesAccount, string adminUsernames)
 		{
 			m_bitshares = new BitsharesWallet(bitsharesConfig.m_url, bitsharesConfig.m_rpcUser, bitsharesConfig.m_rpcPassword);
 			m_bitcoin = new BitcoinWallet(bitcoinConfig.m_url, bitcoinConfig.m_rpcUser, bitcoinConfig.m_rpcPassword, false);
 
 			m_bitsharesAccount = bitsharesAccount;
+			m_adminUsernames = adminUsernames.Split(',');
 
 			m_addressByteType = (byte)(bitcoinConfig.m_useTestnet ? AltCoinAddressTypeBytes.BitcoinTestnet : AltCoinAddressTypeBytes.Bitcoin);
 		}
@@ -70,8 +69,8 @@ namespace MetaDaemon
 		public abstract bool HasDepositBeenCredited(string trxId);
 		protected abstract bool IsTransactionIgnored(string txid);
 		protected abstract void IgnoreTransaction(string txid);
-		public abstract void MarkTransactionAsRefundedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType, decimal amount);
-		public abstract void MarkTransactionAsRefundedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, string notes);
+		public abstract void MarkTransactionAsRefundedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType);
+		public abstract void MarkTransactionAsRefundedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, string notes);
 		protected abstract void LogGeneralException(string message);
 		protected abstract string GetLastBitcoinBlockHash();
 		protected abstract void UpdateBitcoinBlockHash(string lastBlock);
@@ -99,7 +98,7 @@ namespace MetaDaemon
 		/// <returns>	true if price setting transaction, false if not. </returns>
 		public bool IsPriceSettingTransaction(BitsharesLedgerEntry l)
 		{
-			return l.memo.StartsWith(kSetPricesMemoStart) && (l.from_account == kAdminAUsername || l.from_account == kAdminBUsername);
+			return l.memo.StartsWith(kSetPricesMemoStart) && ( m_adminUsernames.Contains(l.from_account) );
 		}
 		
 

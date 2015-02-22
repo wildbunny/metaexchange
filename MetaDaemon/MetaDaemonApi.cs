@@ -8,6 +8,7 @@ using BitcoinRpcSharp.Responses;
 using BitsharesRpc;
 using ApiHost;
 using WebDaemonShared;
+using WebDaemonSharedTables;
 using Monsterer.Request;
 using Monsterer.Util;
 using Casascius.Bitcoin;
@@ -15,31 +16,58 @@ using MySqlDatabase;
 using MetaDaemon.Markets;
 using MetaData;
 using ServiceStack.Text;
+using Pathfinder;
 
 namespace MetaDaemon
 {
-	public interface IDummy { }
+	public interface IDummyDaemon { }
 
 	public partial class MetaDaemonApi : DaemonMySql, IDisposable
 	{
-		ApiServer<IDummy> m_server;
+		ApiServer<IDummyDaemon> m_server;
+		SharedApi<IDummyDaemon> m_api;
 
 		Dictionary<string, MarketBase> m_marketHandlers;
 		Dictionary<int, BitsharesAsset> m_allBitsharesAssets;
+		List<BitsharesMarket> m_allDexMarkets;
+
+		string m_bitshaaresFeeAccount;
+		string m_bitcoinFeeAddress;
 		
 		public MetaDaemonApi(	RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
 								string bitsharesAccount,
 								string databaseName, string databaseUser, string databasePassword,
-								string listenAddress) : 
-								base(bitsharesConfig, bitcoinConfig, bitsharesAccount,
+								string listenAddress,
+								string bitcoinFeeAddress,
+								string bitsharesFeeAccount,
+								string adminUsernames,
+								string masterSiteUrl,
+								string masterSiteIp) : 
+								base(bitsharesConfig, bitcoinConfig, bitsharesAccount, adminUsernames,
 								databaseName, databaseUser, databasePassword)
 		{
+			m_bitshaaresFeeAccount = bitsharesFeeAccount;
+			m_bitcoinFeeAddress = bitcoinFeeAddress;
+			m_masterSiteUrl = masterSiteUrl.TrimEnd('/');
+
 			Serialisation.Defaults();
 
-			m_server = new ApiServer<IDummy>(new string[] { listenAddress });
+			// don't ban on exception here because we'll only end up banning the webserver!
+			m_server = new ApiServer<IDummyDaemon>(new string[] { listenAddress }, null, false, eDdosMaxRequests.Ignore, eDdosInSeconds.One);
 			m_server.ExceptionEvent += OnApiException;
 
+			// only allow the main site to post to us
+			m_server.SetIpLock(masterSiteIp);
+
 			m_marketHandlers = new Dictionary<string,MarketBase>();
+
+			// get all market pegged assets
+			m_allBitsharesAssets = m_bitshares.BlockchainListAssets("", int.MaxValue).Where(a => a.issuer_account_id <= 0).ToDictionary(a => a.id);
+
+			// get all active markets containing those assets
+			m_allDexMarkets = m_bitshares.BlockchainListMarkets().Where(m => m.last_error == null &&
+																		m_allBitsharesAssets.ContainsKey(m.base_id) &&
+																		m_allBitsharesAssets.ContainsKey(m.quote_id)).ToList();
 
 			List<MarketRow> markets = GetAllMarkets();
 			foreach (MarketRow r in markets)
@@ -47,14 +75,20 @@ namespace MetaDaemon
 				m_marketHandlers[r.symbol_pair] = CreateHandlerForMarket(r);
 			}
 
-			m_allBitsharesAssets = m_bitshares.BlockchainListAssets("", int.MaxValue).Where(a=>a.issuer_account_id<=0).ToDictionary(a => a.id);
+			m_api = new SharedApi<IDummyDaemon>(m_dataAccess);
 
-			m_server.HandlePostRoute(Routes.kSubmitAddress,			OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetOrderStatus,		OnGetOrderStatus, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetMarket,				OnGetMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetLastTransactions,	OnGetLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetMyLastTransactions, OnGetMyLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandleGetRoute(Routes.kGetAllMarkets,			OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandlePostRoute(Routes.kSubmitAddress,				OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandleGetRoute(Routes.kGetAllMarkets,				m_api.OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+
+			/*m_server.HandlePostRoute(Routes.kGetOrderStatus,			m_api.OnGetOrderStatus, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandlePostRoute(Routes.kGetMarket,					m_api.OnGetMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandlePostRoute(Routes.kGetLastTransactions,		m_api.OnGetLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandlePostRoute(Routes.kGetMyLastTransactions,		m_api.OnGetMyLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);*/
+			
+
+			// internal requests
+			m_server.HandleGetRoute(Routes.kPing,						OnPing, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			//m_server.HandlePostRoute(Routes.kGetAllTransactionsSince,	m_api.OnGetAllTransactionsSinceInternal, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 		}
 
 		/// <summary>	Starts this object. </summary>
@@ -118,9 +152,13 @@ namespace MetaDaemon
 			CurrencyTypes @base, quote;
 			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(market.symbol_pair, out @base, out quote);
 
-			if ( CurrencyHelpers.IsBitsharesAsset(@base) && quote == CurrencyTypes.BTC)
+			if (@base == CurrencyTypes.bitBTC && quote == CurrencyTypes.BTC)
 			{
-				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount);
+				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, CurrencyTypes.bitBTC);
+			}
+			else if (@base == CurrencyTypes.BTC && quote == CurrencyTypes.bitUSD)
+			{
+				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, CurrencyTypes.bitUSD);
 			}
 			else
 			{
@@ -204,7 +242,7 @@ namespace MetaDaemon
 		/// <summary>	Updates this object. </summary>
 		///
 		/// <remarks>	Paul, 05/02/2015. </remarks>
-		public override void Update()
+		async public override void Update()
 		{
 			try
 			{
@@ -225,6 +263,8 @@ namespace MetaDaemon
 				//
 				// process bitshares deposits
 				//
+
+				uint siteLastTid = m_dataAccess.GetSiteLastTransactionUid();
 				
 				foreach (KeyValuePair<string, BitsharesLedgerEntry> kvpDeposit in bitsharesDeposits)
 				{
@@ -235,7 +275,7 @@ namespace MetaDaemon
 						MarketRow m = allMarkets[kvpHandler.Key];
 						BitsharesAsset depositAsset = m_allBitsharesAssets[l.amount.asset_id];
 
-						if (IsDepositForMarket(l.memo, m.uid))
+						if (IsDepositForMarket(l.memo, m.symbol_pair))
 						{
 							// make sure the deposit is for this market!
 							if (kvpHandler.Value.CanDepositAsset( CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol) ))
@@ -259,10 +299,46 @@ namespace MetaDaemon
 					// figure out which market each deposit belongs to
 					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
 					{
-						if (IsDepositForMarket(deposit.Address, allMarkets[kvpHandler.Key].uid))
+						if (IsDepositForMarket(deposit.Address, allMarkets[kvpHandler.Key].symbol_pair))
 						{
 							kvpHandler.Value.HandleBitcoinDeposit(deposit);
 						}
+					}
+				}
+
+				if (m_bitcoinFeeAddress != null && m_bitshaaresFeeAccount != null)
+				{
+					// collect our fees
+					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
+					{
+						kvpHandler.Value.CollectFees(m_bitcoinFeeAddress, m_bitshaaresFeeAccount);
+					}
+				}
+
+				//
+				// push any new transactions, make sure site acknowledges receipt
+				//
+
+				uint latestTid = m_dataAccess.GetLastTransactionUid();
+				if (latestTid > siteLastTid)
+				{
+					List<TransactionsRow> newTrans = m_dataAccess.GetAllTransactionsSince(siteLastTid);
+					string result = await ApiPush<List<TransactionsRow>>(Routes.kPushTransactions, newTrans);
+					if (bool.Parse(result))
+					{
+						m_dataAccess.UpdateSiteLastTransactionUid(latestTid);
+					}
+				}
+
+				//
+				// push market updates
+				//
+
+				foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
+				{
+					if (kvpHandler.Value.m_IsDirty)
+					{
+						ApiPush<MarketRow>(Routes.kPushMarket, kvpHandler.Value.m_Market);
 					}
 				}
 			}
@@ -275,9 +351,25 @@ namespace MetaDaemon
 		/// <summary>	Gets the API server. </summary>
 		///
 		/// <value>	The m API server. </value>
-		public ApiServer<IDummy> m_ApiServer
+		public ApiServer<IDummyDaemon> m_ApiServer
 		{
 			get { return m_server; }
+		}
+
+		/// <summary>	Gets all dex markets. </summary>
+		///
+		/// <value>	The m all dex markets. </value>
+		public List<BitsharesMarket> m_AllDexMarkets
+		{
+			get { return m_allDexMarkets; }
+		}
+
+		/// <summary>	Gets all dex assets. </summary>
+		///
+		/// <value>	The m all dex assets. </value>
+		public Dictionary<int, BitsharesAsset> m_AllBitsharesAssets
+		{
+			get { return m_allBitsharesAssets; }
 		}
 	}
 }

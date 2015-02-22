@@ -38,7 +38,22 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'debug2nd|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\debug2nd\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ApiHost">
+      <HintPath>..\libs\ApiHost.dll</HintPath>
+    </Reference>
+    <Reference Include="Monsterer">
+      <HintPath>..\libs\Monsterer.dll</HintPath>
+    </Reference>
     <Reference Include="MySqlDatabase">
       <HintPath>..\libs\MySqlDatabase.dll</HintPath>
     </Reference>
@@ -47,6 +62,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -57,16 +73,18 @@
     <Compile Include="CurrencyTypes.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="MetaData.cs" />
+    <Compile Include="MySqlData.cs" />
     <Compile Include="Numeric.cs" />
     <Compile Include="Routes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serialisation.cs" />
+    <Compile Include="SharedApi.cs" />
     <Compile Include="SiteDatabaseTables.cs" />
     <Compile Include="StringExtensions.cs" />
     <Compile Include="WebForms.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-   <PropertyGroup Condition="'$(Configuration)' == 'mono'">
+  <PropertyGroup Condition="'$(Configuration)' == 'mono'">
     <PostBuildEvent>cd $(TargetDir)
 pdb2mdb $(TargetName).dll &amp; copy "$(TargetName).dll.mdb" "$(SolutionDir)bin\mono" /Y
 </PostBuildEvent>

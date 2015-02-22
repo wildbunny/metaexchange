@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 using MySqlDatabase;
 using WebDaemonShared;
@@ -12,6 +13,7 @@ namespace MetaData
 	public class SubmitAddressResponse
 	{
 		public string deposit_address;
+		public string receiving_address;
 		public string memo;
 	}
 
@@ -29,21 +31,32 @@ namespace MetaData
 
 	public class MarketRow : ICoreType
 	{
-		public uint uid;
 		public string symbol_pair;
 		public decimal ask;
 		public decimal bid;
 		public decimal ask_max;
 		public decimal bid_max;
+		public decimal ask_fee_percent;
+		public decimal bid_fee_percent;
+		public bool up;
 
+		[IgnoreDataMember]
+		public uint transaction_processed_uid;
+
+		[IgnoreDataMember]
+		public string daemon_url;
+
+		[IgnoreDataMember]
+		public uint last_tid;
+		
 		public CurrencyTypes GetBase()
 		{
-			return CurrencyHelpers.FromBitsharesSymbol(symbol_pair.Split('_')[0]);
+			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[0]);
 		}
 
 		public CurrencyTypes GetQuote()
 		{
-			return CurrencyHelpers.FromBitsharesSymbol(symbol_pair.Split('_')[1]);
+			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[1]);
 		}
 	}
 
@@ -51,6 +64,16 @@ namespace MetaData
 	{
 		public string deposit_address;
 		public string receiving_address;
-		public uint market_uid;
+		public string symbol_pair;
+	}
+
+	public class FeeCollectionRow : ICoreType
+	{
+		public uint uid;
+		public string buy_trxid;
+		public string sell_trxid;
+		public decimal buy_fee;
+		public decimal sell_fee;
+		public DateTime date;
 	}
 }

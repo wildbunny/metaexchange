@@ -433,13 +433,23 @@ namespace BitsharesRpc
 
 			// try and unmangle the mess we get returned from the RPC call
 			Dictionary<string, Dictionary<int, ulong>> result = new Dictionary<string, Dictionary<int, ulong>>();
+			result[accountName] = new Dictionary<int, ulong>();
 
 			foreach (ulong[] assetBalance in mess[0][accountName])
 			{
-				result[accountName] = new Dictionary<int, ulong>();
 				result[accountName][ (int)assetBalance[0] ] = assetBalance[1];
 			}
 			return result;
+		}
+
+		/// <summary>	Blockchain list markets. </summary>
+		///
+		/// <remarks>	Paul, 16/02/2015. </remarks>
+		///
+		/// <returns>	A List&lt;BitsharesMarket&gt; </returns>
+		public List<BitsharesMarket> BlockchainListMarkets()
+		{
+			return ApiPostSync<List<BitsharesMarket>>(BitsharesMethods.blockchain_list_markets);
 		}
     }
 }

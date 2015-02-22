@@ -22,27 +22,29 @@ namespace MetaExchange
 	{
 		public const string kWebRoot = ".";
 		public const string kSharedJsListName = "Pages/RequiredJs/Shared.rs";
-		public const double kUpdateTimeoutSeconds = 5;
+		public const double kUpdateTimeoutSeconds = 30;
 	}
 	
 	class Program
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length >= 3 && args.Length < 4)
+			if (args.Length >= 5 && args.Length <= 6)
 			{
 				string httpUrl = args[0];
 
-				string apiBaseUrl = args[1];
-				bool maintenance = bool.Parse(args[2]);
+				string database = args[1];
+				string databaseUser = args[2];
+				string databasePassword = args[3];
+
+				bool maintenance = bool.Parse(args[4]);
 				string ipLock = null;
-				if (args.Length == 4)
+				if (args.Length == 6)
 				{
-					ipLock = args[3];
+					ipLock = args[5];
 				}
 
-				using (var server = new MetaServer(httpUrl, Constants.kWebRoot, apiBaseUrl,
-																				maintenance))
+				using (var server = new MetaServer(httpUrl, Constants.kWebRoot, database, databaseUser, databasePassword, maintenance))
 				{
 					AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 

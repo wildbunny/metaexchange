@@ -39,6 +39,9 @@ namespace BitsharesRpc
 	/// <remarks>	Paul, 17/01/2015. </remarks>
 	public class BitsharesAsset
 	{
+		public const int kBtsAssetId = 0;
+		public const int kbitBTCAssetId = 4;
+
 		public int id;
 		public string symbol;
 		public string name;
@@ -60,6 +63,11 @@ namespace BitsharesRpc
 		public decimal GetAmountFromLarimers(ulong larmiers)
 		{
 			return (decimal)larmiers / precision;
+		}
+
+		public decimal Truncate(decimal amount)
+		{
+			return (ulong)(amount * precision) / (decimal)precision;
 		}
 
 		public bool IsUia()
@@ -486,14 +494,66 @@ namespace BitsharesRpc
 		public string meta_data;
 	}
 
+	/// <summary>	The bitshares error context. </summary>
+	///{
+	///            "level": "error",
+	///            "file": "market_engine_v7.cpp",
+	///            "line": 99,
+	///            "method": "bts::blockchain::detail::market_engine_v7::execute",
+	///            "hostname": "",
+	///            "thread_name": "bitshares",
+	///            "timestamp": "2015-02-12T10:35:23"
+	///          }
+	/// <remarks>	Paul, 16/02/2015. </remarks>
+	public class BitsharesErrorContext
+	{
+		public string level;
+		public string file;
+		public int line;
+		public string method;
+		public string hostname;
+		public string thread_name;
+		public DateTime timestamp;
+		
+	}
+
+	/// <summary>	The bitshares error stack level. </summary>
+	///{
+	///          "context":
+	///          {
+	///            "level": "error",
+	///            "file": "market_engine_v7.cpp",
+	///            "line": 99,
+	///            "method": "bts::blockchain::detail::market_engine_v7::execute",
+	///            "hostname": "",
+	///            "thread_name": "bitshares",
+	///            "timestamp": "2015-02-12T10:35:23"
+	///          },
+	///          "format": "",
+	///          "data":
+	///          {
+	///            "quote_id": 1,
+	///            "base_id": 0
+	///          }
+	///        }
+	/// <remarks>	Paul, 16/02/2015. </remarks>
+	public class BitsharesErrorStackLevel
+	{
+		public BitsharesErrorContext context;
+		public string format;
+		public string data;
+	}
+
 	/// <summary> {\"message\":\"Invalid Argument (5)\\nmissing required parameter 1 (asset)\\n\",\"detail\":\"5 invalid_arg_exception: Invalid Argument\\nmissing required parameter 1 (asset)\\n    {}\\n    bitshares  common_api_rpc_server.cpp:1541 bts::rpc_stubs::common_api_rpc_server::blockchain_get_asset_positional\",\"code\":5} </summary>
 	///
 	/// <remarks>	Paul, 10/01/2015. </remarks>
 	public class BitsharesError
 	{
+		public string name;
 		public string message;
 		public string detail;
 		public int code;
+		public BitsharesErrorStackLevel[] stack;
 	}
 
 	/// <summary>	{
@@ -522,5 +582,56 @@ namespace BitsharesRpc
 		public string snapshot_info;
 		public DateTime deposit_date;
 		public DateTime last_update;
+	}
+
+	/// <summary>	The bitshares market. </summary>
+	/// {
+	///    "quote_id": 1,
+	///    "base_id": 0,
+	///    "current_feed_price": 0,
+	///    "last_valid_feed_price": 0,
+	///    "last_error": {
+	///      "code": 37006,
+	///      "name": "insufficient_feeds",
+	///      "message": "insufficient feeds",
+	///      "stack": 
+	///      [{
+	///          "context": 
+	///          {
+	///            "level": "error",
+	///            "file": "market_engine_v7.cpp",
+	///            "line": 99,
+	///            "method": "bts::blockchain::detail::market_engine_v7::execute",
+	///            "hostname": "",
+	///            "thread_name": "bitshares",
+	///            "timestamp": "2015-02-12T10:35:23"
+	///          },
+	///          "format": "",
+	///          "data": 
+	///          {
+	///            "quote_id": 1,
+	///            "base_id": 0
+	///          }
+	///        }
+	///      ]
+	///    },
+	///    "ask_depth": 159210160,
+	///    "bid_depth": 541900001,
+	///    "center_price": {
+	///      "ratio": "0.",
+	///      "quote_asset_id": 0,
+	///      "base_asset_id": 0
+	///    }
+	///  },
+	/// <remarks>	Paul, 16/02/2015. </remarks>
+	public class BitsharesMarket
+	{
+		public int quote_id;
+		public int base_id;
+		public ulong current_feed_price;
+		public ulong last_valid_feed_price;
+		public BitsharesError last_error;
+		public ulong ask_depth;
+		public ulong bid_depth;
 	}
 }

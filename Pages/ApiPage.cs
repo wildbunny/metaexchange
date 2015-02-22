@@ -180,7 +180,7 @@ namespace MetaExchange.Pages
 					{
 						using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
 						{
-							BaseComponent.SPAN(stream, "API details", HtmlAttributes.@class, "noTopMargin h1");
+							BaseComponent.SPAN(stream, "API", HtmlAttributes.@class, "noTopMargin h1");
 						}
 					}
 				}
@@ -188,10 +188,7 @@ namespace MetaExchange.Pages
 
 			using (new DivContainer(stream, HtmlAttributes.@class, "container"))
 			{
-				H4("API details");
-
 				P("The API allows developers to access the functionality of Metaexchange without needing to use the website.");
-
 				P("All API requests return data in JSON format.");
 
 				HR();
@@ -210,7 +207,26 @@ namespace MetaExchange.Pages
 				stream.WriteLine(EnumToPrettyTable("Error codes", typeof(ApiErrorCode)));
 
 				HR();
-				H4("Public API");
+				H4("API summary");
+
+				string[] apiEndpointsAndDescriptions =
+				{
+					Routes.kSubmitAddress, "Submit your receiving address and get back deposit details",
+					Routes.kGetOrderStatus, "Get the status of your order by TXID",
+					Routes.kGetMyLastTransactions, "Get a list of your last transactions",
+					Routes.kGetAllMarkets, "Get a list of all supported markets",
+					Routes.kGetMarket, "Get details of a particular market",
+					Routes.kGetLastTransactions, "Get a list of the last transactions"
+				};
+
+				for (int i = 0; i < apiEndpointsAndDescriptions.Length; i+=2 )
+				{
+					stream.WriteLine("<b>" + apiEndpointsAndDescriptions[i + 1] + "</b><br/>");
+					stream.WriteLine( DocRefLink(apiEndpointsAndDescriptions[i + 0]) + "<br/><br/>");
+				}
+
+				HR();
+				H4("API detail");
 
 				string siteUrl = ctx.Request.Url.AbsoluteUri.TrimEnd(ctx.Request.Url.LocalPath);
 				string market = CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC);
@@ -232,7 +248,7 @@ namespace MetaExchange.Pages
 																				WebForms.kReceivingAddress, "monsterer",
 																				WebForms.kOrderType, MetaOrderType.buy), new SubmitAddressResponse { deposit_address = "mrveCRH4nRZDpS7fxgAiLTX7GKvJ1cARY9" });
 
-				CodeExample<TransactionsRow>(siteUrl, stream, Routes.kGetOrderStatus, WebRequestMethods.Http.Post, "Get the status of a particular order when you know the blockchain transaction id. Transaction must be in a block before this function will return a result.",
+				CodeExample<TransactionsRowNoUid>(siteUrl, stream, Routes.kGetOrderStatus, WebRequestMethods.Http.Post, "Get the status of a particular order when you know the blockchain transaction id. Transaction must be in a block before this function will return a result.",
 							new List<DocParam>
 							{
 								new DocParam { description = "The transaction id of the transaction you sent.",
@@ -241,7 +257,7 @@ namespace MetaExchange.Pages
 								
 							},
 							null, Routes.kGetOrderStatus + RestHelpers.BuildArgs(WebForms.kTxId, "ed7364fd1b8ba4cc3428470072300fb88097c3a343c75b6e604c68799a0148cb"),
-							new TransactionsRow
+							new TransactionsRowNoUid
 							{
 								amount = 0.1M,
 								date = DateTime.UtcNow,
@@ -272,7 +288,6 @@ namespace MetaExchange.Pages
 								ask_max=1,
 								bid_max=0.8M,
 								symbol_pair=market,
-								uid=1								
 							});
 
 
@@ -286,10 +301,9 @@ namespace MetaExchange.Pages
 								ask_max = 1,
 								bid_max = 0.8M,
 								symbol_pair = market,
-								uid = 1
 							}});
 
-				CodeExample<List<TransactionsRow>>(siteUrl, stream, Routes.kGetLastTransactions, WebRequestMethods.Http.Post, "Get the most recent transactions, sorted in descending order. This will only show transactions with status " + MetaOrderStatus.completed+".",
+				CodeExample<List<TransactionsRowNoUid>>(siteUrl, stream, Routes.kGetLastTransactions, WebRequestMethods.Http.Post, "Get the most recent transactions, sorted in descending order. This will only show transactions with status " + MetaOrderStatus.completed+".",
 							new List<DocParam>
 							{
 								new DocParam { description = "The maximum number of results to return.",
@@ -304,8 +318,8 @@ namespace MetaExchange.Pages
 												type = DocType.@string},
 								
 							}, Routes.kGetLastTransactions + RestHelpers.BuildArgs(WebForms.kSymbolPair, market),
-							new List<TransactionsRow>{
-								new TransactionsRow
+							new List<TransactionsRowNoUid>{
+								new TransactionsRowNoUid
 								{
 									amount = 0.1M,
 									date = DateTime.UtcNow,
@@ -317,7 +331,7 @@ namespace MetaExchange.Pages
 									status = MetaOrderStatus.completed,
 									symbol_pair = market
 								},
-								new TransactionsRow
+								new TransactionsRowNoUid
 								{
 									amount = 0.00010000M,
 									date = DateTime.UtcNow,
@@ -331,7 +345,7 @@ namespace MetaExchange.Pages
 								},
 							});
 
-				CodeExample<List<TransactionsRow>>(siteUrl, stream, Routes.kGetMyLastTransactions, WebRequestMethods.Http.Post, "Get your most recent transactions, sorted in descending order. Use this when you know the deposit address to which you sent funds, or the transaction memo. This shows transactions with any status.",
+				CodeExample<List<TransactionsRowNoUid>>(siteUrl, stream, Routes.kGetMyLastTransactions, WebRequestMethods.Http.Post, "Get your most recent transactions, sorted in descending order. Use this when you know the deposit address to which you sent funds, or the transaction memo. This shows transactions with any status.",
 							new List<DocParam>
 							{
 								new DocParam { description = "The maximum number of results to return.",
@@ -349,8 +363,8 @@ namespace MetaExchange.Pages
 												type = DocType.@string},
 								
 							}, Routes.kGetMyLastTransactions + RestHelpers.BuildArgs(WebForms.kMemo, "1-mqjz4GnADMucWuR4v"),
-							new List<TransactionsRow>{
-								new TransactionsRow
+							new List<TransactionsRowNoUid>{
+								new TransactionsRowNoUid
 								{
 									amount = 0.700000M,
 									date = DateTime.UtcNow,
@@ -362,7 +376,7 @@ namespace MetaExchange.Pages
 									status = MetaOrderStatus.refunded,
 									symbol_pair = market
 								},
-								new TransactionsRow
+								new TransactionsRowNoUid
 								{
 									amount = 0.0700000M,
 									date = DateTime.UtcNow,

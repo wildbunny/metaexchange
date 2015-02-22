@@ -32,6 +32,7 @@ namespace BitsharesRpc
 		blockchain_list_blocks,
 		blockchain_list_delegates,
 		blockchain_list_forks,
+		blockchain_list_markets,
 		blockchain_list_missing_block_delegates,
 		blockchain_list_pending_transactions,
 		blockchain_market_get_asset_collateral,

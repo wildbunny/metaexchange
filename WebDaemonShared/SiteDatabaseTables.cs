@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 using MySqlDatabase;
 
@@ -23,7 +24,12 @@ namespace WebDaemonSharedTables
 		sell
 	}
 
-	public class TransactionsRow : ICoreType
+	public class TransactionsRow : TransactionsRowNoUid
+	{
+		public uint uid;
+	}
+
+	public class TransactionsRowNoUid : ICoreType
 	{
 		public string received_txid;
 		public string sent_txid;
@@ -31,6 +37,8 @@ namespace WebDaemonSharedTables
 		public MetaOrderType order_type;
 		public string symbol_pair;
 		public decimal amount;
+		public decimal price;
+		public decimal fee;
 
 		public MetaOrderStatus status;
 

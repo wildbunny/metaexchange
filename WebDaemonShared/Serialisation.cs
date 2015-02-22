@@ -13,6 +13,18 @@ namespace WebDaemonShared
 		static public void Defaults()
 		{
 			JsConfig<DateTime>.RawSerializeFn = d => DateTimeExtensions.ToUnixTime(d).ToString();
+			JsConfig<DateTime>.RawDeserializeFn = d =>
+			{
+				uint unix;
+				if (uint.TryParse(d, out unix))
+				{
+					return DateTimeExtensions.FromUnixTime(unix);
+				}
+				else
+				{
+					return DateTime.Parse(d);
+				}
+			};
 			JsConfig.IncludeTypeInfo = false;
 			JsConfig.IncludePublicFields = true;
 			JsConfig.IncludeNullValues = true;

@@ -20,6 +20,7 @@ namespace WebDaemonShared
 
 	public class CurrencyHelpers
 	{
+		const string kBitassetPrefix = "bit";
 
 		/// <summary>	Query if 'type' is bitshares asset. </summary>
 		///
@@ -42,7 +43,7 @@ namespace WebDaemonShared
 		/// <returns>	type as a string. </returns>
 		static public string ToBitsharesSymbol(CurrencyTypes type)
 		{
-			return type.ToString().TrimStart("bit");
+			return type.ToString().TrimStart(kBitassetPrefix);
 		}
 
 		/// <summary>	Initializes this object from the given from bitshares symbol. </summary>
@@ -53,6 +54,18 @@ namespace WebDaemonShared
 		///
 		/// <returns>	The CurrencyTypes. </returns>
 		static public CurrencyTypes FromBitsharesSymbol(string symbol)
+		{
+			return FromSymbol(kBitassetPrefix+symbol);
+		}
+
+		/// <summary>	Initializes this object from the given from symbol. </summary>
+		///
+		/// <remarks>	Paul, 21/02/2015. </remarks>
+		///
+		/// <param name="symbol">	The symbol. </param>
+		///
+		/// <returns>	The CurrencyTypes. </returns>
+		static public CurrencyTypes FromSymbol(string symbol)
 		{
 			return (CurrencyTypes)Enum.Parse(typeof(CurrencyTypes), symbol);
 		}
@@ -79,8 +92,8 @@ namespace WebDaemonShared
 		/// <param name="quote">	 	[out] The quote. </param>
 		static public void GetBaseAndQuoteFromSymbolPair(string symbolPair, out CurrencyTypes @base, out CurrencyTypes quote)
 		{
-			@base = CurrencyHelpers.FromBitsharesSymbol(symbolPair.Split('_')[0]);
-			quote = CurrencyHelpers.FromBitsharesSymbol(symbolPair.Split('_')[1]);
+			@base = CurrencyHelpers.FromSymbol(symbolPair.Split('_')[0]);
+			quote = CurrencyHelpers.FromSymbol(symbolPair.Split('_')[1]);
 		}
 	}
 }

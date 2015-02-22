@@ -1,4 +1,11 @@
-﻿var countryApp = angular.module('myApp', []);
+﻿var countryApp = angular.module('myApp', []).config([
+    '$compileProvider',
+    function ($compileProvider)
+    {
+    	$compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|bts):/);
+    }
+]);
+
 
 function PostForm($http, url, paramsObj, onSuccess)
 {
@@ -15,25 +22,47 @@ function PostForm($http, url, paramsObj, onSuccess)
 */
 var controlFunc = function ($scope, $http, $timeout)
 {
-	var lastResponse = new Date().getTime();
+	$scope.sell = {};
+
 	var get = function()
 	{
-		var now = new Date().getTime();
-
-		if (now - lastResponse > 30 * 1000)
-		{
-			$scope.status = "Down";
-			$scope.label = "danger";
-		}
-		else
-		{
-			$scope.status = "Green";
-			$scope.label = "success";
-		}
-
 		return PostForm($http, "/api/1/getMarket", { symbol_pair: $('#symbolPairId').val() }, function (data)
 		{
-			lastResponse = now;
+			if (!data.up)
+			{
+				$scope.status = "Down";
+				$scope.label = "danger";
+			}
+			else
+			{
+				$scope.status = "Green";
+				$scope.label = "success";
+			}
+						
+			data.base_symbol = data.symbol_pair.split('_')[0];
+			data.quote_symbol = data.symbol_pair.split('_')[1];
+			var qa, qb;
+			if (data.base_symbol == "BTC")
+			{
+				var tmp = data.base_symbol;
+				data.base_symbol = data.quote_symbol;
+				data.quote_symbol = tmp;
+
+				qa = data.ask;
+				qb = 1 / data.bid;
+			}
+			else
+			{
+				qa = 1 / data.ask;
+				qb = data.bid;
+			}
+
+			var buyFee = (qa * data.ask_fee_percent / 100);
+			var sellFee = (qb * data.bid_fee_percent / 100);
+
+			data.buy_quantity = qa - buyFee;
+			data.sell_quantity = qb - sellFee;
+			
 			$scope.market = data;
 		}).finally(function (response)
 		{
@@ -110,10 +139,17 @@ function OnSubmitAddressBtc(data)
 	else
 	{
 		$('#bitcoinErrorId').hide();
-		$('#bitsharesMemoId').val(data.memo);
-		$('#bitsharesDespositAccountId').val(data.deposit_address);
+		//$('#bitsharesMemoId').val(data.memo);
+		//$('#bitsharesDespositAccountId').val(data.deposit_address);
 		$('.unhideBtcId').show();
 		$('#bitsharesMemoId').popover({ html: true, trigger: "hover", content: "Make sure to include this memo in the transaction otherwise your deposit wont credit.", placement: "auto" });
+
+		var scope = angular.element($("#rootId")).scope();
+		scope.$apply(function ()
+		{
+			scope.sell.memo = data.memo;
+			scope.sell.sendToAccount = data.deposit_address;
+		});
 	}
 }
 
@@ -126,10 +162,6 @@ function CreateLink()
 {
 	var fromAccount = $('#gtxAccountId').val();
 	var amount = $('#gtxAmountId').val();
-	var memo = $('#bitsharesMemoId').val();
-	var toAccount = $('#bitsharesDespositAccountId').val();
-
-	var url = "bts:" + toAccount + "/transfer/amount/" + amount + "/memo/" + memo + "/from/" + fromAccount + "/asset/BTC";
 
 	if (fromAccount.length > 0 && amount > 0)
 	{
@@ -138,8 +170,5 @@ function CreateLink()
 	else
 	{
 		$('#bitsharesLinkId').hide();
-	}
-	
-	$('#bitsharesLinkId').attr("href", url);
-	$('#bitsharesLinkId').text("Click to open in bitshares");
+	}	
 }
