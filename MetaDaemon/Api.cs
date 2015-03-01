@@ -56,6 +56,12 @@ namespace MetaDaemon
 				throw new ApiExceptionUnknownMarket(symbolPair);
 			}
 
+			// prevent our own deposit addresses from being used as receiving addresses
+			if (m_dataAccess.GetSenderDepositFromDeposit(receivingAddress, symbolPair) != null)
+			{
+				throw new ApiExceptionInvalidAddress("<internal deposit address>");
+			}
+
 			// get the handler for this market
 			MarketBase market = m_marketHandlers[symbolPair];
 

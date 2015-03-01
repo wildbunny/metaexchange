@@ -7,15 +7,7 @@
 ]);
 
 
-function PostForm($http, url, paramsObj, onSuccess)
-{
-	return $http({
-		method: 'POST',
-		url: url,
-		data: $.param(paramsObj),
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-	}).success(onSuccess);
-}
+
 
 /**
 	@ngInject
@@ -23,6 +15,7 @@ function PostForm($http, url, paramsObj, onSuccess)
 var controlFunc = function ($scope, $http, $timeout)
 {
 	$scope.sell = {};
+	$scope.renameSymbolPair = renameSymbolPair;
 
 	var get = function()
 	{
@@ -31,12 +24,12 @@ var controlFunc = function ($scope, $http, $timeout)
 			if (!data.up)
 			{
 				$scope.status = "Down";
-				$scope.label = "danger";
+				$scope.label = "warning";
 			}
 			else
 			{
 				$scope.status = "Green";
-				$scope.label = "success";
+				$scope.label = "info";
 			}
 						
 			data.base_symbol = data.symbol_pair.split('_')[0];
@@ -48,25 +41,26 @@ var controlFunc = function ($scope, $http, $timeout)
 				data.base_symbol = data.quote_symbol;
 				data.quote_symbol = tmp;
 
-				qa = data.ask;
-				qb = 1 / data.bid;
+				// flipped market means flipped order types as well
+				qa = parseFloat(data.bid);
+				qb = parseFloat(data.ask);
 			}
 			else
 			{
-				qa = 1 / data.ask;
-				qb = data.bid;
+				qa = 1 / parseFloat(data.ask);
+				qb = 1 / parseFloat(data.bid);
 			}
 
-			var buyFee = (qa * data.ask_fee_percent / 100);
-			var sellFee = (qb * data.bid_fee_percent / 100);
+			var buyFee = (qa * data.ask_fee_percent / 100.0);
+			var sellFee = (qb * data.bid_fee_percent / 100.0);
 
 			data.buy_quantity = qa - buyFee;
-			data.sell_quantity = qb - sellFee;
+			data.sell_quantity = qb + sellFee;
 			
 			$scope.market = data;
 		}).finally(function (response)
 		{
-			PostForm($http, "/api/1/getLastTransactions", { limit: 6 }, function (data)
+			PostForm($http, "/api/1/getLastTransactions", { limit: 6, symbol_pair: $('#symbolPairId').val() }, function (data)
 			{
 				$scope.transactions = data;
 			}).finally(function(reponse)
@@ -109,7 +103,26 @@ function OnLoad()
 	$('.unhideBtsId').hide();
 
 	$('#gtxAmountId').bind("input",CreateLink);
-	$('#gtxAccountId').bind("input",CreateLink);
+	$('#gtxAccountId').bind("input", CreateLink);
+
+	$('.submitOnBlur').blur(function ()
+	{
+		if ($(this).closest('form').valid())
+		{
+			$(this).closest('form').submit();
+		}
+		else
+		{
+			if ($(this).attr("id") == "bitsharesBlurId")
+			{
+				$('.unhideBtsId').hide();
+			}
+			if ($(this).attr("id") == "bitcoinBlurId")
+			{
+				$('.unhideBtcId').hide();
+			}
+		}
+	});
 }
 
 function OnSubmitAddressBts(data)
@@ -156,6 +169,12 @@ function OnSubmitAddressBtc(data)
 function GenerateTransactionModal()
 {
 	$('#bitsharesModalId').modal();
+}
+
+function GenerateQrModal()
+{
+	$('#qrModalId').find("img").attr("src", "https://blockchain.info/qr?data=" + $('#bitcoinDespositId').val() + "&size=200");
+	$('#qrModalId').modal();
 }
 
 function CreateLink()

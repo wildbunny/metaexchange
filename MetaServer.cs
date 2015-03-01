@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading;
+using System.Diagnostics;
 
 using Monsterer.Util;
 using Monsterer.Request;
@@ -54,6 +55,8 @@ namespace MetaExchange
 		SharedApi<IDummy> m_api;
 		MysqlAuthenticator m_auth;
 
+		string m_webAddress;
+
 		public EventHandler<ExceptionWithCtx> ExceptionEvent;
 
 		public MetaServer(	string uri, string webroot, 
@@ -67,8 +70,10 @@ namespace MetaExchange
 
 			string[] listenOn = uri.Split(',');
 
+			m_webAddress = listenOn.First();
+
 			#if MONO
-			bool forwardToSsl=true;
+			bool forwardToSsl=!Debugger.IsAttached;
 			#else
 			bool forwardToSsl=false;
 			#endif
@@ -87,7 +92,7 @@ namespace MetaExchange
 
 			if (maintenance)
 			{
-				m_server.m_HttpServer.ReplaceUnhandledRouteObserver( async ctx => ctx.Respond( await m_server.HandleRequest<MaintenancePage>(ctx, null), HttpStatusCode.OK));
+				m_server.m_HttpServer.ReplaceUnhandledRouteObserver( async ctx => ctx.Respond( await m_server.HandleRequest<MaintenancePage>(ctx, m_auth.Authorise(ctx)), HttpStatusCode.OK));
 			}
 			else
 			{
@@ -98,20 +103,20 @@ namespace MetaExchange
 				// forwarding routes on to actual api server
 				m_server.HandlePostRoute(Routes.kSubmitAddress,			OnSubmitAddress, eDdosMaxRequests.Five, eDdosInSeconds.One, true, true);
 				m_server.HandlePostRoute(Routes.kGetOrderStatus,		m_api.OnGetOrderStatus, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
-				m_server.HandlePostRoute(Routes.kGetMarket,				m_api.OnGetMarket, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
+				m_server.HandlePostRoute(Routes.kGetMarket,				OnGetMarket, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
 				m_server.HandlePostRoute(Routes.kGetLastTransactions,	m_api.OnGetLastTransactions, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
 				m_server.HandlePostRoute(Routes.kGetMyLastTransactions, m_api.OnGetMyLastTransactions, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
-				m_server.HandleGetRoute(Routes.kGetAllMarkets,			m_api.OnGetAllMarkets, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
+				m_server.HandleGetRoute(Routes.kGetAllMarkets,			OnGetAllMarkets, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
 
 				// handle push from daemons
-				m_server.HandlePostRoute(Routes.kPushSenderToDeposit,	OnPushSenderToDeposit, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
-				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
-				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
+				//m_server.HandlePostRoute(Routes.kPushSenderToDeposit,	OnPushSenderToDeposit, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
 				
 				
 				// serve the pages
-				m_server.HandlePageRequest<MainPage>("/", eDdosMaxRequests.Five, eDdosInSeconds.One, true);
-				m_server.HandlePageRequest<MainPage>("/markets/{market}", eDdosMaxRequests.Five, eDdosInSeconds.One, true);
+				m_server.HandlePageRequest<MarketsPage>("/", eDdosMaxRequests.Five, eDdosInSeconds.One, true);
+				m_server.HandlePageRequest<MainPage>("/markets/{base}/{quote}", eDdosMaxRequests.Five, eDdosInSeconds.One, true);
 				m_server.HandlePageRequest<ApiPage>("/apiDocs", eDdosMaxRequests.Five, eDdosInSeconds.One, true);
 				m_server.HandlePageRequest<FaqPage>("/faq", eDdosMaxRequests.Five, eDdosInSeconds.One, true);
 			}
@@ -152,7 +157,11 @@ namespace MetaExchange
 				bool up;
 				try
 				{
-					await Rest.ExecuteGetAsync(ApiUrl(daemon, Routes.kPing), 5000);
+					List<MarketRow> daemonMarkets = await Rest.JsonApiGetAsync<List<MarketRow>>(ApiUrl(daemon, Routes.kGetAllMarkets), 5000);
+					foreach (MarketRow m in daemonMarkets)
+					{
+						m_auth.m_Database.UpdateMarketInDatabase(m);
+					}
 					up = true;
 				}
 				catch (Exception)
@@ -161,6 +170,22 @@ namespace MetaExchange
 				}
 
 				m_auth.m_Database.UpdateMarketStatus(daemon, up);
+			}
+
+			// collect market stats
+			foreach (MarketRow r in allMarkets)
+			{
+				decimal btcVolume24h = m_auth.m_Database.Get24HourBtcVolume(r.symbol_pair, r.GetQuote() != CurrencyTypes.BTC);
+				LastPriceAndDelta lastPrice = m_auth.m_Database.GetLastPriceAndDelta(r.symbol_pair);
+
+				decimal askFee = r.ask * r.ask_fee_percent / 100;
+				decimal bidFee = r.bid * r.bid_fee_percent / 100;
+				decimal ask = r.ask + askFee;
+				decimal bid = r.bid - bidFee;
+
+				decimal realisedSpreadPercent = 100*(ask - bid) / lastPrice.last_price;
+
+				m_Database.UpdateMarketStats(r.symbol_pair, btcVolume24h, lastPrice.last_price, lastPrice.price_delta, realisedSpreadPercent);
 			}
 		}
 
@@ -187,6 +212,14 @@ namespace MetaExchange
 		public void SetIpLock(string ipAddress)
 		{
 			m_server.SetIpLock(ipAddress);
+		}
+
+		/// <summary>	Gets the database. </summary>
+		///
+		/// <value>	The m database. </value>
+		public MySqlData m_Database
+		{
+			get { return m_auth.m_Database; }
 		}
 	}
 }

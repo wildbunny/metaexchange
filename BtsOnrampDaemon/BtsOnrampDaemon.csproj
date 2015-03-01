@@ -89,7 +89,6 @@
     <Compile Include="DaemonMySql.cs" />
     <Compile Include="DatabaseTables.cs" />
     <Compile Include="Exceptions.cs" />
-    <Compile Include="GlostenMilgromSimple.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

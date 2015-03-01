@@ -4,9 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-using System.Net;
-
-using ServiceStack.Text;
 
 using Monsterer.Request;
 
@@ -14,151 +11,138 @@ using WebHost;
 using WebHost.Components;
 using WebHost.WebSystem;
 
-using MetaExchange.ClientApis;
-using MetaExchange.MetaApi;
+using WebDaemonShared;
+using WebDaemonSharedTables;
+using MetaExchange;
 
 namespace MetaExchange.Pages
 {
 	public class MarketsPage : SharedPage
 	{
-		public override async Task Render<T>(RequestContext ctx, StringWriter stream, T authObj)
+		public override Task Render(RequestContext ctx, StringWriter stream, IDummy authObj)
 		{
-			string[] wildcards = ctx.Request.GetWildcardParameters(2).ToArray();
-			
-			string baseSymbol = wildcards[0];
-			string quoteSymbol = wildcards[1];
+			#if MONO
+			AddResource(new JsResource(Constants.kWebRoot, "/js/marketsPageCompiled.js", true));
+			#endif
 
-			BitsharesApi api = new BitsharesApi(Constants.kClientUrl);
-
-			MetaAsset baseAsset = await api.GetAsset(baseSymbol);
-			MetaAsset quoteAsset = await api.GetAsset(quoteSymbol);
-
-			string market = wildcards[0] + "/" + wildcards[1];
-			
-			AddResource(new MetaResource("market", market));
-			AddResource(new MetaResource("baseAsset", WebUtility.UrlEncode( JsonSerializer.SerializeToString(baseAsset) )) );
-			AddResource(new MetaResource("quoteAsset", WebUtility.UrlEncode( JsonSerializer.SerializeToString(quoteAsset) )) );
-						
+			AddResource(new CssResource(Constants.kWebRoot, "/css/markets.css", true));
 
 			// render head
 			base.Render(ctx, stream, authObj);
 
-			using (new DivContainer(stream, HtmlAttributes.@class, "container-fluid"))
+			using (new DivContainer(stream, "ng-app", "myApp", "ng-controller", "MarketsController", HtmlAttributes.id, "rootId"))
 			{
-				using (new DivContainer(stream, HtmlAttributes.@class, "row",
-												"ng-app", "BitShares"))
+				using (new DivContainer(stream, HtmlAttributes.@class, "jumbotron clearfix no-padding-bottom-top"))
 				{
-					using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-3 col-md-2",
-													"ng-controller", "GetMarkets"))
+					using (new DivContainer(stream, HtmlAttributes.@class, "container"))
 					{
-						using (new Panel(stream, "Active markets", "panel panel-default", true, "", null, "panel-body noPadding"))
+						using (new DivContainer(stream, HtmlAttributes.@class, "row"))
 						{
-							using (new DivContainer(stream, HtmlAttributes.@class, "list-group smallFont"))
+							using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
 							{
-								Href(stream, "<span class=\"pull-left\">{{m.m_base}}/{{m.m_quote}}</span><span class=\"pull-right\">{{m.m_lastPrice | number : m.m_dps}}</span>",
-										HtmlAttributes.@class, "list-group-item clearfix",
-										"active-link", "active",
-										"ng-repeat", "m in results.m_active",
-										HtmlAttributes.href, "/markets/{{m.m_base}}/{{m.m_quote}}");
-							}
-						}
+								BaseComponent.SPAN(stream, "Metaexchange<sup>beta</sup>", HtmlAttributes.@class, "noTopMargin h1");
 
-						using (new Panel(stream, "Inactive markets", "panel panel-default", true, "", null, "panel-body noPadding"))
-						{
-							using (new DivContainer(stream, HtmlAttributes.@class, "list-group smallFont"))
-							{
-								Href(stream, "<span class=\"pull-left\">{{m.m_base}}/{{m.m_quote}}</span><span class=\"pull-right\">{{m.m_lastPrice | number : m.m_dps}}</span>",
-										HtmlAttributes.@class, "list-group-item clearfix",
-										"active-link", "active",
-										"ng-repeat", "m in results.m_inactive",
-										HtmlAttributes.href, "/markets/{{m.m_base}}/{{m.m_quote}}");
+								P("The place to buy and sell bitAssets");
 							}
 						}
 					}
+				}
 
-					using (new DivContainer(stream, (object)"ng-controller", "GetOrderbook", 
-													HtmlAttributes.@class, "col-sm-8 col-md-10"))
+				using (new DivContainer(stream, HtmlAttributes.@class, "container"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "row"))
 					{
-						using (new Panel(stream, market + " market", "panel panel-default", true, "", (s)=>RenderTimeframeButtons(s,market)))
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-12"))
 						{
-							using (new DivContainer(stream, HtmlAttributes.@class, "candlestickChart"/*, 
-															HtmlAttributes.id, "candlestickChartId"*/))
+							using (new Table(stream, "", 4, 4, "table table-striped table-hover noMargin", new string[] 
+								{ "",		"hidden-sm hidden-xs hidden-md",	"",			"",						"",			"hidden-xs",		"hidden-xs",	"hidden-xs hidden-sm",	"hidden-xs hidden-sm" },
+								"Market",	"Asset name",						"Price",	"24 hour volume (BTC)", "Spread %", "Ask",				"Bid",				"Buy fee (%)",	"Sell fee (%)"))
 							{
-								stream.WriteLine("<canvas id=\"candlestickChartId\"></canvas>");
-							}
-						}
+								using (var tr = new TR(stream, "ng-repeat", "t in allMarkets", HtmlAttributes.@class, "clickable-row",
+																								"ng-click", 
+																								"go(t)"))
+								{
+									tr.TD("{{renameSymbolPair(t.symbol_pair)}}");
+									tr.TD("{{t.asset_name}}", HtmlAttributes.@class, "hidden-sm hidden-xs hidden-md");
 
-						using (new DivContainer(stream, HtmlAttributes.@class, "row"))
-						{
-							using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
-							{
-								using (new Panel(stream, "Bids", "panel panel-success"))
-								{
-									using (new DivContainer(stream, HtmlAttributes.@class, "wbScrollList"))
-									{
-										using (var t = new Table(stream, "", 4, 1, "table table-striped table-condensed smallFont", "Price (" + quoteSymbol + ")", baseSymbol, "Depth"))
-										{
-											t.Out("<tr ng-repeat=\"d in results.m_bids\">");
-											t.Out("<td>{{d.m_price  | number : dpQuote}}</td>");
-											t.Out("<td>{{d.m_volume | number : dpBase}}</td>");
-											t.Out("<td><div class=\"progress\"><div class=\"progress-bar progress-bar-success\" style=\"width:{{getFraction($index, results.m_bids, results)}}%; float:right\"</div></div></td>");
-											t.Out("</tr>");
-										}
-									}
-								}
-							}
-							using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
-							{
-								using (new Panel(stream, "Asks", "panel panel-danger"))
-								{
-									using (new DivContainer(stream, HtmlAttributes.@class, "wbScrollList"))
-									{
-										using (var t = new Table(stream, "", 4, 1, "table table-striped table-condensed smallFont", "Depth", baseSymbol, "Price (" + quoteSymbol + ")"))
-										{
-											t.Out("<tr ng-repeat=\"d in results.m_asks\">");
-											t.Out("<td><div class=\"progress\"><div class=\"progress-bar progress-bar-danger\" style=\"width:{{getFraction($index, results.m_asks, results)}}%\"</div></div></td>");
-											t.Out("<td>{{d.m_volume | number : dpBase}}</td>");
-											t.Out("<td>{{d.m_price | number : dpQuote}}</td>");
-											t.Out("</tr>");
-										}
-									}
+									tr.TD("{{t.last_price}} <i class=\"glyphicon glyphicon-arrow-up text-success\"/>", "ng-if", "t.price_delta>0");
+									tr.TD("{{t.last_price}} <i class=\"glyphicon glyphicon-arrow-down text-danger\"/>", "ng-if", "t.price_delta<0");
+									tr.TD("{{t.last_price}} <i class=\"glyphicon glyphicon glyphicon-minus text-info\"/>", "ng-if", "t.price_delta==0");
+
+									tr.TD("{{t.btc_volume_24h | number:2}}");
+									tr.TD("{{t.realised_spread_percent | number:2}}");
+									tr.TD("{{t.ask}}", HtmlAttributes.@class, "hidden-xs");
+									tr.TD("{{t.bid}}", HtmlAttributes.@class, "hidden-xs");
+									tr.TD("{{t.ask_fee_percent | number:2}}", HtmlAttributes.@class, "hidden-sm hidden-xs");
+									tr.TD("{{t.bid_fee_percent | number:2}}", HtmlAttributes.@class, "hidden-sm hidden-xs");
 								}
 							}
 						}
+					}
+				}
+				
 
-						using (new DivContainer(stream,  (object)"ng-controller", "GetTrades"))
+				//
+				// bullet points
+				// 
+				using (new DivContainer(stream, HtmlAttributes.@class, "container",
+													HtmlAttributes.style, "margin-top:20px"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "row"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
 						{
-							using (new Panel(stream, "Recent trades"))
+							H4("<i class=\"glyphicon glyphicon-ok text-info\"></i>  No registration required");
+							P("There is no need to register an account, just tell us where you'd like to receive the coins that you buy or sell.");
+						}
+
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+						{
+							H4("<i class=\"glyphicon glyphicon-flash text-info\"></i>  Fast transactions");
+							P("Only one confirmation is neccessary for buying or selling, which is around 7 minutes for a buy and around 3 seconds for a sell.");
+						}
+
+						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-4"))
+						{
+							H4("<i class=\"glyphicon glyphicon-lock text-info\"></i>  Safe");
+							P("We don't hold any of our customer's funds, so there is nothing to get lost or stolen.");
+						}
+					}
+				}
+
+				using (new DivContainer(stream, HtmlAttributes.@class, "bg-primary hidden-xs",
+												HtmlAttributes.style, "margin-top:20px"))
+				{
+					using (new DivContainer(stream, HtmlAttributes.@class, "container"))
+					{
+						using (new DivContainer(stream, HtmlAttributes.style, "margin:30px 0px 30px 0px"))
+						{
+							using (new DivContainer(stream, HtmlAttributes.@class, "row"))
 							{
-								using (var t = new Table(stream, "", 4, 1, "table table-striped table-condensed smallFont", "Buy type", "Sell type", "Price (" + quoteSymbol + ")", baseSymbol, quoteSymbol, "Date"))
+								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-12"))
 								{
-									t.Out("<tr ng-repeat=\"d in results\">");
-									t.Out("<td>{{d.m_buyType}}</td>");
-									t.Out("<td>{{d.m_sellType}}</td>");
-									t.Out("<td>{{d.m_buyPrice | number : dpQuote}}</td>");
-									t.Out("<td>{{d.m_buyAmount | number : dpBase}}</td>");
-									t.Out("<td>{{d.m_sellAmount | number : dpQuote}}</td>");
-									t.Out("<td>{{d.m_date | date : 'HH:mm:ss MM/dd/yy'}}</td>");
-									t.Out("</tr>");
+									H3("Recent transactions");
+
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date"))
+									{
+										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
+										{
+											tr.TD("{{renameSymbolPair(t.symbol_pair)}}");
+											tr.TD("{{t.order_type}}");
+											tr.TD("{{t.price}}");
+											tr.TD("{{t.amount}}");
+											tr.TD("{{t.fee}}");
+											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
+										}
+									}
 								}
 							}
 						}
 					}
 				}
 			}
-		}
 
-
-		void RenderDepthTable(StringWriter stream, string depthName)
-		{
-			using (var t = new Table(stream, "", 4, 1, "table table-striped table-condensed smallFont", "Price", "Volume", "Sum"))
-			{
-				t.Out("<tr ng-repeat=\"d in " + depthName + "\" ng->");
-				t.Out("<td>{{d.m_price}}</td>");
-				t.Out("<td>{{d.m_volume}}</td>");
-				t.Out("<td>{{getAccumulated($index, " + depthName + ")}}</td>");
-				t.Out("</tr>");
-			}
+			return null;
 		}
 
 		/// <summary>
@@ -167,53 +151,7 @@ namespace MetaExchange.Pages
 		/// <returns></returns>
 		protected override string GetPageSpecificJsFilename()
 		{
-			return "pages/requiredjs/markets.rs";
-		}
-
-		void RenderTimeframeButtons(StringWriter stream, string market)
-		{
-			using (new Span(stream, HtmlAttributes.@class, "pull-right"))
-			{
-				using (var cf = new FormContainer(stream,	HtmlAttributes.action, "/getOhlc",
-															HtmlAttributes.handler, "OnChartTimeframe",
-															HtmlAttributes.@class, "btn-group inline",
-															HtmlAttributes.ajax, "true",
-															HtmlAttributes.method, "post",
-															HtmlAttributes.id, "timeframeFormId"))
-				{
-					cf.Input(stream, HtmlAttributes.type, "hidden",	HtmlAttributes.name, "market", HtmlAttributes.value, market);
-					cf.Input(stream, HtmlAttributes.type, "hidden", HtmlAttributes.name, "start", HtmlAttributes.value, DateTime.UtcNow.ToString());
-					cf.Input(stream, HtmlAttributes.type, "hidden", HtmlAttributes.name, "bars", HtmlAttributes.value, 100);
-
-					using (new DivContainer(stream, HtmlAttributes.@class, "btn-group",
-													"data-toggle", "buttons"))
-					{
-						Timeframe [] timeframes = 
-						{
-							Timeframe.M1,
-							Timeframe.M5,
-							Timeframe.M15,
-							Timeframe.M30,
-							Timeframe.H1,
-							Timeframe.H4,
-							Timeframe.H12,
-							Timeframe.D1,
-							Timeframe.W1
-						};
-
-						foreach (Timeframe tf in timeframes)
-						{
-							using (new Label(stream, HtmlAttributes.@class, "btn btn-success btn-xs"))
-							{
-								cf.Input(stream,	HtmlAttributes.type, InputTypes.radio, 
-													HtmlAttributes.value, tf, 
-													HtmlAttributes.name, "timeframe");
-								stream.WriteLine(Enum.GetName(typeof(Timeframe), tf));
-							}
-						}
-					}
-				}
-			}
+			return "Pages/RequiredJs/Markets.rs";
 		}
 	}
 }

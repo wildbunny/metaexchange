@@ -80,3 +80,13 @@ ol.linenums li {
   line-height: 20px;
   text-shadow: 0 1px 0 #fff;
 }
+
+ul.nav li.dropdown:hover > ul.dropdown-menu {
+    display: block;    
+}
+
+.no-padding-bottom-top
+{
+	padding-bottom:20px;
+	padding-top:20px;
+}

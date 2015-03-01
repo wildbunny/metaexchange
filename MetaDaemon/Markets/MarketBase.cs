@@ -16,7 +16,7 @@ namespace MetaDaemon.Markets
 {
 	public abstract class MarketBase
 	{
-		protected const int kMaxTransactionsBeforeCollectFees = 10;
+		protected const int kMaxTransactionsBeforeCollectFees = 20;
 
 		protected MarketRow m_market;
 		protected MetaDaemonApi m_daemon;
@@ -50,7 +50,6 @@ namespace MetaDaemon.Markets
 		public virtual void ComputeMarketPricesAndLimits(ref MarketRow market, Dictionary<int, ulong> bitsharesBalances, decimal bitcoinBalances)
 		{
 			m_market = market;
-			m_isDirty = false;
 		}
 
 		public abstract void HandleBitsharesDeposit(KeyValuePair<string, BitsharesLedgerEntry> kvp);
@@ -81,7 +80,7 @@ namespace MetaDaemon.Markets
 
 			if (bitAssetAmount > m_market.bid_max)
 			{
-				throw new RefundBitsharesException("Over " + m_market.bid_max + " " + asset.symbol + "!");
+				throw new RefundBitsharesException("Over " + Numeric.TruncateDecimal(m_market.bid_max, 8) + " " + asset.symbol + "!");
 			}
 
 			// get the BTC amount we need to transfer
@@ -89,7 +88,9 @@ namespace MetaDaemon.Markets
 
 			if (m_flipped)
 			{
-				btcNoFee = bitAssetAmount / m_market.bid;
+				// they're sending us bitAssets, not BTC because the market is flipped, this is
+				// equivelent to the opposite order type, so we have to use ask here
+				btcNoFee = bitAssetAmount / m_market.ask;
 			}
 			else
 			{
@@ -129,33 +130,35 @@ namespace MetaDaemon.Markets
 
 			if (t.Amount > m_market.ask_max)
 			{
-				throw new RefundBitcoinException("Over " + m_market.ask_max + " " + asset.symbol + "!");
+				throw new RefundBitcoinException("Over " + Numeric.TruncateDecimal(m_market.ask_max, 8) + " " + asset.symbol + "!");
 			}
 
 			string bitsharesAccount = s2d.receiving_address;
-			decimal amountNoFee;
+			decimal bitAssetAmountNoFee;
 
 			if (m_flipped)
 			{
-				amountNoFee = t.Amount * m_market.ask;
+				// they're sending us BTC, not bitAssets because the market is flipped, this is
+				// equivelent to the opposite order type, so we have to use bid here
+				bitAssetAmountNoFee = t.Amount * m_market.bid;
 			}
 			else
 			{
-				amountNoFee = t.Amount / m_market.ask;
+				bitAssetAmountNoFee = t.Amount / m_market.ask;
 			}
 
 			// when buying, the fee is charged in bitAssets,
 			// the amount recorded in the transaction is the amount of bitAssets purchased sans fee
 
-			amountNoFee = asset.Truncate(amountNoFee);
+			bitAssetAmountNoFee = asset.Truncate(bitAssetAmountNoFee);
 
-			decimal fee = (m_market.ask_fee_percent / 100) * amountNoFee;
-			decimal amountAsset = amountNoFee - fee;
+			decimal fee = (m_market.ask_fee_percent / 100) * bitAssetAmountNoFee;
+			decimal amountAsset = bitAssetAmountNoFee - fee;
 
 			amountAsset = asset.Truncate(amountAsset);
 			
 			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
-			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, amountNoFee, m_market.ask, fee);
+			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, bitAssetAmountNoFee, m_market.ask, fee);
 
 			return bitsharesTrx;
 		}
@@ -289,13 +292,29 @@ namespace MetaDaemon.Markets
 		///
 		/// <param name="baseQuantity"> 	The base quantity. </param>
 		/// <param name="quoteQuantity">	The quote quantity. </param>
-		public void SetPricesFromSingleUnitQuantities(decimal baseQuantity, decimal quoteQuantity)
+		virtual public void SetPricesFromSingleUnitQuantities(decimal baseQuantity, decimal quoteQuantity, bool flipped, MarketRow market)
 		{
-			decimal bid = baseQuantity;
-			decimal ask = 1 / quoteQuantity;
+			decimal bid, ask;
 
-			if (Math.Abs(bid - m_market.bid) > m_market.bid / 20 ||
-				Math.Abs(ask - m_market.ask) > m_market.ask / 20)
+			decimal buyFee = baseQuantity * market.bid_fee_percent/100;
+			decimal sellFee = quoteQuantity * market.ask_fee_percent/100;
+
+			baseQuantity -= buyFee;
+			quoteQuantity += sellFee;
+
+			if (flipped)
+			{
+				bid = baseQuantity;
+				ask = quoteQuantity;
+			}
+			else
+			{
+				bid = 1 / baseQuantity;
+				ask = 1 / quoteQuantity;
+			}
+
+			if (Math.Abs(bid - m_market.bid) > m_market.bid / 10 ||
+				Math.Abs(ask - m_market.ask) > m_market.ask / 10)
 			{
 				throw new Exception("New prices are too different!");
 			}
@@ -328,6 +347,7 @@ namespace MetaDaemon.Markets
 		public bool m_IsDirty
 		{
 			get { return m_isDirty; }
+			set { m_isDirty = value; }
 		}
 
 		/// <summary>	Gets the market. </summary>

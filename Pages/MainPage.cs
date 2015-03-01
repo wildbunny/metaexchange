@@ -25,17 +25,20 @@ namespace MetaExchange.Pages
 			AddResource(new JsResource(Constants.kWebRoot, "/js/mainPageCompiled.js", true));
 			#endif
 
-			IEnumerable<string> markets = ctx.Request.GetWildcardParameters(1);
+			IEnumerable<string> markets = ctx.Request.GetWildcardParameters(2);
 
-			string market="";
-			if (markets.Count() == 1)
+			string @base="", quote="";
+			if (markets.Count() == 2)
 			{
-				market = markets.First();
+				@base = markets.First();
+				quote = markets.Last();
 			}
 
-			if (market.Length == 0)
+			string market = @base + "_" + quote;
+
+			if (authObj.m_database.GetMarket(market) == null)
 			{
-				market = CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC);
+				ctx.Respond(System.Net.HttpStatusCode.NotFound);
 			}
 
 			// render head
@@ -43,7 +46,7 @@ namespace MetaExchange.Pages
 
 			using (new DivContainer(stream, "ng-app", "myApp", "ng-controller", "StatsController", HtmlAttributes.id, "rootId"))
 			{
-				using (new DivContainer(stream, HtmlAttributes.@class, "jumbotron clearfix"))
+				using (new DivContainer(stream, HtmlAttributes.@class, "jumbotron clearfix no-padding-bottom-top"))
 				{
 					using (new DivContainer(stream, HtmlAttributes.@class, "container"))
 					{
@@ -75,27 +78,13 @@ namespace MetaExchange.Pages
 					{
 						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
 						{
-							Button("Buy {{market.base_symbol}}<br/><span class='badge'>1.00 {{market.quote_symbol}}</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{market.buy_quantity | number:6}} {{market.base_symbol}}</span>", HtmlAttributes.@class, "btn btn-success btn-lg btn-block",
+							Button("Buy {{market.base_symbol}}<br/><span class='badge'>1.00 {{market.quote_symbol}}</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{market.buy_quantity | number:3}} {{market.base_symbol}}</span>", 
+													HtmlAttributes.@class, "btn btn-success btn-lg btn-block",
 													"data-toggle", "collapse",
 													"aria-expanded", "false",
 													"aria-controls", "buyId",
 													"data-target", "#buyId");
 
-							
-						}
-						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
-						{
-							Button("Sell {{market.base_symbol}}<br/><span class='badge'>1.00 {{market.base_symbol}}</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>{{market.sell_quantity | number:6}} {{market.quote_symbol}}</span>", HtmlAttributes.@class, "btn btn-danger btn-lg btn-block",
-													"data-toggle", "collapse",
-													"aria-expanded", "false",
-													"aria-controls", "sellId",
-													"data-target", "#sellId");
-						}
-					}
-					using (new DivContainer(stream, HtmlAttributes.@class, "row"))
-					{
-						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
-						{
 							using (new Panel(stream, "Buy {{market.base_symbol}}", "panel panel-success collapse", false, "buyId"))
 							{
 								P("Once you enter your bitshares account name, we will generate your deposit address and send your {{market.base_symbol}} to you after 1 confirmation.");
@@ -124,7 +113,8 @@ namespace MetaExchange.Pages
 																HtmlAttributes.minlength, 1,
 																HtmlAttributes.maxlength, 63,
 																HtmlAttributes.required, true,
-																HtmlAttributes.@class, "form-control",
+																HtmlAttributes.id, "bitsharesBlurId",
+																HtmlAttributes.@class, "form-control submitOnBlur",
 																HtmlAttributes.placeholder, "Bitshares account name");
 
 											using (new Span(stream, HtmlAttributes.@class, "input-group-btn"))
@@ -149,12 +139,21 @@ namespace MetaExchange.Pages
 															HtmlAttributes.style, "cursor:text;");
 									}
 
+									Button("Click to generate QR code", HtmlAttributes.@class, "btn btn-warning btn-xs pull-right unhideBtsId",
+																			HtmlAttributes.onclick, "GenerateQrModal()");
 									SPAN("Maximum {{market.ask_max | number:8}} {{market.quote_symbol}} per transaction", "maxBtcId", "label label-info");
 								}
 							}
+							
 						}
 						using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-6"))
 						{
+							Button("Sell {{market.base_symbol}}<br/><span class='badge'>{{market.sell_quantity | number:3}} {{market.base_symbol}}</span><span class='glyphicon glyphicon-arrow-right arrow'></span><span class='badge'>1.00 {{market.quote_symbol}}</span>", HtmlAttributes.@class, "btn btn-danger btn-lg btn-block",
+													"data-toggle", "collapse",
+													"aria-expanded", "false",
+													"aria-controls", "sellId",
+													"data-target", "#sellId");
+
 							using (new Panel(stream, "Sell {{market.base_symbol}}", "panel panel-danger collapse", false, "sellId"))
 							{
 								P("Once you enter your bitcoin receiving address, we will generate your deposit address and send your bitcoins to you the instant we receive your {{market.base_symbol}}.");
@@ -183,7 +182,8 @@ namespace MetaExchange.Pages
 																HtmlAttributes.minlength, 25,
 																HtmlAttributes.maxlength, 34,
 																HtmlAttributes.required, true,
-																HtmlAttributes.@class, "form-control",
+																HtmlAttributes.id, "bitcoinBlurId",
+																HtmlAttributes.@class, "form-control submitOnBlur",
 																HtmlAttributes.placeholder, "Bitcoin address from your wallet");
 
 											using (new Span(stream, HtmlAttributes.@class, "input-group-btn"))
@@ -275,13 +275,15 @@ namespace MetaExchange.Pages
 								{
 									H3("Your transactions");
 
-									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Amount", "Date", "Status", "Notes"))
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date", "Status", "Notes"))
 									{
 										using (var tr = new TR(stream, "ng-repeat", "t in myTransactions"))
 										{
-											tr.TD("{{t.symbol_pair}}");
+											tr.TD("{{renameSymbolPair(t.symbol_pair)}}");
 											tr.TD("{{t.order_type}}");
+											tr.TD("{{t.price}}");
 											tr.TD("{{t.amount}}");
+											tr.TD("{{t.fee}}");
 											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
 											tr.TD("{{t.status}}");
 											tr.TD("{{t.notes}}");
@@ -299,15 +301,17 @@ namespace MetaExchange.Pages
 							{
 								using (new DivContainer(stream, HtmlAttributes.@class, "col-sm-12"))
 								{
-									H3("All transactions");
+									H3("Recent {{renameSymbolPair(market.symbol_pair)}} transactions");
 
-									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Amount", "Date"))
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date"))
 									{
 										using (var tr = new TR(stream, "ng-repeat", "t in transactions"))
 										{
-											tr.TD("{{t.symbol_pair}}");
+											tr.TD("{{renameSymbolPair(t.symbol_pair)}}");
 											tr.TD("{{t.order_type}}");
+											tr.TD("{{t.price}}");
 											tr.TD("{{t.amount}}");
+											tr.TD("{{t.fee}}");
 											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
 										}
 									}
@@ -357,6 +361,14 @@ namespace MetaExchange.Pages
 											HtmlAttributes.href, "bts:{{sell.sendToAccount}}/transfer/amount/{{sell.quantity}}/memo/{{sell.memo}}/from/{{sell.payFrom}}/asset/{{(market.base_symbol).substr(3)}}",
 											HtmlAttributes.style, "display:none",
 											HtmlAttributes.@class, "btn btn-success");
+					}
+				}, true, "", "modal", "close", false);
+
+				Modal("Scan for bitcoin address", "qrModalId", () =>
+				{
+					using (new DivContainer(stream, "row text-center"))
+					{
+						BaseComponent.IMG(stream, "", HtmlAttributes.@class, "center-block");
 					}
 				}, true, "", "modal", "close", false);
 			}

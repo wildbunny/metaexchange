@@ -44,6 +44,7 @@ namespace BitsharesRpc
 		blockchain_market_order_history,
 		blockchain_market_price_history,
 		blockchain_market_status,
+		blockchain_median_feed_price,
 		blockchain_unclaimed_genesis,
 		debug_clear_errors,
 		debug_enable_output,

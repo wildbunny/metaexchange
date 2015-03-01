@@ -71,7 +71,7 @@ namespace MetaDaemonUnitTests
 															new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
 															bitsharesAccount,
 															database, databaseUser, databasePassword,
-															apiListen, null, null, "gatewayclient", null, "192.168.0.2");
+															apiListen, null, null, "gatewayclient", "http://192.168.0.2/", "192.168.0.2");
 
 				m_api.m_ApiServer.m_HttpServer.m_DdosProtector.m_Enabled = false;
 

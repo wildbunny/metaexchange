@@ -101,6 +101,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BestPrice\BestPrice.csproj">
+      <Project>{50655d2f-ddef-468e-9c34-0263399c6f8a}</Project>
+      <Name>BestPrice</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BitsharesCore\BitsharesCore.csproj">
       <Project>{dc18e1fd-6299-40b7-82dd-7fe4e9eea7e2}</Project>
       <Name>BitsharesCore</Name>

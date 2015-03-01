@@ -85,6 +85,7 @@
     <Compile Include="Pages\Faq.cs" />
     <Compile Include="Pages\MainPage.cs" />
     <Compile Include="Pages\Maintenance.cs" />
+    <Compile Include="Pages\MarketsPage.cs" />
     <Compile Include="Pages\SharedPage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -99,6 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="css\bootstrap.min.css" />
+    <Content Include="css\markets.css" />
     <Content Include="css\site.css" />
     <Content Include="js\bitsharesApi.js" />
     <Content Include="js\bootstrap.min.js" />
@@ -130,9 +132,11 @@ cd $(ProjectDir)
 for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\main.rs') do @set gameFiles=%25%25a
 for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\api.rs') do @set apiFiles=%25%25a
 for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\faq.rs') do @set faqFiles=%25%25a
+for /f "delims=" %25%25a in ('commandlinetools\bin\concat.exe pages\requiredjs\shared.rs pages\requiredjs\markets.rs') do @set marketsFiles=%25%25a
 java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25gameFiles%25 --js_output_file js\mainPageCompiled.js --warning_level QUIET --summary_detail_level 3 
 java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25apiFiles%25 --js_output_file js\apiPageCompiled.js --warning_level QUIET --summary_detail_level 3 
 java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25faqFiles%25 --js_output_file js\faqPageCompiled.js --warning_level QUIET --summary_detail_level 3 
+java -jar commandlinetools\bin\compiler.jar --angular_pass --js %25marketsFiles%25 --js_output_file js\marketsPageCompiled.js --warning_level QUIET --summary_detail_level 3 
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

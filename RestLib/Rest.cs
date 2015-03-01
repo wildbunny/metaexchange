@@ -49,9 +49,9 @@ namespace RestLib
 			m_gTimeoutSeconds = seconds;
 		}
 
-		static public WebClientTimeout ConfigurePost(string url, string query, string contentType = kContentTypeForm)
+		static public WebClientTimeout ConfigurePost(string url, string query, string contentType = kContentTypeForm, int timeoutMillis=5000)
 		{
-			WebClientTimeout client = new WebClientTimeout();
+			WebClientTimeout client = new WebClientTimeout(timeoutMillis);
 			client.Encoding = System.Text.Encoding.UTF8;
 			client.Headers[HttpRequestHeader.ContentType] = contentType;
 			return client;
@@ -110,9 +110,9 @@ namespace RestLib
 			return JsonSerializer.DeserializeFromString<T>(result);
 		}
 
-		static async public Task<T> JsonApiGetAsync<T>(string url)
+		static async public Task<T> JsonApiGetAsync<T>(string url, int timeoutMillis = 20000)
 		{
-			string result = await ExecuteGetAsync(url);
+			string result = await ExecuteGetAsync(url, timeoutMillis);
 			return JsonSerializer.DeserializeFromString<T>(result);
 		}
 

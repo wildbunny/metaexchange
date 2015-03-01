@@ -27,6 +27,8 @@ namespace MetaExchange
 	
 	class Program
 	{
+		static MetaServer m_gServer;
+
 		static void Main(string[] args)
 		{
 			if (args.Length >= 5 && args.Length <= 6)
@@ -44,18 +46,18 @@ namespace MetaExchange
 					ipLock = args[5];
 				}
 
-				using (var server = new MetaServer(httpUrl, Constants.kWebRoot, database, databaseUser, databasePassword, maintenance))
+				using (m_gServer = new MetaServer(httpUrl, Constants.kWebRoot, database, databaseUser, databasePassword, maintenance))
 				{
 					AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
-					server.ExceptionEvent += OnServerException;
+					m_gServer.ExceptionEvent += OnServerException;
 
 					if (ipLock != null)
 					{
-						server.SetIpLock(ipLock);
+						m_gServer.SetIpLock(ipLock);
 					}
 
-					scheduler.RunWithUpdate(server.Start, server.Update, Constants.kUpdateTimeoutSeconds);
+					scheduler.RunWithUpdate(m_gServer.Start, m_gServer.Update, Constants.kUpdateTimeoutSeconds);
 
 					Console.WriteLine("Exiting...");
 				}	
@@ -65,18 +67,15 @@ namespace MetaExchange
 				Console.WriteLine("Error, usage.");
 			}			
 		}
-
-
+		
 		static void OnServerException(object sender, ExceptionWithCtx e)
 		{
-			Console.WriteLine(e.m_e.ToString());
-			//throw e.m_e;
+			m_gServer.m_Database.LogGeneralException(e.m_e.ToString());
 		}
 
 		static void OnException(Exception e)
 		{
-			Console.WriteLine(e.ToString());
-			//throw e;
+			m_gServer.m_Database.LogGeneralException(e.ToString());
 		}
 	}
 }

@@ -325,5 +325,16 @@ namespace MetaDaemon
 		{
 			m_dataAccess.InsertFeeTransaction(market, buyTrxId, sellTrxId, buyFee, sellFee, transactionProcessedUid, exception);
 		}
+
+		/// <summary>	Enables the price discovery. </summary>
+		///
+		/// <remarks>	Paul, 25/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">	The symbol pair. </param>
+		/// <param name="enable">	 	true to enable, false to disable. </param>
+		public void EnablePriceDiscovery(string symbolPair, bool enable)
+		{
+			m_dataAccess.EnablePriceDiscovery(symbolPair, enable);
+		}
 	}
 }
