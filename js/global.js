@@ -1,23 +1,12 @@
-﻿/*angular.module('link', []).
-	  directive('activeLink', ['$location', function (location)
-	  {
-	  	return {
-	  		restrict: 'A',
-	  		link: function (scope, element, attrs, controller)
-	  		{
-	  			var clazz = attrs.activeLink;
-	  			var path = attrs.href;
-	  			
-	  			if (path === window.location.pathname)
-	  			{
-	  				element.addClass(clazz);
-	  			} else
-	  			{
-	  				element.removeClass(clazz);
-	  			}
-	  		}
-	  	};
-	  }]);*/
+﻿function PostForm($http, url, paramsObj, onSuccess)
+{
+	return $http({
+		method: 'POST',
+		url: url,
+		data: $.param(paramsObj),
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+	}).success(onSuccess);
+}
 
 $( document ).ready(function() 
 {
@@ -107,3 +96,8 @@ Date.prototype.timeNow = function (includeSeconds, hideNonTime)
 	}
 	return nonTime + this.format(this.getHours()) + ":" + this.format(this.getMinutes()) + seconds;
 };
+
+function renameSymbolPair(name)
+{
+	return name != undefined ? name.replace("_", "/") : "";
+}

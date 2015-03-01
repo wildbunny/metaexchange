@@ -26,13 +26,14 @@ namespace MetaDaemon
 	{
 		const int kSleepTimeSeconds = 10;
 				
-		const string kFundingMemo = "FUND";
+		public const string kFundingMemo = "FUND";
 		public const string kSetPricesMemoStart = "SET";
+		public const string kWithdrawMemo = "WITHDRAW";
 
 		#if MONO
-		const int kBitcoinConfirms = 1;
+		protected const int kBitcoinConfirms = 1;
 		#else
-		const int kBitcoinConfirms = 0;
+		protected const int kBitcoinConfirms = 0;
 		#endif
 		
 		protected BitsharesWallet m_bitshares;
@@ -89,19 +90,7 @@ namespace MetaDaemon
 			return pubKey.ToBitcoinAddress(true, m_addressByteType);
 		}
 
-		/// <summary>	Query if 'l' is price setting transaction. </summary>
-		///
-		/// <remarks>	Paul, 14/02/2015. </remarks>
-		///
-		/// <param name="l">	The BitsharesLedgerEntry to process. </param>
-		///
-		/// <returns>	true if price setting transaction, false if not. </returns>
-		public bool IsPriceSettingTransaction(BitsharesLedgerEntry l)
-		{
-			return l.memo.StartsWith(kSetPricesMemoStart) && ( m_adminUsernames.Contains(l.from_account) );
-		}
 		
-
 		/// <summary>	Handles the bitshares desposits. </summary>
 		///
 		/// <remarks>	Paul, 16/12/2014. </remarks>
@@ -125,7 +114,7 @@ namespace MetaDaemon
 			}
 
 			// get all relevant bitshares deposits
-			List<BitsharesWalletTransaction> assetTransactions = m_bitshares.WalletAccountTransactionHistory(m_bitsharesAccount,
+			List<BitsharesWalletTransaction> assetTransactions = m_bitshares.WalletAccountTransactionHistory(	m_bitsharesAccount,
 																												null,
 																												0,
 																												lastBlockBitshares,

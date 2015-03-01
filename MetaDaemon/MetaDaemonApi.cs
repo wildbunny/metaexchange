@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+using System.Net;
+using System.Diagnostics;
 
 using BitcoinRpcSharp.Responses;
 using BitsharesRpc;
@@ -50,6 +54,8 @@ namespace MetaDaemon
 			m_bitcoinFeeAddress = bitcoinFeeAddress;
 			m_masterSiteUrl = masterSiteUrl.TrimEnd('/');
 
+			ServicePointManager.ServerCertificateValidationCallback = Validator;
+
 			Serialisation.Defaults();
 
 			// don't ban on exception here because we'll only end up banning the webserver!
@@ -80,15 +86,29 @@ namespace MetaDaemon
 			m_server.HandlePostRoute(Routes.kSubmitAddress,				OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 			m_server.HandleGetRoute(Routes.kGetAllMarkets,				m_api.OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 
-			/*m_server.HandlePostRoute(Routes.kGetOrderStatus,			m_api.OnGetOrderStatus, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetMarket,					m_api.OnGetMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetLastTransactions,		m_api.OnGetLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			//m_server.HandlePostRoute(Routes.kGetOrderStatus,			m_api.OnGetOrderStatus, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			//m_server.HandlePostRoute(Routes.kGetMarket,					m_api.OnGetMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			/*m_server.HandlePostRoute(Routes.kGetLastTransactions,		m_api.OnGetLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 			m_server.HandlePostRoute(Routes.kGetMyLastTransactions,		m_api.OnGetMyLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);*/
 			
 
 			// internal requests
-			m_server.HandleGetRoute(Routes.kPing,						OnPing, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			//m_server.HandleGetRoute(Routes.kPing,						OnPing, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 			//m_server.HandlePostRoute(Routes.kGetAllTransactionsSince,	m_api.OnGetAllTransactionsSinceInternal, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="certificate"></param>
+		/// <param name="chain"></param>
+		/// <param name="sslPolicyErrors"></param>
+		/// <returns></returns>
+		public static bool Validator(object sender, X509Certificate certificate, X509Chain chain,
+									  SslPolicyErrors sslPolicyErrors)
+		{
+			return true;
 		}
 
 		/// <summary>	Starts this object. </summary>
@@ -152,13 +172,13 @@ namespace MetaDaemon
 			CurrencyTypes @base, quote;
 			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(market.symbol_pair, out @base, out quote);
 
-			if (@base == CurrencyTypes.bitBTC && quote == CurrencyTypes.BTC)
+			if ( CurrencyHelpers.IsBitsharesAsset(@base) && quote == CurrencyTypes.BTC)
 			{
-				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, CurrencyTypes.bitBTC);
+				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, @base);
 			}
-			else if (@base == CurrencyTypes.BTC && quote == CurrencyTypes.bitUSD)
+			else if (@base == CurrencyTypes.BTC && CurrencyHelpers.IsBitsharesAsset(quote))
 			{
-				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, CurrencyTypes.bitUSD);
+				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, @quote);
 			}
 			else
 			{
@@ -166,18 +186,11 @@ namespace MetaDaemon
 			}
 		}
 
-		/// <summary>	Recompute transaction limits and prices. </summary>
+		/// <summary>	Check handlers. </summary>
 		///
-		/// <remarks>	Paul, 30/01/2015. </remarks>
-		virtual protected Dictionary<string, MarketRow> RecomputeTransactionLimitsAndPrices()
+		/// <remarks>	Paul, 25/02/2015. </remarks>
+		void CheckMarketHandlers(Dictionary<string, MarketRow> allMarkets)
 		{
-			// get balances for both wallets
-			Dictionary<int, ulong> bitsharesBalances = m_bitshares.WalletAccountBalance(m_bitsharesAccount)[m_bitsharesAccount];
-			decimal bitcoinBalance = m_bitcoin.GetBalance();
-
-			// get all markets
-			Dictionary<string, MarketRow> allMarkets = GetAllMarkets().ToDictionary(m=>m.symbol_pair);
-
 			// make sure we have handlers for all markets
 			foreach (KeyValuePair<string, MarketRow> kvp in allMarkets)
 			{
@@ -188,6 +201,16 @@ namespace MetaDaemon
 					m_marketHandlers[market.symbol_pair] = CreateHandlerForMarket(market);
 				}
 			}
+		}
+
+		/// <summary>	Recompute transaction limits and prices. </summary>
+		///
+		/// <remarks>	Paul, 30/01/2015. </remarks>
+		virtual protected void RecomputeTransactionLimitsAndPrices(Dictionary<string, MarketRow> allMarkets)
+		{
+			// get balances for both wallets
+			Dictionary<int, ulong> bitsharesBalances = m_bitshares.WalletAccountBalance(m_bitsharesAccount)[m_bitsharesAccount];
+			decimal bitcoinBalance = m_bitcoin.GetBalance("", kBitcoinConfirms);
 
 			// update all the limits in our handlers
 			foreach (KeyValuePair<string, MarketBase> kvp in m_marketHandlers)
@@ -200,8 +223,6 @@ namespace MetaDaemon
 				// write them back out
 				UpdateMarketInDatabase(market);
 			}
-
-			return allMarkets;
 		}
 
 		/// <summary>	Handles the price setting. </summary>
@@ -211,24 +232,79 @@ namespace MetaDaemon
 		/// <param name="l">	  	The BitsharesLedgerEntry to process. </param>
 		/// <param name="handler">	The handler. </param>
 		/// <param name="market"> 	The market. </param>
-		void HandlePriceSetting(BitsharesLedgerEntry l, MarketBase handler, MarketRow market)
+		void HandlePriceSetting(string[] parts, BitsharesLedgerEntry l, MarketBase handler, MarketRow market)
 		{
-			if (IsPriceSettingTransaction(l))
+			// parse
+			
+			if (parts[0] == kSetPricesMemoStart)
+			{
+				if (parts[1] == market.symbol_pair)
+				{
+					// setting is for this market!
+					decimal basePrice = decimal.Parse(parts[2]);
+					decimal quotePrice = decimal.Parse(parts[3]);
+
+					// go do it!
+					handler.SetPricesFromSingleUnitQuantities(basePrice, quotePrice, market.GetBase() == CurrencyTypes.BTC, market);
+				}
+			}
+		}
+
+		/// <summary>	Handles the command. </summary>
+		///
+		/// <remarks>	Paul, 26/02/2015. </remarks>
+		///
+		/// <param name="l">	  	The BitsharesLedgerEntry to process. </param>
+		/// <param name="handler">	The handler. </param>
+		/// <param name="market"> 	The market. </param>
+		///
+		/// <returns>	true if it succeeds, false if it fails. </returns>
+		public bool HandleCommand(BitsharesLedgerEntry l, MarketBase handler, MarketRow market, string trxid)
+		{
+			if (m_adminUsernames.Contains(l.from_account))
 			{
 				try
 				{
-					// parse
 					string[] parts = l.memo.Split(' ');
-					if (parts[0] == kSetPricesMemoStart)
-					{
-						if (parts[1] == market.symbol_pair)
-						{
-							// setting is for this market!
-							decimal basePrice = decimal.Parse(parts[2]);
-							decimal quotePrice = decimal.Parse(parts[3]);
 
-							// go do it!
-							handler.SetPricesFromSingleUnitQuantities(basePrice, quotePrice);
+					if (l.memo.StartsWith(kSetPricesMemoStart))
+					{
+						HandlePriceSetting(parts, l, handler, market);
+
+						return true;
+					}
+					else if (l.memo.StartsWith(kWithdrawMemo))
+					{
+						// process withdrawal
+						if (parts[0] == kWithdrawMemo)
+						{
+							// make sure we didn't already process this transaction!
+							if (!m_dataAccess.IsWithdrawalProcessed(trxid))
+							{
+								decimal amount = decimal.Parse(parts[1]);
+								CurrencyTypes type = CurrencyHelpers.FromSymbol(parts[2]);
+								string to;
+
+								string txid;
+								if (type == CurrencyTypes.BTC)
+								{
+									to = m_dataAccess.GetStats().bitcoin_withdraw_address;
+									Debug.Assert(to != null);
+
+									txid = m_bitcoin.SendToAddress(to, amount);
+								}
+								else
+								{
+									to = l.from_account;
+									BitsharesTransactionResponse response = m_bitshares.WalletTransfer(amount, CurrencyHelpers.ToBitsharesSymbol(type), m_bitsharesAccount, to);
+									txid = response.record_id;
+								}
+
+								// log in DB
+								m_dataAccess.InsertWithdrawal(trxid, txid, type.ToString(), amount, to, DateTime.UtcNow);
+							}
+
+							return true;
 						}
 					}
 				}
@@ -237,6 +313,8 @@ namespace MetaDaemon
 					LogGeneralException(e.ToString());
 				}
 			}
+
+			return false;
 		}
 
 		/// <summary>	Updates this object. </summary>
@@ -246,7 +324,14 @@ namespace MetaDaemon
 		{
 			try
 			{
-				Dictionary<string, MarketRow> allMarkets = RecomputeTransactionLimitsAndPrices();
+				Dictionary<string, MarketRow> allMarkets = GetAllMarkets().ToDictionary(m => m.symbol_pair);
+
+				// create any handlers we need for new markets
+				CheckMarketHandlers(allMarkets);
+
+				// get all markets
+				//Dictionary<string, MarketRow> allMarkets = m_marketHandlers.Select<KeyValuePair<string, MarketBase>, MarketRow>(h => h.Value.m_Market).ToDictionary(m => m.symbol_pair);
+				RecomputeTransactionLimitsAndPrices(allMarkets);
 
 				//
 				// handle bitshares->bitcoin
@@ -275,19 +360,26 @@ namespace MetaDaemon
 						MarketRow m = allMarkets[kvpHandler.Key];
 						BitsharesAsset depositAsset = m_allBitsharesAssets[l.amount.asset_id];
 
-						if (IsDepositForMarket(l.memo, m.symbol_pair))
+						if (!HandleCommand(l, kvpHandler.Value, m, kvpDeposit.Key))
 						{
-							// make sure the deposit is for this market!
-							if (kvpHandler.Value.CanDepositAsset( CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol) ))
+							if (IsDepositForMarket(l.memo, m.symbol_pair))
 							{
-								kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
+								// make sure the deposit is for this market!
+								if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol)))
+								{
+									kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
+								}
 							}
 						}
-						else 
+						else
 						{
-							HandlePriceSetting(l, kvpHandler.Value, allMarkets[kvpHandler.Key]);
+							// this was a command, so we're done trying to route it any more
+							break;
 						}
 					}
+
+					// this needs to happen for every transaction
+					RecomputeTransactionLimitsAndPrices(allMarkets);
 				}
 
 				//
@@ -304,6 +396,9 @@ namespace MetaDaemon
 							kvpHandler.Value.HandleBitcoinDeposit(deposit);
 						}
 					}
+
+					// this needs to happen for every transaction
+					RecomputeTransactionLimitsAndPrices(allMarkets);
 				}
 
 				if (m_bitcoinFeeAddress != null && m_bitshaaresFeeAccount != null)
@@ -328,6 +423,10 @@ namespace MetaDaemon
 					{
 						m_dataAccess.UpdateSiteLastTransactionUid(latestTid);
 					}
+					else
+					{
+						throw new Exception("API push response unknown! " + result);
+					}
 				}
 
 				//
@@ -338,7 +437,11 @@ namespace MetaDaemon
 				{
 					if (kvpHandler.Value.m_IsDirty)
 					{
+						m_dataAccess.UpdateMarketInDatabase(kvpHandler.Value.m_Market);
+
 						ApiPush<MarketRow>(Routes.kPushMarket, kvpHandler.Value.m_Market);
+
+						kvpHandler.Value.m_IsDirty = false;
 					}
 				}
 			}

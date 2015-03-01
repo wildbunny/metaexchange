@@ -52,6 +52,14 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MySqlDatabase, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\libs\MySqlDatabase.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Text, Version=3.9.54.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\libs\ServiceStack.Text.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -75,6 +83,14 @@
     <ProjectReference Include="..\MetaDaemonUnitTests\MetaDaemonUnitTests.csproj">
       <Project>{5bdfc2da-d529-42ea-9bcb-e6a001d511d2}</Project>
       <Name>MetaDaemonUnitTests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\RestLib\RestLib.csproj">
+      <Project>{c2755a02-d80a-4fb2-8210-45c181dd6785}</Project>
+      <Name>RestLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\WebDaemonShared\WebDaemonShared.csproj">
+      <Project>{f1f6ee90-cdc5-494b-845f-0203dce40432}</Project>
+      <Name>WebDaemonShared</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

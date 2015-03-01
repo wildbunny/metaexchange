@@ -12,6 +12,7 @@ using Casascius.Bitcoin;
 using ApiHost;
 using WebDaemonSharedTables;
 using MetaData;
+using BestPrice;
 
 namespace MetaDaemon.Markets
 {
@@ -26,10 +27,13 @@ namespace MetaDaemon.Markets
 		public const decimal kMinBtcFee = 0.1M;
 		#else
 		public const decimal kMaxTransactionFactor = 0.1M;
-		public const decimal kMinBtcFee = 0.00000M;
+		public const decimal kMinBtcFee = 0.1M;
 		#endif
 
 		protected BitsharesAsset m_asset;
+		protected PriceDiscovery m_prices;
+
+		protected decimal m_lastFeedPrice;
 		
 		/// <summary>	Constructor. </summary>
 		///
@@ -45,8 +49,53 @@ namespace MetaDaemon.Markets
 								base(daemon, market, bitshares, bitcoin, bitsharesAccount)
 		{
 			m_flipped = m_market.GetBase() != bitsharesAsset;
-
 			m_asset = m_bitshares.BlockchainGetAsset(CurrencyHelpers.ToBitsharesSymbol(bitsharesAsset));
+
+			Dictionary<int, ulong> allBitsharesBalances = m_bitshares.WalletAccountBalance(bitsharesAccount)[bitsharesAccount];
+			decimal bitcoinBalance = bitcoin.GetBalance();
+			
+			ComputeMarketPricesAndLimits(ref m_market, allBitsharesBalances, bitcoinBalance);
+		}
+
+		/// <summary>	Calculates the inventory ratio. </summary>
+		///
+		/// <remarks>	Paul, 25/02/2015. </remarks>
+		///
+		/// <param name="allBitsharesBalances">	all bitshares balances. </param>
+		/// <param name="bitcoinBalance">	   	The bitcoin balance. </param>
+		///
+		/// <returns>	The calculated inventory ratio. </returns>
+		decimal ComputeInventoryRatio(Dictionary<int, ulong> allBitsharesBalances, decimal bitcoinBalance)
+		{
+			decimal bitsharesBalance = m_asset.GetAmountFromLarimers(allBitsharesBalances[m_asset.id]);
+
+			// convert bitshares into bitcoin value
+			bitsharesBalance *= m_lastFeedPrice;
+
+			decimal inventoryRatio = (bitcoinBalance - bitsharesBalance) / (bitsharesBalance + bitcoinBalance);
+			return inventoryRatio / 2 + 0.5M;
+		}
+
+		/// <summary>	Recompute feed price in btc. </summary>
+		///
+		/// <remarks>	Paul, 24/02/2015. </remarks>
+		///
+		/// <returns>	A decimal. </returns>
+		decimal RecomputeFeedPriceInBtc()
+		{
+			decimal bitsharesPriceInBtc = m_bitshares.BlockchainMedianFeedPrice(CurrencyTypes.BTC.ToString());
+			decimal bitsharesPriceInBitasset;
+			
+			if (m_asset.symbol != CurrencyTypes.BTS.ToString())
+			{
+				bitsharesPriceInBitasset = m_bitshares.BlockchainMedianFeedPrice(m_asset.symbol);
+			}
+			else
+			{
+				bitsharesPriceInBitasset = 1;
+			}
+
+			return bitsharesPriceInBtc / bitsharesPriceInBitasset;
 		}
 
 		/// <summary>	Calculates the market prices and limits. </summary>
@@ -73,26 +122,72 @@ namespace MetaDaemon.Markets
 
 			decimal newAskMax, newBidMax;
 
-			#if MONO
-			int dps=2;
-			#else
-			int dps = 8;
-			#endif
+			// askMax is in BITCOINS
+			// bidMax is in BITASSETS
 
 			if (m_flipped)
 			{
-				decimal t = baseBalance;
-				baseBalance = quoteBalance;
-				quoteBalance = t;
+				// BTC_bitUSD
+				
+				// baseBalance = 10 bitUSD
+				// ask = 240
+				// askMax = 10 / 240 = 0.04 BTC
+
+				newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * kMaxTransactionFactor, 8);
+				newBidMax = Numeric.TruncateDecimal((quoteBalance * m_market.bid) * kMaxTransactionFactor, 8);
 			}
-			
-			newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * kMaxTransactionFactor, dps);
-			newBidMax = Numeric.TruncateDecimal(quoteBalance * kMaxTransactionFactor, dps);
-			
-			m_isDirty |= market.ask_max != newAskMax || market.bid_max != newBidMax;
+			else
+			{
+				// BTS_BTC
+				//
+				// baseBalance = 1 BTS
+				// ask = 0.00004
+				// askMax = 1 * 0.0004 = 0.0004 BTC
+
+				newAskMax = Numeric.TruncateDecimal((baseBalance * m_market.ask) * kMaxTransactionFactor, 8);
+				newBidMax = Numeric.TruncateDecimal((quoteBalance / m_market.bid) * kMaxTransactionFactor, 8);
+			}
+
+			m_isDirty |= newAskMax != m_market.ask_max || newBidMax != m_market.bid_max;
 			
 			market.ask_max = newAskMax;
 			market.bid_max = newBidMax;
+
+			if (m_market.price_discovery)
+			{
+				//
+				// update price discovery engine
+				//
+				
+				decimal bitsharesBalance = m_asset.GetAmountFromLarimers(bitsharesBalances[m_asset.id]);
+
+				if (m_asset.symbol == CurrencyTypes.BTC.ToString())
+				{
+					m_lastFeedPrice = 1;
+				}
+				else
+				{
+					m_lastFeedPrice = RecomputeFeedPriceInBtc();
+				}
+
+				decimal inventoryRatio = ComputeInventoryRatio(bitsharesBalances, bitcoinBalance);
+
+				if (m_prices == null)
+				{
+					//
+					// initialise the price discovery engine
+					// 
+
+					m_prices = new PriceDiscovery(market.spread_percent, market.window_percent, m_lastFeedPrice, inventoryRatio);
+				}
+
+				decimal oldBid = m_market.bid;
+				decimal oldAsk = m_market.ask;
+				m_prices.SetInventoryRatio(inventoryRatio, out m_market.bid, out m_market.ask);
+				m_prices.SetFeedPrice(m_lastFeedPrice, out m_market.bid, out m_market.ask);
+
+				m_isDirty |= oldBid != m_market.bid || oldAsk != m_market.ask;
+			}
 		}
 
 		/// <summary>	Determine if we can deposit asset. </summary>
@@ -119,16 +214,56 @@ namespace MetaDaemon.Markets
 		/// <param name="trxId">	Identifier for the trx. </param>
 		protected virtual void SellBitAsset(BitsharesLedgerEntry l, SenderToDepositRow s2d, string trxId)
 		{
+			decimal oldBid = m_market.bid;
+
 			try
 			{
+				if (m_market.price_discovery)
+				{
+					//
+					// adjust prices based on order
+					//
+
+					decimal informed = m_asset.GetAmountFromLarimers(l.amount.amount) / m_market.bid_max;
+					m_market.bid = m_prices.GetBidForSell(informed);
+				}
+
 				string btcAddress = s2d.receiving_address;
 				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_asset, s2d.deposit_address, MetaOrderType.sell);
+
+				if (m_market.price_discovery)
+				{
+					// update database with new prices
+					m_isDirty = true;
+				}
 			}
 			catch (Exception e)
 			{
 				// also lets now ignore this transaction so we don't keep failing
 				RefundBitsharesDeposit(l.from_account, l.amount.amount, trxId, e.Message, m_asset, s2d.deposit_address, MetaOrderType.sell);
+
+				// restore this
+				m_market.bid = oldBid;
 			}
+		}
+
+		/// <summary>	Sets prices from single unit quantities. </summary>
+		///
+		/// <remarks>	Paul, 25/02/2015. </remarks>
+		///
+		/// <param name="baseQuantity"> 	The base quantity. </param>
+		/// <param name="quoteQuantity">	The quote quantity. </param>
+		/// <param name="flipped">			true if flipped. </param>
+		/// <param name="market">			The market. </param>
+		public override void SetPricesFromSingleUnitQuantities(decimal baseQuantity, decimal quoteQuantity, bool flipped, MarketRow market)
+		{
+			base.SetPricesFromSingleUnitQuantities(baseQuantity, quoteQuantity, flipped, market);
+
+			// disable further price discovery
+			m_market.price_discovery = false;
+
+			// disable in database too
+			m_daemon.EnablePriceDiscovery(m_market.symbol_pair, false);
 		}
 
 		/// <summary>	Handles the bitshares deposit described by kvp. </summary>
@@ -155,14 +290,35 @@ namespace MetaDaemon.Markets
 		/// <param name="s2d">	The 2D. </param>
 		protected virtual void BuyBitAsset(TransactionSinceBlock t, SenderToDepositRow s2d)
 		{
+			decimal oldAsk = m_market.ask;
+
 			try
 			{
+				if (m_market.price_discovery)
+				{
+					//
+					// adjust prices based on order
+					//
+
+					decimal informed = t.Amount / m_market.ask_max;
+					m_market.ask = m_prices.GetAskForBuy(informed);
+				}
+
 				SendBitAssetsToDepositor(t, m_asset, s2d, MetaOrderType.buy);
+
+				if (m_market.price_discovery)
+				{
+					// update database with new prices
+					m_isDirty = true;
+				}
 			}
 			catch (Exception e)
 			{
 				// also lets now ignore this transaction so we don't keep failing
 				RefundBitcoinDeposit(t, e.Message, s2d, MetaOrderType.buy);
+
+				// restore this
+				m_market.ask = oldAsk;
 			}
 		}
 
@@ -285,7 +441,17 @@ namespace MetaDaemon.Markets
 				buyFees = m_asset.Truncate(buyFees);
 				sellFees = Numeric.TruncateDecimal(sellFees, 8);
 
-				if (buyFees / m_market.ask > kMinBtcFee &&
+				decimal btcWorthOfBitassets;
+				if (m_flipped)
+				{
+					btcWorthOfBitassets = buyFees / m_market.bid;
+				}
+				else
+				{
+					btcWorthOfBitassets = buyFees * m_market.bid;
+				}
+
+				if (btcWorthOfBitassets > kMinBtcFee &&
 					sellFees > kMinBtcFee)
 				{
 					// update this here to prevent failures from continually sending fees

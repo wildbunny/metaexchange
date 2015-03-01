@@ -1,113 +1,43 @@
-﻿function ResizeCanvas()
-{
-	fitToContainer(document.getElementById('candlestickChartId'));
-}
+﻿var countryApp = angular.module('myApp', []);
 
-function Refresh()
+/**
+	@ngInject
+*/
+var controlFunc = function ($scope, $http, $timeout)
 {
-	ResizeCanvas();
-	CanvasChart.Refresh();
-}
-
-function OnChartTimeframe(data)
-{
-	var numDps = GetMarketDetails().quoteAsset.m_dps;
-
-	var dataDef = {
-		dataPointFont: '8pt Lato',
-		pixelsPerBar: 10,
-		candleStrokeBear: '#b94a48',
-		candleFillBear: '#e74c3c',
-		candleStrokeBull: '#468847',
-		candleFillBull: '#18bc9c',
-		timeFrameSeconds: (ParseDate(data[1].date).getTime() - ParseDate(data[0].date).getTime())/1000,
-		dataPoints: data,
-		decimalPlaces: numDps,
-		gridColour: '#d0d0d0'
+	$scope.go = function(m)
+	{
+		window.document.location = "/markets/" + $scope.renameSymbolPair(m.symbol_pair);
 	};
 
-	CanvasChart.Reset();
-	CanvasChart.render('candlestickChartId', dataDef);
-}
+	$scope.renameSymbolPair = renameSymbolPair;
 
-function OnLoad()
-{
-	var market = $('meta[name=market]').attr("content");
-
-	ResizeCanvas();	
-
-	$.post("/getOhlc", { market: market, start: new Date().toISOString(), timeframe: "H1", bars: 100 }).done(function (data)
+	var get = function ()
 	{
-		OnChartTimeframe(data);
-
-		window.addEventListener('resize', Refresh, false);
-	});
-
-	$("input[name=timeframe][value=" + "H1" + "]").prop('checked', true);
-	$("input[name=timeframe][value=" + "H1" + "]").parent().addClass('active');
-
-	$('input[type=radio]').change(function ()
-	{
-		$(this).closest("form").submit();
-	});
-}
-
-function TruncateNumberAsString(number)
-{
-	return number.match(/^[-\d]+(?:\.\d{0,8})?/);
-}
-
-function NumberToString(number)
-{
-	if (typeof (number) == "string")
-	{
-		number = parseFloat(number);
+		return $http.get("/api/1/getAllMarkets").success(function (data)
+		{
+			$scope.allMarkets = data;
+		}).finally(function (response)
+		{
+			PostForm($http, "/api/1/getLastTransactions", { limit: 6 }, function (data)
+			{
+				$scope.transactions = data;
+			});
+		});
 	}
-
-	number = number.toFixed(8).toString();
-
-	return number;
-}
-
-function FormatPrice(price)
-{
-	return TruncateNumberAsString(NumberToString(price));
-}
-
-function fitToContainer(canvas)
-{
-	// Make it visually fill the positioned parent
-	canvas.style.width = '100%';
-	canvas.style.height = '100%';
-	// ...then set the internal size to match
-	canvas.width = canvas.offsetWidth;
-	canvas.height = canvas.offsetHeight;
-}
-
-Date.prototype.format = function (integer)
-{
-	return (integer < 10) ? "0" + integer : integer.toString();
-}
-
-Date.prototype.timeNow = function (includeSeconds, hideNonTime)
-{
-	var m_shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-	var seconds = (includeSeconds != undefined) ? ":" + this.format(this.getSeconds()) : "";
-	var nonTime = this.getDate() + " " + m_shortMonths[this.getMonth()] + " ";
-	if (hideNonTime == true)
+	var poll = function ()
 	{
-		nonTime = "";
-	}
-	return nonTime + this.format(this.getHours()) + ":" + this.format(this.getMinutes()) + seconds;
+		$timeout(function ()
+		{
+			get().finally(function (response)
+			{
+				poll();
+			});
+		}, 5000);
+	};
+
+	get();
+	poll();
 };
 
-function ParseDate(input)
-{
-	return new Date(input);
-	var parts = input.split('-');
-	var dayAndTime = parts[2].split(' ');
-	var time = dayAndTime[1].split(':');
-
-	// new Date(year, month [, date [, hours[, minutes[, seconds[, ms]]]]])
-	return new Date(parts[0], parts[1] - 1, dayAndTime[0], time[0], time[1], time[2]); // months are 0-based
-}
+countryApp.controller('MarketsController', controlFunc);

@@ -55,7 +55,15 @@ namespace WebDaemonShared
 		/// <returns>	The CurrencyTypes. </returns>
 		static public CurrencyTypes FromBitsharesSymbol(string symbol)
 		{
-			return FromSymbol(kBitassetPrefix+symbol);
+			if (symbol == CurrencyTypes.BTS.ToString())
+			{
+				// special case for BTS
+				return CurrencyTypes.BTS;
+			}
+			else
+			{
+				return FromSymbol(kBitassetPrefix + symbol);
+			}
 		}
 
 		/// <summary>	Initializes this object from the given from symbol. </summary>
@@ -94,6 +102,18 @@ namespace WebDaemonShared
 		{
 			@base = CurrencyHelpers.FromSymbol(symbolPair.Split('_')[0]);
 			quote = CurrencyHelpers.FromSymbol(symbolPair.Split('_')[1]);
+		}
+
+		/// <summary>	Rename symbol pair. </summary>
+		///
+		/// <remarks>	Paul, 01/03/2015. </remarks>
+		///
+		/// <param name="name">	The name. </param>
+		///
+		/// <returns>	A string. </returns>
+		static public string RenameSymbolPair(string name)
+		{
+			return name.Replace('_', '/');
 		}
 	}
 }

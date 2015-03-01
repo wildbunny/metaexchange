@@ -14,7 +14,7 @@ namespace WebDaemonShared
 		UnknownMarket,
 		InvalidAddress,
 		InvalidAccount,
-		OrderNotFound
+		OrderNotFound,
 	}
 
 	public class ApiError

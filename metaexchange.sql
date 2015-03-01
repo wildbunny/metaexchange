@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Feb 22, 2015 at 02:32 PM
+-- Generation Time: Mar 01, 2015 at 12:49 PM
 -- Server version: 5.1.41
 -- PHP Version: 5.3.1
 
@@ -75,11 +75,14 @@ CREATE TABLE IF NOT EXISTS `markets` (
   `symbol_pair` varchar(20) NOT NULL,
   `ask` decimal(18,8) NOT NULL,
   `bid` decimal(18,8) NOT NULL,
-  `ask_max` decimal(18,8) NOT NULL COMMENT 'quantity of base currency',
-  `bid_max` decimal(18,8) NOT NULL COMMENT 'quantity of quote currency',
+  `ask_max` decimal(18,8) NOT NULL COMMENT 'quantity of BTC',
+  `bid_max` decimal(18,8) NOT NULL COMMENT 'quantity of bitAsset',
   `ask_fee_percent` decimal(18,8) NOT NULL DEFAULT '0.00000000',
   `bid_fee_percent` decimal(18,8) NOT NULL DEFAULT '0.00000000',
   `transaction_processed_uid` int(10) unsigned NOT NULL DEFAULT '0',
+  `spread_percent` decimal(18,8) NOT NULL DEFAULT '0.00000000',
+  `window_percent` decimal(18,8) NOT NULL DEFAULT '10.00000000',
+  `price_discovery` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`symbol_pair`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -93,7 +96,7 @@ CREATE TABLE IF NOT EXISTS `sender_to_deposit` (
   `receiving_address` varchar(64) NOT NULL,
   `deposit_address` varchar(36) NOT NULL,
   `symbol_pair` varchar(20) NOT NULL DEFAULT 'bitBTC_BTC',
-  PRIMARY KEY (`receiving_address`)
+  PRIMARY KEY (`receiving_address`,`symbol_pair`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -107,6 +110,7 @@ CREATE TABLE IF NOT EXISTS `stats` (
   `last_bitcoin_block` varchar(64) DEFAULT NULL,
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `site_last_tid` int(10) unsigned NOT NULL DEFAULT '0',
+  `bitcoin_withdraw_address` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
 
@@ -131,7 +135,24 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `deposit_address` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`uid`),
   UNIQUE KEY `received_txid` (`received_txid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=50 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=141 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `withdrawals`
+--
+
+CREATE TABLE IF NOT EXISTS `withdrawals` (
+  `received_txid` varchar(64) NOT NULL,
+  `sent_txid` varchar(64) NOT NULL,
+  `amount` decimal(18,8) NOT NULL,
+  `to_account` varchar(64) NOT NULL,
+  `date` datetime NOT NULL,
+  `symbol` varchar(10) NOT NULL,
+  PRIMARY KEY (`received_txid`),
+  UNIQUE KEY `txid` (`sent_txid`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

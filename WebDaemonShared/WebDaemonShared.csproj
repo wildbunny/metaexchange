@@ -86,7 +86,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup Condition="'$(Configuration)' == 'mono'">
     <PostBuildEvent>cd $(TargetDir)
-pdb2mdb $(TargetName).dll &amp; copy "$(TargetName).dll.mdb" "$(SolutionDir)bin\mono" /Y
+pdb2mdb $(TargetName).dll &amp; copy "$(TargetName).dll.mdb" "$(SolutionDir)bin\mono" /Y &amp; copy "$(TargetName).dll" "$(SolutionDir)bin\mono" /Y
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

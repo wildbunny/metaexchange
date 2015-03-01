@@ -1,0 +1,9 @@
+﻿.table-striped > tbody > tr:nth-child(2n+1) > td, .table-striped > tbody > tr:nth-child(2n+1) > th {
+   background-color: #ecf0f1;
+}
+
+.table-hover tbody tr:hover td, .table-hover tbody tr:hover th {
+  background-color: #18bc9c;
+}
+
+tr.clickable-row { cursor: pointer; } 

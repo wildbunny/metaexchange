@@ -157,7 +157,7 @@ namespace BitsharesRpc
 		/// <returns>	true if valid account name, false if not. </returns>
 		public static bool IsValidAccountName(string name)
 		{
-			string regExPattern = @"^([\-\.a-z]+)$";
+			string regExPattern = @"^([\-\.a-z0-9]+)$";
 			return Regex.IsMatch(name, regExPattern) && name.Length <= kBitsharesMaxAccountNameLength;
 		}
 
@@ -450,6 +450,18 @@ namespace BitsharesRpc
 		public List<BitsharesMarket> BlockchainListMarkets()
 		{
 			return ApiPostSync<List<BitsharesMarket>>(BitsharesMethods.blockchain_list_markets);
+		}
+
+		/// <summary>	Blockchain median feed price. </summary>
+		///
+		/// <remarks>	Paul, 24/02/2015. </remarks>
+		///
+		/// <param name="symbol">	The symbol. </param>
+		///
+		/// <returns>	A decimal. </returns>
+		public decimal BlockchainMedianFeedPrice(string symbol)
+		{
+			return ApiPostSync<decimal>(BitsharesMethods.blockchain_median_feed_price, symbol);
 		}
     }
 }

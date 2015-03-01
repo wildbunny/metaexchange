@@ -21,6 +21,7 @@ namespace MetaData
 	{
 		public uint last_bitshares_block;
 		public string last_bitcoin_block;
+		public string bitcoin_withdraw_address;
 	}
 
 	public class IgnoreRow : ICoreType
@@ -48,6 +49,24 @@ namespace MetaData
 
 		[IgnoreDataMember]
 		public uint last_tid;
+
+		[IgnoreDataMember]
+		public bool price_discovery;
+
+		[IgnoreDataMember]
+		public decimal spread_percent;
+
+		[IgnoreDataMember]
+		public decimal window_percent;
+
+		[IgnoreDataMember]
+		public bool visible;
+
+		public decimal btc_volume_24h;
+		public decimal last_price;
+		public string asset_name;
+		public decimal realised_spread_percent;
+		public decimal price_delta;
 		
 		public CurrencyTypes GetBase()
 		{
@@ -75,5 +94,11 @@ namespace MetaData
 		public decimal buy_fee;
 		public decimal sell_fee;
 		public DateTime date;
+	}
+
+	public class LastPriceAndDelta
+	{
+		public decimal last_price;
+		public decimal price_delta;
 	}
 }

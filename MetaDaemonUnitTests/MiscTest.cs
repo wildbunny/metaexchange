@@ -15,6 +15,7 @@ using Monsterer.Util;
 using ApiHost;
 using WebDaemonSharedTables;
 using MetaDaemon.Markets;
+using BitsharesRpc;
 
 namespace MetaDaemonUnitTests
 {
@@ -170,6 +171,12 @@ namespace MetaDaemonUnitTests
 		{
 			string content = Post(Routes.kGetMyLastTransactions, RestHelpers.BuildPostArgs(WebForms.kLimit, -1));
 			ReplyIsApiError(content, new ApiExceptionMissingParameter());
+		}
+
+		[Test]
+		public void VerifiyAccountNameWithHipan()
+		{
+			Assert.IsTrue(BitsharesWallet.IsValidAccountName("argentina-marketing.matt608"));
 		}
 	}
 }

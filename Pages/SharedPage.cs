@@ -10,6 +10,8 @@ using Monsterer.Request;
 using WebHost;
 using WebHost.Components;
 using WebHost.WebSystem;
+using MetaData;
+using WebDaemonShared;
 
 namespace MetaExchange.Pages
 {
@@ -73,6 +75,7 @@ namespace MetaExchange.Pages
 			AddResource(new CssResource(Constants.kWebRoot, "/css/bootstrap.min.css", true));
 			AddResource(new FavIconResource(Constants.kWebRoot, "/images/favicon.ico"));
 			AddResource(new TitleResource("Metaexchange"));
+			AddResource(new MetaResource("viewport", "width=device-width, initial-scale=1"));
 
 			// render head
 			base.Render(ctx, stream, authObj);
@@ -92,9 +95,30 @@ namespace MetaExchange.Pages
 					{
 						string page = ctx.Request.Url.LocalPath.Split('/').Last();
 
+						IEnumerable<MarketRow> allMarkets = authObj.m_database.GetAllMarkets().Where(m=>m.visible);
+
 						using (var ul = new UL(stream, "nav navbar-nav pull-left"))
 						{
-							WriteLiHref(stream, "Home", GetLiClass(page, ""), "", HtmlAttributes.href, "/");
+							using (var li = new LI(stream, "dropdown"))
+							{
+								Href(stream, "Markets <span class=\"caret\">", HtmlAttributes.href, "/",
+																				HtmlAttributes.@class, "disabled",
+																				"data-toggle", "dropdown",
+																				"role", "button",
+																				"aria-expanded", "false");
+
+								using (new UL(stream,	HtmlAttributes.@class, "dropdown-menu", 
+														"role","menu"))
+								{
+									foreach (MarketRow m in allMarkets)
+									{
+										WriteLiHref(stream, CurrencyHelpers.RenameSymbolPair(m.symbol_pair), "", "", HtmlAttributes.href, "/markets/" + CurrencyHelpers.RenameSymbolPair(m.symbol_pair));
+									}
+								}
+							}
+
+							//WriteLiHref(stream, "Home", GetLiClass(page, ""), "", HtmlAttributes.href, "/");
+							
 							WriteLiHref(stream, "Api", GetLiClass(page, "apiDocs"), "", HtmlAttributes.href, "/apiDocs");
 							WriteLiHref(stream, "Faq", GetLiClass(page, "faq"), "", HtmlAttributes.href, "/faq");
 						}

@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetaDaemonUnitTests", "..\M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pathfinder", "..\Pathfinder\Pathfinder.csproj", "{2E963D4C-FFA3-4A3C-BB0E-5A180C5FA46A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BestPrice", "..\BestPrice\BestPrice.csproj", "{50655D2F-DDEF-468E-9C34-0263399C6F8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,14 @@ Global
 		{2E963D4C-FFA3-4A3C-BB0E-5A180C5FA46A}.mono|Any CPU.Build.0 = Release|Any CPU
 		{2E963D4C-FFA3-4A3C-BB0E-5A180C5FA46A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E963D4C-FFA3-4A3C-BB0E-5A180C5FA46A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.debug2nd|Any CPU.ActiveCfg = Debug|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.debug2nd|Any CPU.Build.0 = Debug|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.mono|Any CPU.ActiveCfg = Release|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.mono|Any CPU.Build.0 = Release|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50655D2F-DDEF-468E-9C34-0263399C6F8A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -20,9 +20,14 @@ namespace WebDaemonShared
 			m_database = new Database(databaseName, databaseUser, databasePassword, System.Threading.Thread.CurrentThread.ManagedThreadId);
 		}
 
+		public StatsRow GetStats()
+		{
+			return m_database.Query<StatsRow>("SELECT * FROM stats;").First();
+		}
+
 		public uint GetLastBitsharesBlock()
 		{
-			StatsRow stats = m_database.Query<StatsRow>("SELECT * FROM stats;").First();
+			StatsRow stats = GetStats();
 			return stats.last_bitshares_block;
 		}
 
@@ -187,6 +192,24 @@ namespace WebDaemonShared
 											market.ask, market.bid, market.ask_max, market.bid_max, market.ask_fee_percent, market.bid_fee_percent, market.symbol_pair) > 0;
 		}
 
+		/// <summary>	Inserts a market. </summary>
+		///
+		/// <remarks>	Paul, 23/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">   	The symbol pair. </param>
+		/// <param name="ask">				The ask. </param>
+		/// <param name="bid">				The bid. </param>
+		/// <param name="askMax">			The ask maximum. </param>
+		/// <param name="bidMax">			The bid maximum. </param>
+		/// <param name="askFeePercent">	The ask fee percent. </param>
+		/// <param name="bidFeePercent">	The bid fee percent. </param>
+		public void InsertMarket(	string symbolPair, decimal ask, decimal bid, decimal askMax, decimal bidMax, 
+									decimal askFeePercent, decimal bidFeePercent)
+		{
+			m_database.Statement(	"INSERT INTO markets (symbol_pair,ask,bid,ask_max,bid_max,ask_fee_percent,bid_fee_percent) VALUES(@a,@b,@c,@d,@e,@f,@g);",
+									symbolPair, ask, bid, askMax, bidMax, askFeePercent, bidFeePercent);
+		}
+
 		/// <summary>	Query if 'identifier' is deposit for market. </summary>
 		///
 		/// <remarks>	Paul, 05/02/2015. </remarks>
@@ -287,7 +310,7 @@ namespace WebDaemonShared
 		{
 			if (market != null)
 			{
-				return m_database.Query<TransactionsRowNoUid>("SELECT * FROM transactions WHERE symbol_pair=@s AND status=@s ORDER BY date DESC LIMIT @l;", market, MetaOrderStatus.completed, limit);
+				return m_database.Query<TransactionsRowNoUid>("SELECT * FROM transactions WHERE symbol_pair=@s AND status=@b ORDER BY date DESC LIMIT @l;", market, MetaOrderStatus.completed, limit);
 			}
 			else
 			{
@@ -413,6 +436,106 @@ namespace WebDaemonShared
 		public void UpdateMarketStatus(string daemonUrl, bool up)
 		{
 			m_database.Statement("UPDATE markets SET up=@u WHERE daemon_url=@s;", up, daemonUrl);
+		}
+
+		/// <summary>	Enables the price discovert. </summary>
+		///
+		/// <remarks>	Paul, 25/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">	The symbol pair. </param>
+		/// <param name="enable">	 	true to enable, false to disable. </param>
+		public void EnablePriceDiscovery(string symbolPair, bool enable)
+		{
+			m_database.Statement("UPDATE markets SET price_discovery=@p WHERE symbol_pair=@s;", enable, symbolPair);
+		}
+
+		/// <summary>	Inserts a withdrawal. </summary>
+		///
+		/// <remarks>	Paul, 26/02/2015. </remarks>
+		///
+		/// <param name="receivedTxid">	The received txid. </param>
+		/// <param name="txid">		   	The txid. </param>
+		/// <param name="symbol">	   	The symbol. </param>
+		/// <param name="amount">	   	The amount. </param>
+		/// <param name="to">		   	to. </param>
+		/// <param name="date">		   	The date Date/Time. </param>
+		public void InsertWithdrawal(string receivedTxid, string txid, string symbol, decimal amount, string to, DateTime date)
+		{
+			m_database.Statement(	"INSERT INTO withdrawals (received_txid, sent_txid, symbol, amount, to_account, date) VALUES(@a,@b,@c,@d,@e,@f);", 
+									receivedTxid, txid, symbol, amount, to, date);
+		}
+
+		/// <summary>	Withdrawal processed. </summary>
+		///
+		/// <remarks>	Paul, 26/02/2015. </remarks>
+		///
+		/// <param name="receivedTxid">	The received txid. </param>
+		///
+		/// <returns>	true if it succeeds, false if it fails. </returns>
+		public bool IsWithdrawalProcessed(string receivedTxid)
+		{
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM withdrawals WHERE received_txid=@a;", receivedTxid) > 0;
+		}
+
+		/// <summary>	Gets 24 hour btc volume. </summary>
+		///
+		/// <remarks>	Paul, 28/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">   	The symbol pair. </param>
+		/// <param name="flippedMarket">	true to flipped market. </param>
+		///
+		/// <returns>	The 24 hour btc volume. </returns>
+		public decimal Get24HourBtcVolume(string symbolPair, bool flippedMarket)
+		{
+			DateTime start = DateTime.UtcNow - new TimeSpan(1,0,0,0);
+
+			if (flippedMarket)
+			{
+				return m_database.QueryScalar<decimal>("SELECT SUM(amount / price) FROM transactions WHERE symbol_pair=@market AND date>@start;", symbolPair, start);
+			}
+			else
+			{
+				return m_database.QueryScalar<decimal>("SELECT SUM(amount * price) FROM transactions WHERE symbol_pair=@market AND date>@start;", symbolPair, start);
+			}
+		}
+
+		/// <summary>	Gets the last price. </summary>
+		///
+		/// <remarks>	Paul, 28/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">	The symbol pair. </param>
+		///
+		/// <returns>	The last price. </returns>
+		public LastPriceAndDelta GetLastPriceAndDelta(string symbolPair)
+		{
+			List<TransactionsRow> lastTwo = m_database.Query<TransactionsRow>("SELECT price FROM transactions WHERE symbol_pair=@market ORDER BY date DESC LIMIT 2;", symbolPair);
+
+			decimal delta;
+			if (lastTwo.Count == 2)
+			{
+				delta = lastTwo[0].price - lastTwo[1].price;
+			}
+			else
+			{
+				delta = lastTwo.Last().price;
+			}
+
+			return new LastPriceAndDelta { last_price = lastTwo.Last().price, price_delta = delta };
+		}
+
+		/// <summary>	Updates the market statistics. </summary>
+		///
+		/// <remarks>	Paul, 28/02/2015. </remarks>
+		///
+		/// <param name="symbolPair">				The symbol pair. </param>
+		/// <param name="btcVolume24h">				The btc volume 24h. </param>
+		/// <param name="lastPrice">				The last price. </param>
+		/// <param name="priceDelta">				The price delta. </param>
+		/// <param name="realisedSpreadPercent">	The realised spread percent. </param>
+		public void UpdateMarketStats(string symbolPair, decimal btcVolume24h, decimal lastPrice, decimal priceDelta, decimal realisedSpreadPercent)
+		{
+			m_database.Statement("UPDATE markets SET btc_volume_24h=@vol, last_price=@price, price_delta=@delta, realised_spread_percent=@spread WHERE symbol_pair=@market;",
+									btcVolume24h, lastPrice, priceDelta, realisedSpreadPercent, symbolPair);
 		}
 	}
 }

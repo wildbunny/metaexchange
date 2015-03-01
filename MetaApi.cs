@@ -32,6 +32,7 @@ namespace MetaExchange
 		{
 			string from = ctx.Request.RemoteEndPoint.Address.ToString();
 
+			IEnumerable<string> ourIps = Dns.GetHostEntry(Dns.GetHostName()).AddressList.Select<IPAddress, string>(ip => ip.ToString());
 			IEnumerable<string> daemons = m_auth.m_Database.GetAllMarkets().Select<MarketRow, string>(r => r.daemon_url);
 
 			List<Uri> uris = new List<Uri>();
@@ -40,8 +41,8 @@ namespace MetaExchange
 			{
 				ips.Add(new Uri(d).Host);
 			}
-			
-			return ips.Contains(from);
+
+			return ips.Contains(from) || ourIps.Contains(from);
 		}
 
 		/// <summary>	Executes the submit address action. </summary>
@@ -59,15 +60,18 @@ namespace MetaExchange
 			// forward the post on
 			string response = await ForwardPostSpecific(ctx, dummy);
 
-			// get the juicy data out
-			SubmitAddressResponse data = JsonSerializer.DeserializeFromString<SubmitAddressResponse>(response);
+			if (response != null)
+			{
+				// get the juicy data out
+				SubmitAddressResponse data = JsonSerializer.DeserializeFromString<SubmitAddressResponse>(response);
 
-			// pull the market out of the request
-			string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
-			MarketRow m = dummy.m_database.GetMarket(symbolPair);
+				// pull the market out of the request
+				string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
+				MarketRow m = dummy.m_database.GetMarket(symbolPair);
 
-			// stick it in the master database
-			dummy.m_database.InsertSenderToDeposit(data.receiving_address, data.deposit_address, m.symbol_pair, true);
+				// stick it in the master database
+				dummy.m_database.InsertSenderToDeposit(data.receiving_address, data.deposit_address, m.symbol_pair, true);
+			}
 		}
 
 		/// <summary>	Executes the push sender to deposit action. </summary>
@@ -78,7 +82,7 @@ namespace MetaExchange
 		/// <param name="dummy">	The dummy. </param>
 		///
 		/// <returns>	A Task. </returns>
-		Task OnPushSenderToDeposit(RequestContext ctx, IDummy dummy)
+		/*Task OnPushSenderToDeposit(RequestContext ctx, IDummy dummy)
 		{
 			if (ConfirmDaemon(ctx, dummy))
 			{
@@ -87,7 +91,7 @@ namespace MetaExchange
 			}
 
 			return null;
-		}
+		}*/
 
 		/// <summary>	Executes the push transactions action. </summary>
 		///
@@ -139,6 +143,10 @@ namespace MetaExchange
 
 				ctx.Respond<bool>(true);
 			}
+			else
+			{
+				ctx.Respond<bool>(false);
+			}
 
 			return null;
 		}
@@ -157,6 +165,11 @@ namespace MetaExchange
 			{
 				MarketRow market = JsonSerializer.DeserializeFromString<MarketRow>(ctx.Request.Body);
 				dummy.m_database.UpdateMarketInDatabase(market);
+				ctx.Respond<bool>(true);
+			}
+			else
+			{
+				ctx.Respond<bool>(false);
 			}
 
 			return null;
@@ -196,12 +209,13 @@ namespace MetaExchange
 
 				return result;
 			}
-			catch (WebException)
+			catch (WebException e)
 			{
-				ctx.Respond(HttpStatusCode.InternalServerError);
-			}
+				// make sure to log this so we can check the details
+				m_Database.LogGeneralException(e.ToString());
 
-			return null;
+				throw new ApiExceptionGeneral();
+			}
 		}
 
 		/// <summary>	Forward post specific. </summary>
@@ -350,6 +364,63 @@ namespace MetaExchange
 				}
 			}
 			catch (Exception) { }
+		}
+
+		/// <summary>	Gets the visisble markets in this collection. </summary>
+		///
+		/// <remarks>	Paul, 28/02/2015. </remarks>
+		///
+		/// <param name="initial">	The initial. </param>
+		///
+		/// <returns>
+		/// An enumerator that allows foreach to be used to process the visisble markets in this
+		/// collection.
+		/// </returns>
+		IEnumerable<MarketRow> GetVisisbleMarkets(List<MarketRow> initial)
+		{
+			return initial.Where(m => m.visible);
+		}
+
+		/// <summary>	Executes the get all markets action. </summary>
+		///
+		/// <remarks>	Paul, 28/02/2015. </remarks>
+		///
+		/// <param name="ctx">  	The context. </param>
+		/// <param name="dummy">	The dummy. </param>
+		///
+		/// <returns>	A Task. </returns>
+		Task OnGetAllMarkets(RequestContext ctx, IDummy dummy)
+		{
+			ctx.Respond<List<MarketRow>>(GetVisisbleMarkets(m_Database.GetAllMarkets()).ToList());
+			return null;
+		}
+
+		/// <summary>	Executes the get market action. </summary>
+		///
+		/// <remarks>	Paul, 28/02/2015. </remarks>
+		///
+		/// <exception cref="ApiExceptionUnknownMarket">	Thrown when an API exception unknown market
+		/// 												error condition occurs. </exception>
+		///
+		/// <param name="ctx">  	The context. </param>
+		/// <param name="dummy">	The dummy. </param>
+		///
+		/// <returns>	A Task. </returns>
+		Task OnGetMarket(RequestContext ctx, IDummy dummy)
+		{
+			string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
+
+			MarketRow market = m_Database.GetMarket(symbolPair);
+			if (market == null || !market.visible)
+			{
+				throw new ApiExceptionUnknownMarket(symbolPair);
+			}
+			else
+			{
+				ctx.Respond<MarketRow>(market);
+			}
+
+			return null;
 		}
 	}
 }

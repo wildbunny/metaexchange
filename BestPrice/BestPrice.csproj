@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{5BDFC2DA-D529-42EA-9BCB-E6A001D511D2}</ProjectGuid>
+    <ProjectGuid>{50655D2F-DDEF-468E-9C34-0263399C6F8A}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MetaDaemonUnitTests</RootNamespace>
-    <AssemblyName>MetaDaemonUnitTests</AssemblyName>
+    <RootNamespace>BestPrice</RootNamespace>
+    <AssemblyName>BestPrice</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -29,43 +29,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'debug2nd|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\debug2nd\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ApiHost, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\libs\ApiHost.dll</HintPath>
-    </Reference>
-    <Reference Include="Monsterer">
-      <HintPath>..\libs\Monsterer.dll</HintPath>
-    </Reference>
-    <Reference Include="MySql.Data">
-      <HintPath>..\libs\MySql.Data.dll</HintPath>
-    </Reference>
-    <Reference Include="MySqlDatabase">
-      <HintPath>..\libs\MySqlDatabase.dll</HintPath>
-    </Reference>
-    <Reference Include="nunit.framework, Version=2.6.3.13283, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\libs\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="RedisCache">
-      <HintPath>..\libs\RedisCache.dll</HintPath>
-    </Reference>
-    <Reference Include="ServiceStack.Text, Version=3.9.54.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\libs\ServiceStack.Text.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpTestsEx">
-      <HintPath>..\libs\SharpTestsEx.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -75,28 +39,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MiscTest.cs" />
+    <Compile Include="BestPriceMarketOrders.cs" />
+    <Compile Include="GlostenMilgromSimple.cs" />
     <Compile Include="PriceDiscovery.cs" />
-    <Compile Include="SubmitAddressTest.cs" />
-    <Compile Include="TestBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BestPrice\BestPrice.csproj">
-      <Project>{50655d2f-ddef-468e-9c34-0263399c6f8a}</Project>
-      <Name>BestPrice</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BitsharesRpc\BitsharesRpc.csproj">
       <Project>{3b864150-7bd3-454b-a19a-d3e2c4ea426f}</Project>
       <Name>BitsharesRpc</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MetaDaemon\MetaDaemon.csproj">
-      <Project>{9cf7295a-645b-4996-9ff8-c09d27aaf786}</Project>
-      <Name>MetaDaemon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\RestLib\RestLib.csproj">
-      <Project>{c2755a02-d80a-4fb2-8210-45c181dd6785}</Project>
-      <Name>RestLib</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebDaemonShared\WebDaemonShared.csproj">
       <Project>{f1f6ee90-cdc5-494b-845f-0203dce40432}</Project>
