@@ -94,3 +94,5 @@
 /BestPrice/bin/Release
 /BestPrice/obj/Debug
 /BestPrice/obj/Release
+/BestPrice/bin/mono
+/BestPrice/obj/mono

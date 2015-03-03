@@ -183,8 +183,7 @@ namespace MetaDaemon.Markets
 
 				decimal oldBid = m_market.bid;
 				decimal oldAsk = m_market.ask;
-				m_prices.SetInventoryRatio(inventoryRatio, out m_market.bid, out m_market.ask);
-				m_prices.SetFeedPrice(m_lastFeedPrice, out m_market.bid, out m_market.ask);
+				m_prices.UpdateParameters(m_lastFeedPrice, inventoryRatio, m_market.spread_percent, m_market.window_percent, out m_market.bid, out m_market.ask);
 
 				m_isDirty |= oldBid != m_market.bid || oldAsk != m_market.ask;
 			}

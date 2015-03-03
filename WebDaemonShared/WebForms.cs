@@ -20,5 +20,6 @@ namespace WebDaemonShared
 		public const string kTxId = "txid";
 		public const string kOrderBucket = "order_bucket";
 		public const string kSince = "since";
+		public const string kReferralId = "refid";
 	}
 }

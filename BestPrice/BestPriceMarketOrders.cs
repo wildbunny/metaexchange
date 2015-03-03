@@ -13,7 +13,7 @@ namespace BestPrice
     {
 		Dictionary<int, BitsharesAsset> m_allAssets;
 		List<BitsharesMarket> m_allMarkets;
-		MySqlData m_database;
+		//MySqlData m_database;
 
 		public BestPriceMarketOrders(Dictionary<int, BitsharesAsset> allAssets, List<BitsharesMarket> allMarkets, MySqlData database)
 		{

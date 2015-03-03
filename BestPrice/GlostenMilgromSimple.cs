@@ -13,7 +13,7 @@ namespace BestPrice
 		decimal m_mu;
 		decimal m_vLow;
 		decimal m_vHigh;
-		decimal m_pi;
+		protected decimal m_pi;
 
 		/// <summary>	Constructor. </summary>
 		///
@@ -91,17 +91,6 @@ namespace BestPrice
 			m_vLow = low;
 			m_vHigh = high;
 		}
-
-		/// <summary>	Sets inventory ratio. </summary>
-		///
-		/// <remarks>	Paul, 25/02/2015. </remarks>
-		///
-		/// <param name="inventoryRatio">	The inventory ratio, 0=maximum inventory, 0.5=equal,
-		/// 								1.0=minimum. </param>
-		public void SetInventoryRatio(decimal inventoryRatio)
-		{
-			m_pi = inventoryRatio;
-		}
 	}
 
 	public class GlostenMilgromDesiredSpread : GlostenMilgromSimple
@@ -109,6 +98,20 @@ namespace BestPrice
 		public GlostenMilgromDesiredSpread(	decimal spread, decimal vLow, decimal vHigh, decimal inventoryRatio) : 
 											base(0, vLow, vHigh, inventoryRatio)
 		{
+			SetInventoryRatio(inventoryRatio, spread);
+		}
+
+		/// <summary>	Sets inventory ratio. </summary>
+		///
+		/// <remarks>	Paul, 25/02/2015. </remarks>
+		///
+		/// <param name="inventoryRatio">	The inventory ratio, 0=maximum inventory, 0.5=equal,
+		/// 								1.0=minimum. </param>
+		public void SetInventoryRatio(decimal inventoryRatio, decimal spread)
+		{
+			m_pi = inventoryRatio;
+			m_Mu = 0;
+
 			decimal currentSpread = 0;
 			do
 			{
