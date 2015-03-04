@@ -313,6 +313,9 @@ namespace MetaDaemon.Markets
 			}
 			catch (Exception e)
 			{
+				// lets hear about what went wrong
+				m_daemon.LogGeneralException(e.ToString());
+
 				// also lets now ignore this transaction so we don't keep failing
 				RefundBitcoinDeposit(t, e.Message, s2d, MetaOrderType.buy);
 

@@ -56,7 +56,7 @@ namespace MetaExchange.Pages
 						P("Q) What if I forget to include the memo?");
 						P("A) Your transaction will be automatically refunded");
 						BR();
-						P("Q) What is bitshares?");
+						P("Q) What is BitShares?");
 						P("A) You can find out more here: <a href='https://bitshares.org'>bitshares.org</a>");
 					}
 				}

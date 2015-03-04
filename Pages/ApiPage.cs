@@ -358,7 +358,7 @@ namespace MetaExchange.Pages
 								new DocParam { description = "Bitcoin deposit address.",
 												name = WebForms.kDepositAddress,
 												type = DocType.@string},
-								new DocParam { description = "Bitshares transaction memo.",
+								new DocParam { description = "BitShares transaction memo.",
 												name = WebForms.kMemo,
 												type = DocType.@string},
 								
