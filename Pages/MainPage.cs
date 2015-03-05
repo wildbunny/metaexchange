@@ -87,7 +87,7 @@ namespace MetaExchange.Pages
 
 							using (new Panel(stream, "Buy {{market.base_symbol}}", "panel panel-success collapse", false, "buyId"))
 							{
-								P("Once you enter your bitshares account name, we will generate your deposit address and send your {{market.base_symbol}} to you after 1 confirmation.");
+								P("Once you enter your BitShares account name, we will generate your deposit address and send your {{market.base_symbol}} to you after 1 confirmation.");
 
 								using (var fm = new FormContainer(stream, HtmlAttributes.method, "post",
 																			HtmlAttributes.ajax, true,
@@ -115,7 +115,7 @@ namespace MetaExchange.Pages
 																HtmlAttributes.required, true,
 																HtmlAttributes.id, "bitsharesBlurId",
 																HtmlAttributes.@class, "form-control submitOnBlur",
-																HtmlAttributes.placeholder, "Bitshares account name");
+																HtmlAttributes.placeholder, "BitShares account name");
 
 											using (new Span(stream, HtmlAttributes.@class, "input-group-btn"))
 											{
@@ -202,7 +202,7 @@ namespace MetaExchange.Pages
 									{
 										using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success"))
 										{
-											fm.Label(stream, "Your bitshares deposit account");
+											fm.Label(stream, "Your BitShares deposit account");
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
 																HtmlAttributes.id, "bitsharesDespositAccountId",
 																"ng-model", "sell.sendToAccount",
@@ -213,7 +213,7 @@ namespace MetaExchange.Pages
 
 										using (new DivContainer(stream, HtmlAttributes.@class, "form-group has-success"))
 										{
-											fm.Label(stream, "Your bitshares deposit memo");
+											fm.Label(stream, "Your BitShares deposit memo");
 											fm.Input(stream, HtmlAttributes.type, InputTypes.text,
 																HtmlAttributes.id, "bitsharesMemoId",
 																"ng-model", "sell.memo",
@@ -321,7 +321,7 @@ namespace MetaExchange.Pages
 					}
 				}
 
-				Modal("Generate Bitshares transaction", "bitsharesModalId", () =>
+				Modal("Generate BitShares transaction", "bitsharesModalId", () =>
 				{
 					using (var fm = new FormContainer(stream))
 					{
@@ -356,7 +356,7 @@ namespace MetaExchange.Pages
 											HtmlAttributes.placeholder, "Sending acount");
 						}
 
-						Href(stream, "Click to open in Bitshares",	
+						Href(stream, "Click to open in BitShares",	
 											HtmlAttributes.id, "bitsharesLinkId",
 											HtmlAttributes.href, "bts:{{sell.sendToAccount}}/transfer/amount/{{sell.quantity}}/memo/{{sell.memo}}/from/{{sell.payFrom}}/asset/{{(market.base_symbol).substr(3)}}",
 											HtmlAttributes.style, "display:none",

@@ -67,10 +67,19 @@ namespace MetaExchange
 
 				// pull the market out of the request
 				string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
+				uint referralId = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
+
 				MarketRow m = dummy.m_database.GetMarket(symbolPair);
 
 				// stick it in the master database
 				dummy.m_database.InsertSenderToDeposit(data.receiving_address, data.deposit_address, m.symbol_pair, true);
+				
+				if (referralId > 0)
+				{
+					// track referrals
+					
+
+				}
 			}
 		}
 

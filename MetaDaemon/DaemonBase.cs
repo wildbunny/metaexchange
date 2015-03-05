@@ -72,7 +72,7 @@ namespace MetaDaemon
 		protected abstract void IgnoreTransaction(string txid);
 		public abstract void MarkTransactionAsRefundedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType);
 		public abstract void MarkTransactionAsRefundedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, string notes);
-		protected abstract void LogGeneralException(string message);
+		public abstract void LogGeneralException(string message);
 		protected abstract string GetLastBitcoinBlockHash();
 		protected abstract void UpdateBitcoinBlockHash(string lastBlock);
 

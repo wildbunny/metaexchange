@@ -537,5 +537,29 @@ namespace WebDaemonShared
 			m_database.Statement("UPDATE markets SET btc_volume_24h=@vol, last_price=@price, price_delta=@delta, realised_spread_percent=@spread WHERE symbol_pair=@market;",
 									btcVolume24h, lastPrice, priceDelta, realisedSpreadPercent, symbolPair);
 		}
+
+		/// <summary>	Begins a transaction. </summary>
+		///
+		/// <remarks>	Paul, 03/03/2015. </remarks>
+		public void BeginTransaction()
+		{
+			m_database.BeginTransaction();
+		}
+
+		/// <summary>	Ends a transaction. </summary>
+		///
+		/// <remarks>	Paul, 03/03/2015. </remarks>
+		public void EndTransaction()
+		{
+			m_database.EndTransaction();
+		}
+
+		/// <summary>	Rolls back a transaction. </summary>
+		///
+		/// <remarks>	Paul, 03/03/2015. </remarks>
+		public void RollbackTransaction()
+		{
+			m_database.RollbackTransaction();
+		}
 	}
 }

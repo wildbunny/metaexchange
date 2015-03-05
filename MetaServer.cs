@@ -178,12 +178,7 @@ namespace MetaExchange
 				decimal btcVolume24h = m_auth.m_Database.Get24HourBtcVolume(r.symbol_pair, r.GetQuote() != CurrencyTypes.BTC);
 				LastPriceAndDelta lastPrice = m_auth.m_Database.GetLastPriceAndDelta(r.symbol_pair);
 
-				decimal askFee = r.ask * r.ask_fee_percent / 100;
-				decimal bidFee = r.bid * r.bid_fee_percent / 100;
-				decimal ask = r.ask + askFee;
-				decimal bid = r.bid - bidFee;
-
-				decimal realisedSpreadPercent = 100*(ask - bid) / lastPrice.last_price;
+				decimal realisedSpreadPercent = 100 * (1 - r.bid/r.ask);
 
 				m_Database.UpdateMarketStats(r.symbol_pair, btcVolume24h, lastPrice.last_price, lastPrice.price_delta, realisedSpreadPercent);
 			}

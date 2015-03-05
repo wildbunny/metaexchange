@@ -45,12 +45,24 @@ namespace BestPrice
 
 		/// <summary>	Sets feed price. </summary>
 		///
-		/// <remarks>	Paul, 24/02/2015. </remarks>
+		/// <remarks>	Paul, 02/03/2015. </remarks>
 		///
-		/// <param name="feedPrice">	The feed price. </param>
-		public void SetFeedPrice(decimal feedPrice, out decimal bid, out decimal ask)
+		/// <param name="feedPrice">	 	The feed price. </param>
+		/// <param name="inventoryRatio">	The inventory ratio. </param>
+		/// <param name="spreadPercent"> 	The spread percent. </param>
+		/// <param name="windowPercent"> 	The window percent. </param>
+		/// <param name="bid">			 	[out] The bid. </param>
+		/// <param name="ask">			 	[out] The ask. </param>
+		public void UpdateParameters(decimal feedPrice, decimal inventoryRatio, decimal spreadPercent, decimal windowPercent, out decimal bid, out decimal ask)
 		{
+			m_windowRange = GetSpreadBtc(feedPrice, windowPercent);
+
+			decimal spread = GetSpreadBtc(feedPrice, spreadPercent);
+
 			m_glosten.SetLowHigh(feedPrice - m_windowRange / 2, feedPrice + m_windowRange / 2);
+
+			m_glosten.SetInventoryRatio(inventoryRatio, spread);
+
 			m_glosten.ComputeAskBid(out ask, out bid);
 		}
 
@@ -112,19 +124,6 @@ namespace BestPrice
 			decimal bid, ask;
 			GetBidAskForOrder(true, informedProp, out bid, out ask);
 			return ask;
-		}
-
-		/// <summary>	Sets inventory ratio. </summary>
-		///
-		/// <remarks>	Paul, 25/02/2015. </remarks>
-		///
-		/// <param name="ratio">	The ratio. </param>
-		///
-		/// <returns>	A decimal. </returns>
-		public void SetInventoryRatio(decimal ratio, out decimal bid, out decimal ask)
-		{
-			m_glosten.SetInventoryRatio(ratio);
-			m_glosten.ComputeAskBid(out ask, out bid);
 		}
 	}
 }

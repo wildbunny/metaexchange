@@ -96,6 +96,19 @@ namespace MetaData
 		public DateTime date;
 	}
 
+	public class ReferralUserRow : ICoreType
+	{
+		public uint uid;
+		public string bitshares_username;
+		public string bitcoin_address;
+	}
+
+	public class ReferralAddressRow : ICoreType
+	{
+		public uint referral_user;
+		public string address;
+	}
+
 	public class LastPriceAndDelta
 	{
 		public decimal last_price;

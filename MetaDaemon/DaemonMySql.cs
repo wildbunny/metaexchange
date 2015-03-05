@@ -83,7 +83,7 @@ namespace MetaDaemon
 			m_dataAccess.IgnoreTransaction(txid);
 		}
 		
-		protected override void LogGeneralException(string message)
+		public override void LogGeneralException(string message)
 		{
 			m_dataAccess.LogGeneralException(message);
 		}
