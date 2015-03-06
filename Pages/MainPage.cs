@@ -41,6 +41,9 @@ namespace MetaExchange.Pages
 				ctx.Respond(System.Net.HttpStatusCode.NotFound);
 			}
 
+			ImgResource logo = new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg");
+			AddResource(logo);
+
 			// render head
 			base.Render(ctx, stream, authObj);
 
@@ -54,9 +57,7 @@ namespace MetaExchange.Pages
 						{
 							using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
 							{
-								BaseComponent.SPAN(stream, "Metaexchange<sup>beta</sup>", HtmlAttributes.@class, "noTopMargin h1");
-
-								P("The place to buy and sell {{market.base_symbol}}");
+								RenderJumbo(stream, logo);
 																
 								using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
 								{

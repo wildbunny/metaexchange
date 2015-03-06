@@ -90,3 +90,10 @@ ul.nav li.dropdown:hover > ul.dropdown-menu {
 	padding-bottom:20px;
 	padding-top:20px;
 }
+@media all and (min-width: 768px)
+{
+	.splashImg
+	{ 
+		margin-top:20px;
+	}
+}

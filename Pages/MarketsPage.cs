@@ -27,6 +27,9 @@ namespace MetaExchange.Pages
 
 			AddResource(new CssResource(Constants.kWebRoot, "/css/markets.css", true));
 
+			ImgResource logo = new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg" );
+			AddResource(logo);
+
 			// render head
 			base.Render(ctx, stream, authObj);
 
@@ -40,9 +43,7 @@ namespace MetaExchange.Pages
 						{
 							using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
 							{
-								BaseComponent.SPAN(stream, "Metaexchange<sup>beta</sup>", HtmlAttributes.@class, "noTopMargin h1");
-
-								P("The place to buy and sell bitAssets");
+								RenderJumbo(stream, logo);
 							}
 						}
 					}
