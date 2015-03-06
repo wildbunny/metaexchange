@@ -77,6 +77,9 @@ namespace MetaExchange.Pages
 			AddResource(new TitleResource("Metaexchange"));
 			AddResource(new MetaResource("viewport", "width=device-width, initial-scale=1"));
 
+			ImgResource brand = new ImgResource(Constants.kWebRoot, "/images/brandTitle.png", "", false);
+			AddResource(brand);
+
 			// render head
 			base.Render(ctx, stream, authObj);
 
@@ -89,7 +92,11 @@ namespace MetaExchange.Pages
 				{
 					using (new DivContainer(m_stream, HtmlAttributes.@class, "navbar-header"))
 					{
-						Href(m_stream, "Metaexchange", HtmlAttributes.href, "/", HtmlAttributes.@class, "navbar-brand");
+						using (new Link(m_stream, HtmlAttributes.@class, "navbar-brand", HtmlAttributes.href, "/"))
+						{
+							brand.Write(m_stream);
+							m_stream.Write(" metaexchange");
+						}
 					}
 					using (new DivContainer(m_stream, HtmlAttributes.@class, "navbar-collapse collapse"))
 					{
@@ -127,6 +134,28 @@ namespace MetaExchange.Pages
 			}
 
 			return null;
+		}
+
+		/// <summary>	Renders the jumbo. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <param name="stream">	. </param>
+		/// <param name="logo">  	The logo. </param>
+		protected void RenderJumbo(StringWriter stream, ImgResource logo)
+		{
+			using (new DivContainer(stream, HtmlAttributes.@class, "clearfix"))
+			{
+				using (new DivContainer(stream, HtmlAttributes.@class, "pull-left"))
+				{
+					logo.Write(stream);
+				}
+				using (new DivContainer(stream, HtmlAttributes.@class, "pull-left"))
+				{
+					BaseComponent.SPAN(stream, "metaexchange<sup>beta</sup>", HtmlAttributes.@class, "noTopMargin h1");
+					P("The place to buy and sell bitAssets");
+				}
+			}
 		}
 
 		/// <summary>
