@@ -92,7 +92,7 @@ namespace MetaExchange.Pages
 				{
 					using (new DivContainer(m_stream, HtmlAttributes.@class, "navbar-header"))
 					{
-						using (new HRef(m_stream, HtmlAttributes.@class, "navbar-brand", HtmlAttributes.href, "#"))
+						using (new Link(m_stream, HtmlAttributes.@class, "navbar-brand", HtmlAttributes.href, "/"))
 						{
 							brand.Write(m_stream);
 							m_stream.Write(" metaexchange");
