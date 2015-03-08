@@ -19,6 +19,7 @@ namespace WebDaemonShared
 		public const string kPushSenderToDeposit = "/api/1/pushSenderToDeposit";
 		public const string kPushTransactions = "/api/1/pushTransactions";
 		public const string kPushMarket = "/api/1/pushMarket";
+		public const string kPushFees = "/api/1/pushFees";
 		public const string kGetAllTransactionsSince = "/api/1/getAllTransactionsSince";
 		public const string kPing = "/api/1/ping";
     }

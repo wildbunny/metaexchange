@@ -225,50 +225,72 @@ namespace WebDaemonShared
 
 		/// <summary>	Gets sender deposit from deposit. </summary>
 		///
-		/// <remarks>	Paul, 11/02/2015. </remarks>
+		/// <remarks>	Paul, 04/03/2015. </remarks>
 		///
 		/// <param name="depositAddress">	The deposit address. </param>
-		/// <param name="marketUid">	 	The market UID. </param>
+		/// <param name="symbolPair">	 	The symbol pair. </param>
+		/// <param name="referralUser">  	The referral user. </param>
 		///
 		/// <returns>	The sender deposit from deposit. </returns>
-		public SenderToDepositRow GetSenderDepositFromDeposit(string depositAddress, string symbolPair)
+		public SenderToDepositRow GetSenderDepositFromDeposit(string depositAddress, string symbolPair, uint referralUser)
 		{
-			return m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE deposit_address=@d AND symbol_pair=@m;", depositAddress, symbolPair).FirstOrDefault();
+			return m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE deposit_address=@d AND symbol_pair=@m AND referral_user=@u;", depositAddress, symbolPair, referralUser).FirstOrDefault();
+		}
+
+		/// <summary>	Bitcoin deposits cannot know the referral user, but a unique address is generated anyway, so 
+		/// 			doesn't matter, but we need a custom look up function</summary>
+		///
+		/// <remarks>	Paul, 04/03/2015. </remarks>
+		///
+		/// <param name="depositAddress">	The deposit address. </param>
+		/// <param name="symbolPair">	 	The symbol pair. </param>
+		///
+		/// <returns>	The sender deposit from bitcoin deposit. </returns>
+		public SenderToDepositRow GetSenderDepositFromBitcoinDeposit(string depositAddress, string symbolPair)
+		{
+			List<SenderToDepositRow> shouldOnlyBeOne = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE deposit_address=@d AND symbol_pair=@m;", depositAddress, symbolPair);
+
+			Debug.Assert(shouldOnlyBeOne.Count <= 1);
+
+			return shouldOnlyBeOne.FirstOrDefault();
 		}
 
 		/// <summary>	Gets sender deposit from receiver. </summary>
 		///
-		/// <remarks>	Paul, 05/02/2015. </remarks>
+		/// <remarks>	Paul, 04/03/2015. </remarks>
 		///
 		/// <param name="recevingAddress">	The receving address. </param>
-		/// <param name="marketUid">	  	The market UID. </param>
+		/// <param name="symbolPair">	  	The symbol pair. </param>
+		/// <param name="referralUser">   	The referral user. </param>
 		///
 		/// <returns>	The sender deposit from receiver. </returns>
-		public SenderToDepositRow GetSenderDepositFromReceiver(string recevingAddress, string symbolPair)
+		public SenderToDepositRow GetSenderDepositFromReceiver(string recevingAddress, string symbolPair, uint referralUser)
 		{
-			return m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@r AND symbol_pair=@m;", recevingAddress, symbolPair).FirstOrDefault();
+			return m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE receiving_address=@r AND symbol_pair=@m AND referral_user=@u;", recevingAddress, symbolPair, referralUser).FirstOrDefault();
 		}
 
 		/// <summary>	Inserts a sender to deposit. </summary>
 		///
-		/// <remarks>	Paul, 05/02/2015. </remarks>
+		/// <remarks>	Paul, 04/03/2015. </remarks>
 		///
 		/// <param name="recevingAddress">	The receving address. </param>
 		/// <param name="depositAddress"> 	The deposit address. </param>
-		/// <param name="marketUid">	  	The market UID. </param>
+		/// <param name="symbolPair">	  	The symbol pair. </param>
+		/// <param name="referralUser">   	The referral user. </param>
+		/// <param name="replace">		  	(Optional) true to replace. </param>
 		///
 		/// <returns>	A SenderToDepositRow. </returns>
-		public SenderToDepositRow InsertSenderToDeposit(string recevingAddress, string depositAddress, string symbolPair, bool replace=false)
+		public SenderToDepositRow InsertSenderToDeposit(string recevingAddress, string depositAddress, string symbolPair, uint referralUser, bool replace=false)
 		{
 			string verb=replace?"REPLACE":"INSERT";
 
-			m_database.Statement(	verb + " INTO sender_to_deposit (deposit_address, receiving_address, symbol_pair) VALUES(@a,@b,@c);",
-									depositAddress, recevingAddress, symbolPair);
+			m_database.Statement(	verb + " INTO sender_to_deposit (deposit_address, receiving_address, symbol_pair, referral_user) VALUES(@a,@b,@c,@d);",
+									depositAddress, recevingAddress, symbolPair, referralUser);
+
 			return	new SenderToDepositRow 
 					{ 
 						deposit_address = depositAddress, 
 						receiving_address = recevingAddress, 
-						//market_uid = marketUid 
 						symbol_pair = symbolPair
 					};
 		}
@@ -338,9 +360,38 @@ namespace WebDaemonShared
 		/// <param name="lastUid">   	The last UID. </param>
 		///
 		/// <returns>	The transactions in market since. </returns>
-		public List<TransactionsRow> GetTransactionsInMarketSince(string symbolPair, uint lastUid)
+		public List<TransactionsRow> GetCompletedTransactionsInMarketSince(string symbolPair, uint lastUid)
 		{
-			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE symbol_pair=@s AND uid>@lastUid ORDER BY uid;", symbolPair, lastUid);
+			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE symbol_pair=@s AND uid>@lastUid AND status=@comp ORDER BY uid;", symbolPair, lastUid, MetaOrderStatus.completed);
+		}
+
+		/// <summary>	Gets transactions in market between. </summary>
+		///
+		/// <remarks>	Paul, 08/03/2015. </remarks>
+		///
+		/// <param name="symbolPair">	The symbol pair. </param>
+		/// <param name="startUid">  	The start UID. </param>
+		/// <param name="endUid">	 	The end UID. </param>
+		///
+		/// <returns>	The transactions in market between. </returns>
+		public List<TransactionsRow> GetCompletedTransactionsInMarketBetween(string symbolPair, uint startUid, uint endUid)
+		{
+			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE symbol_pair=@s AND uid>=@start AND uid<=@end AND status=@comp;", symbolPair, startUid, endUid, MetaOrderStatus.completed);
+		}
+
+		/// <summary>	Gets all referral transactions for user between. </summary>
+		///
+		/// <remarks>	Paul, 08/03/2015. </remarks>
+		///
+		/// <param name="referralUser">	The referral user. </param>
+		/// <param name="symbolPair">  	The symbol pair. </param>
+		/// <param name="startUid">	   	The start UID. </param>
+		/// <param name="endUid">	   	The end UID. </param>
+		///
+		/// <returns>	all referral transactions for user between. </returns>
+		public List<TransactionsRow> GetAllReferralTransactionsForUserBetween(uint referralUser, string symbolPair, uint startUid, uint endUid)
+		{
+			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE uid>=@start AND uid<=@end AND symbol_pair=@sym AND status=@comp AND deposit_address IN (SELECT address FROM referral_addresses WHERE referral_user=@u);", startUid, endUid, symbolPair, MetaOrderStatus.completed, referralUser);
 		}
 
 		/// <summary>	Gets all transactions since. </summary>
@@ -379,11 +430,33 @@ namespace WebDaemonShared
 		/// <param name="sellFee">				  	The sell fee. </param>
 		/// <param name="transactionProcessedUid">	The transaction processed UID. </param>
 		/// <param name="exception">			  	The exception. </param>
-		public void InsertFeeTransaction(	string market, string buyTrxId, string sellTrxId, decimal buyFee, decimal sellFee, 
-											uint transactionProcessedUid, string exception)
+		public long InsertFeeTransaction(string market, string buyTrxId, string sellTrxId, decimal buyFee, decimal sellFee, 
+											uint transactionProcessedUid, string exception, string startTxId, string endTxId, bool replace=false)
 		{
-			m_database.Statement(	"INSERT INTO fee_collections (symbol_pair, buy_trxid, sell_trxid, buy_fee, sell_fee, date, transaction_processed_uid, exception) VALUES(@a,@b,@c,@d,@e,@f,@g,@h);",
-									market, buyTrxId, sellTrxId, buyFee, sellFee, DateTime.UtcNow, transactionProcessedUid, exception);
+			string verb = replace ? "REPLACE" : "INSERT";
+			long lastInsertedId;
+
+			DateTime now = DateTime.UtcNow;
+			object[] hashParts = { market, buyTrxId, sellTrxId, buyFee, sellFee, transactionProcessedUid, exception, startTxId, endTxId };
+			uint hash = (uint)string.Join("|", hashParts).GetHashCode();
+
+			m_database.StatementLastInserted(	verb + " INTO fee_collections (hash, symbol_pair, buy_trxid, sell_trxid, buy_fee, sell_fee, date, transaction_processed_uid, exception, start_txid, end_txid) VALUES(@aa,@a,@b,@c,@d,@e,@f,@g,@h,@i,@j);",
+									out lastInsertedId,
+									hash, market, buyTrxId, sellTrxId, buyFee, sellFee, now, transactionProcessedUid, exception, startTxId, endTxId);
+
+			return lastInsertedId;
+		}
+
+		/// <summary>	Gets fee collection. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <param name="uid">	The UID. </param>
+		///
+		/// <returns>	The fee collection. </returns>
+		public FeeCollectionRow GetFeeCollection(uint uid)
+		{
+			return m_database.Query<FeeCollectionRow>("SELECT * FROM fee_collections WHERE uid=@u;", uid).FirstOrDefault();
 		}
 
 		/// <summary>	Gets the last transaction UID. </summary>
@@ -396,6 +469,16 @@ namespace WebDaemonShared
 			return m_database.QueryScalar<uint>("SELECT MAX(uid) FROM transactions;");
 		}
 
+		/// <summary>	Gets the last fee collection UID. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <returns>	The last fee collection UID. </returns>
+		public uint GetLastFeeCollectionUid()
+		{
+			return m_database.QueryScalar<uint>("SELECT MAX(uid) FROM fee_collections;");
+		}
+
 		/// <summary>	Gets site last transaction UID. </summary>
 		///
 		/// <remarks>	Paul, 21/02/2015. </remarks>
@@ -406,6 +489,16 @@ namespace WebDaemonShared
 			return m_database.QueryScalar<uint>("SELECT site_last_tid FROM stats;");
 		}
 
+		/// <summary>	Gets site last fee UID. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <returns>	The site last fee UID. </returns>
+		public uint GetSiteLastFeeUid()
+		{
+			return m_database.QueryScalar<uint>("SELECT site_last_fee_tid FROM stats;");
+		}
+
 		/// <summary>	Updates the site last transaction UID described by lastTid. </summary>
 		///
 		/// <remarks>	Paul, 21/02/2015. </remarks>
@@ -414,6 +507,16 @@ namespace WebDaemonShared
 		public void UpdateSiteLastTransactionUid(uint lastTid)
 		{
 			m_database.Statement("UPDATE stats SET site_last_tid=@s;", lastTid);
+		}
+
+		/// <summary>	Updates the site last fee UID described by lastTid. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <param name="lastTid">	The last tid. </param>
+		public void UpdateSiteLastFeeUid(uint lastTid)
+		{
+			m_database.Statement("UPDATE stats SET site_last_fee_tid=@s;", lastTid);
 		}
 
 		/// <summary>	Updates the last seen transaction for site. </summary>
@@ -491,11 +594,11 @@ namespace WebDaemonShared
 
 			if (flippedMarket)
 			{
-				return m_database.QueryScalar<decimal>("SELECT SUM(amount / price) FROM transactions WHERE symbol_pair=@market AND date>@start;", symbolPair, start);
+				return m_database.QueryScalar<decimal>("SELECT SUM(amount / price) FROM transactions WHERE symbol_pair=@market AND date>@start AND status=@s;", symbolPair, start, MetaOrderStatus.completed);
 			}
 			else
 			{
-				return m_database.QueryScalar<decimal>("SELECT SUM(amount * price) FROM transactions WHERE symbol_pair=@market AND date>@start;", symbolPair, start);
+				return m_database.QueryScalar<decimal>("SELECT SUM(amount * price) FROM transactions WHERE symbol_pair=@market AND date>@start AND status=@s;", symbolPair, start, MetaOrderStatus.completed);
 			}
 		}
 
@@ -508,7 +611,7 @@ namespace WebDaemonShared
 		/// <returns>	The last price. </returns>
 		public LastPriceAndDelta GetLastPriceAndDelta(string symbolPair)
 		{
-			List<TransactionsRow> lastTwo = m_database.Query<TransactionsRow>("SELECT price FROM transactions WHERE symbol_pair=@market ORDER BY date DESC LIMIT 2;", symbolPair);
+			List<TransactionsRow> lastTwo = m_database.Query<TransactionsRow>("SELECT price FROM transactions WHERE symbol_pair=@market AND status=@s ORDER BY date DESC LIMIT 2;", symbolPair, MetaOrderStatus.completed);
 
 			decimal delta;
 			if (lastTwo.Count == 2)
@@ -560,6 +663,98 @@ namespace WebDaemonShared
 		public void RollbackTransaction()
 		{
 			m_database.RollbackTransaction();
+		}
+
+		/// <summary>	Inserts a referral address. </summary>
+		///
+		/// <remarks>	Paul, 05/03/2015. </remarks>
+		///
+		/// <param name="address">	   	The address. </param>
+		/// <param name="referralUser">	The referral user. </param>
+		public void InsertReferralAddress(string address, uint referralUser)
+		{
+			m_database.Statement("INSERT IGNORE INTO referral_addresses (address, referral_user) VALUES(@a,@b);", address, referralUser);
+		}
+
+		/// <summary>	Gets all referral users. </summary>
+		///
+		/// <remarks>	Paul, 05/03/2015. </remarks>
+		///
+		/// <returns>	all referral users. </returns>
+		public List<ReferralUserRow> GetAllReferralUsers()
+		{
+			return m_database.Query<ReferralUserRow>("SELECT * FROM referral_users;");
+		}
+
+		/// <summary>	Gets all referral transactions for user since. </summary>
+		///
+		/// <remarks>	Paul, 05/03/2015. </remarks>
+		///
+		/// <param name="referralUser">	The referral user. </param>
+		/// <param name="sinceTid">	   	The since tid. </param>
+		/// <param name="symbolPair">  	The symbol pair. </param>
+		///
+		/// <returns>	all referral transactions for user since. </returns>
+		public List<TransactionsRow> GetAllReferralTransactionsForUserSince(uint referralUser, uint sinceTid, string symbolPair)
+		{
+			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE uid>@uid AND symbol_pair=@sym AND deposit_address IN (SELECT address FROM referral_addresses WHERE referral_user=@u);", sinceTid, symbolPair, referralUser);
+		}
+
+		/// <summary>	Gets or create referral last tid. </summary>
+		///
+		/// <remarks>	Paul, 05/03/2015. </remarks>
+		///
+		/// <param name="referralUser">	The referral user. </param>
+		/// <param name="symbolPair">  	The symbol pair. </param>
+		///
+		/// <returns>	The or create referral last tid. </returns>
+		/*public ReferralLastTidRow GetOrCreateReferralLastTid(uint referralUser, string symbolPair)
+		{
+			ReferralLastTidRow existing = null;
+			while (existing == null)
+			{ 
+				m_database.Statement("INSERT IGNORE INTO referral_last_tids (referral_user, symbol_pair) VALUES(@r, @s);", referralUser, symbolPair);
+				existing = m_database.Query<ReferralLastTidRow>("SELECT * FROM referral_last_tids WHERE referral_user=@u AND symbol_pair=@s;", referralUser, symbolPair).FirstOrDefault();
+			}
+
+			return existing;
+		}*/
+
+		/*public void UpdateReferralLastTidForUser(uint referralUser, string symbolPair, uint lastTid)
+		{
+			m_database.Statement("UPDATE referral_last_tids SET last_tid=@l WHERE ")
+		}*/
+
+		/// <summary>	Gets fee collections since. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <param name="uid">	The UID. </param>
+		///
+		/// <returns>	The fee collections since. </returns>
+		public List<FeeCollectionRow> GetFeeCollectionsSince(uint uid)
+		{
+			return m_database.Query<FeeCollectionRow>("SELECT * FROM fee_collections WHERE uid>@u;", uid);
+		}
+
+		/// <summary>	Gets the configuration. </summary>
+		///
+		/// <remarks>	Paul, 08/03/2015. </remarks>
+		///
+		/// <returns>	The configuration. </returns>
+		public ConfigRow GetConfig()
+		{
+			return m_database.Query<ConfigRow>("SELECT * FROM config;").FirstOrDefault();
+		}
+
+		/// <summary>	Count fee rows. </summary>
+		///
+		/// <remarks>	Paul, 08/03/2015. </remarks>
+		///
+		/// <returns>	The total number of fee rows. </returns>
+		public long CountFeeRows()
+		{
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM fee_collections;");
 		}
 	}
 }

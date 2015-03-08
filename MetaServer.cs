@@ -109,7 +109,7 @@ namespace MetaExchange
 				m_server.HandleGetRoute(Routes.kGetAllMarkets,			OnGetAllMarkets, eDdosMaxRequests.Five, eDdosInSeconds.One, true, false);
 
 				// handle push from daemons
-				//m_server.HandlePostRoute(Routes.kPushSenderToDeposit,	OnPushSenderToDeposit, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushFees,				OnPushFeeCollection, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
 				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
 				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
 				

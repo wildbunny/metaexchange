@@ -77,6 +77,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FeeReporting.cs" />
     <Compile Include="MetaApi.cs" />
     <Compile Include="MetaServer.cs" />
     <Compile Include="MySqlLayer.cs" />

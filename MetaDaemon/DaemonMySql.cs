@@ -195,42 +195,45 @@ namespace MetaDaemon
 
 		/// <summary>	Gets sender deposit from deposit. </summary>
 		///
-		/// <remarks>	Paul, 11/02/2015. </remarks>
+		/// <remarks>	Paul, 04/03/2015. </remarks>
 		///
 		/// <param name="depositAddress">	The deposit address. </param>
-		/// <param name="marketUid">	 	The market UID. </param>
+		/// <param name="symbolPair">	 	The symbol pair. </param>
+		/// <param name="referralUser">  	The referral user. </param>
 		///
 		/// <returns>	The sender deposit from deposit. </returns>
-		public SenderToDepositRow GetSenderDepositFromDeposit(string depositAddress, string symbolPair)
+		public SenderToDepositRow GetSenderDepositFromDeposit(string depositAddress, string symbolPair, uint referralUser)
 		{
-			return m_dataAccess.GetSenderDepositFromDeposit(depositAddress, symbolPair);
+			return m_dataAccess.GetSenderDepositFromDeposit(depositAddress, symbolPair, referralUser);
 		}
 
 		/// <summary>	Gets sender deposit from receiver. </summary>
 		///
-		/// <remarks>	Paul, 05/02/2015. </remarks>
+		/// <remarks>	Paul, 04/03/2015. </remarks>
 		///
 		/// <param name="recevingAddress">	The receving address. </param>
-		/// <param name="marketUid">	  	The market UID. </param>
+		/// <param name="symbolPair">	  	The symbol pair. </param>
+		/// <param name="referralUser">   	The referral user. </param>
 		///
 		/// <returns>	The sender deposit from receiver. </returns>
-		public SenderToDepositRow GetSenderDepositFromReceiver(string recevingAddress, string symbolPair)
+		public SenderToDepositRow GetSenderDepositFromReceiver(string recevingAddress, string symbolPair, uint referralUser)
 		{
-			return m_dataAccess.GetSenderDepositFromReceiver(recevingAddress, symbolPair);
+			return m_dataAccess.GetSenderDepositFromReceiver(recevingAddress, symbolPair, referralUser);
 		}
 
 		/// <summary>	Inserts a sender to deposit. </summary>
 		///
-		/// <remarks>	Paul, 05/02/2015. </remarks>
+		/// <remarks>	Paul, 04/03/2015. </remarks>
 		///
 		/// <param name="recevingAddress">	The receving address. </param>
 		/// <param name="depositAddress"> 	The deposit address. </param>
-		/// <param name="marketUid">	  	The market UID. </param>
+		/// <param name="symbolPair">	  	The symbol pair. </param>
+		/// <param name="referralUser">   	The referral user. </param>
 		///
 		/// <returns>	A SenderToDepositRow. </returns>
-		public SenderToDepositRow InsertSenderToDeposit(string recevingAddress, string depositAddress, string symbolPair)
+		public SenderToDepositRow InsertSenderToDeposit(string recevingAddress, string depositAddress, string symbolPair, uint referralUser)
 		{
-			return m_dataAccess.InsertSenderToDeposit(recevingAddress, depositAddress, symbolPair);
+			return m_dataAccess.InsertSenderToDeposit(recevingAddress, depositAddress, symbolPair, referralUser);
 		}
 
 		/// <summary>	Gets a transaction. </summary>
@@ -291,9 +294,9 @@ namespace MetaDaemon
 		/// <param name="lastUid">   	The last UID. </param>
 		///
 		/// <returns>	The transactions in market since. </returns>
-		public List<TransactionsRow> GetTransactionsInMarketSince(string symbolPair, uint lastUid)
+		public List<TransactionsRow> GetCompletedTransactionsInMarketSince(string symbolPair, uint lastUid)
 		{
-			return m_dataAccess.GetTransactionsInMarketSince(symbolPair, lastUid);
+			return m_dataAccess.GetCompletedTransactionsInMarketSince(symbolPair, lastUid);
 		}
 
 		/// <summary>	Updates the transaction processed for market. </summary>
@@ -309,22 +312,7 @@ namespace MetaDaemon
 			return m_dataAccess.UpdateTransactionProcessedForMarket(market, last);
 		}
 
-		/// <summary>	Inserts a fee transaction. </summary>
-		///
-		/// <remarks>	Paul, 19/02/2015. </remarks>
-		///
-		/// <param name="market">				  	The market. </param>
-		/// <param name="buyTrxId">				  	Identifier for the buy trx. </param>
-		/// <param name="sellTrxId">			  	Identifier for the sell trx. </param>
-		/// <param name="buyFee">				  	The buy fee. </param>
-		/// <param name="sellFee">				  	The sell fee. </param>
-		/// <param name="transactionProcessedUid">	The transaction processed UID. </param>
-		/// <param name="exception">			  	The exception. </param>
-		public void InsertFeeTransaction(	string market, string buyTrxId, string sellTrxId, decimal buyFee, decimal sellFee, 
-											uint transactionProcessedUid, string exception)
-		{
-			m_dataAccess.InsertFeeTransaction(market, buyTrxId, sellTrxId, buyFee, sellFee, transactionProcessedUid, exception);
-		}
+		
 
 		/// <summary>	Enables the price discovery. </summary>
 		///
@@ -335,6 +323,14 @@ namespace MetaDaemon
 		public void EnablePriceDiscovery(string symbolPair, bool enable)
 		{
 			m_dataAccess.EnablePriceDiscovery(symbolPair, enable);
+		}
+
+		/// <summary>	Gets the database. </summary>
+		///
+		/// <value>	The m database. </value>
+		public MySqlData m_Database
+		{
+			get { return m_dataAccess; }
 		}
 	}
 }

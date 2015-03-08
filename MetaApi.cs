@@ -67,40 +67,31 @@ namespace MetaExchange
 
 				// pull the market out of the request
 				string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
-				uint referralId = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
+				uint referralUser = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
 
 				MarketRow m = dummy.m_database.GetMarket(symbolPair);
 
 				// stick it in the master database
-				dummy.m_database.InsertSenderToDeposit(data.receiving_address, data.deposit_address, m.symbol_pair, true);
+				dummy.m_database.InsertSenderToDeposit(data.receiving_address, data.deposit_address, m.symbol_pair, referralUser, true);
 				
-				if (referralId > 0)
+				if (referralUser > 0)
 				{
 					// track referrals
-					
+					string depositAddress;
 
+					if (data.memo != null)
+					{
+						depositAddress = data.memo;
+					}
+					else
+					{
+						depositAddress = data.deposit_address;
+					}
+
+					dummy.m_database.InsertReferralAddress(depositAddress, referralUser);
 				}
 			}
 		}
-
-		/// <summary>	Executes the push sender to deposit action. </summary>
-		///
-		/// <remarks>	Paul, 19/02/2015. </remarks>
-		///
-		/// <param name="ctx">  	The context. </param>
-		/// <param name="dummy">	The dummy. </param>
-		///
-		/// <returns>	A Task. </returns>
-		/*Task OnPushSenderToDeposit(RequestContext ctx, IDummy dummy)
-		{
-			if (ConfirmDaemon(ctx, dummy))
-			{
-				SenderToDepositRow s2d = JsonSerializer.DeserializeFromString<SenderToDepositRow>(ctx.Request.Body);
-				dummy.m_database.InsertSenderToDeposit(s2d.receiving_address, s2d.deposit_address, s2d.symbol_pair);
-			}
-
-			return null;
-		}*/
 
 		/// <summary>	Executes the push transactions action. </summary>
 		///
@@ -112,25 +103,37 @@ namespace MetaExchange
 		{
 			Dictionary<string, uint> lastSeen = new Dictionary<string, uint>();
 
-			foreach (TransactionsRow r in newTrans)
+			try
 			{
-				// this may have problems with partial transactions
-				database.InsertTransaction(r.symbol_pair, r.deposit_address, r.order_type, r.received_txid, r.sent_txid, r.amount, r.price, r.fee, r.status, r.date, r.notes, true);
+				database.BeginTransaction();
 
-				if (lastSeen.ContainsKey(r.symbol_pair))
+				foreach (TransactionsRow r in newTrans)
 				{
-					lastSeen[r.symbol_pair] = Math.Max(r.uid, lastSeen[r.symbol_pair]);
+					// this may have problems with partial transactions
+					database.InsertTransaction(r.symbol_pair, r.deposit_address, r.order_type, r.received_txid, r.sent_txid, r.amount, r.price, r.fee, r.status, r.date, r.notes, true);
+
+					if (lastSeen.ContainsKey(r.symbol_pair))
+					{
+						lastSeen[r.symbol_pair] = Math.Max(r.uid, lastSeen[r.symbol_pair]);
+					}
+					else
+					{
+						lastSeen[r.symbol_pair] = r.uid;
+					}
 				}
-				else
+
+				// keep the site upto date with last seen transastion uids
+				foreach (KeyValuePair<string, uint> kvp in lastSeen)
 				{
-					lastSeen[r.symbol_pair] = r.uid;
+					database.UpdateLastSeenTransactionForSite(kvp.Key, kvp.Value);
 				}
+
+				database.EndTransaction();
 			}
-
-			// keep the site upto date with last seen transastion uids
-			foreach (KeyValuePair<string, uint> kvp in lastSeen)
+			catch (Exception)
 			{
-				database.UpdateLastSeenTransactionForSite(kvp.Key, kvp.Value);
+				database.RollbackTransaction();
+				throw;
 			}
 		}
 
@@ -184,7 +187,68 @@ namespace MetaExchange
 			return null;
 		}
 
-		
+		/// <summary>	Executes the push fee collection action. </summary>
+		///
+		/// <remarks>	Paul, 06/03/2015. </remarks>
+		///
+		/// <param name="ctx">  	The context. </param>
+		/// <param name="dummy">	The dummy. </param>
+		///
+		/// <returns>	A Task. </returns>
+		Task OnPushFeeCollection(RequestContext ctx, IDummy dummy)
+		{
+			if (ConfirmDaemon(ctx, dummy))
+			{
+				long oldRow = m_Database.CountFeeRows();
+
+				List<FeeCollectionRow> allFees = JsonSerializer.DeserializeFromString<List<FeeCollectionRow>>(ctx.Request.Body);
+
+				try
+				{
+					dummy.m_database.BeginTransaction();
+
+					foreach (FeeCollectionRow fee in allFees)
+					{
+						dummy.m_database.InsertFeeTransaction(fee.symbol_pair,
+																fee.buy_trxid,
+																fee.sell_trxid,
+																fee.buy_fee,
+																fee.sell_fee,
+																fee.transaction_processed_uid,
+																fee.exception, 
+																fee.start_txid,
+																fee.end_txid,
+																true);
+					}
+
+					dummy.m_database.EndTransaction();
+
+					long newRows = m_Database.CountFeeRows();
+
+					if (newRows > oldRow)
+					{
+						// here we should process the fees
+						FeeReporting(allFees);
+					}
+
+					ctx.Respond<bool>(true);
+				}
+				catch (Exception)
+				{
+					dummy.m_database.RollbackTransaction();
+
+					ctx.Respond<bool>(false);
+
+					throw;
+				}
+			}
+			else
+			{
+				ctx.Respond<bool>(false);
+			}
+
+			return null;
+		}
 
 		/// <summary>	Forward track IP bans. </summary>
 		///
