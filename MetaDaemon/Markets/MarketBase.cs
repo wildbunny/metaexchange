@@ -206,7 +206,7 @@ namespace MetaDaemon.Markets
 		protected SenderToDepositRow GetBitsharesAccountFromBitcoinDeposit(TransactionSinceBlock t)
 		{
 			// look up the deposit address in our map of sender->deposit
-			SenderToDepositRow senderToDeposit = m_daemon.m_Database.GetSenderDepositFromBitcoinDeposit(t.Address, m_market.symbol_pair);
+			SenderToDepositRow senderToDeposit = m_daemon.m_Database.GetSenderDepositIgnoreReferral(t.Address, m_market.symbol_pair);
 			if (senderToDeposit != null)
 			{
 				return senderToDeposit;

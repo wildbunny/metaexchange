@@ -246,7 +246,7 @@ namespace WebDaemonShared
 		/// <param name="symbolPair">	 	The symbol pair. </param>
 		///
 		/// <returns>	The sender deposit from bitcoin deposit. </returns>
-		public SenderToDepositRow GetSenderDepositFromBitcoinDeposit(string depositAddress, string symbolPair)
+		public SenderToDepositRow GetSenderDepositIgnoreReferral(string depositAddress, string symbolPair)
 		{
 			List<SenderToDepositRow> shouldOnlyBeOne = m_database.Query<SenderToDepositRow>("SELECT * FROM sender_to_deposit WHERE deposit_address=@d AND symbol_pair=@m;", depositAddress, symbolPair);
 
@@ -613,17 +613,24 @@ namespace WebDaemonShared
 		{
 			List<TransactionsRow> lastTwo = m_database.Query<TransactionsRow>("SELECT price FROM transactions WHERE symbol_pair=@market AND status=@s ORDER BY date DESC LIMIT 2;", symbolPair, MetaOrderStatus.completed);
 
-			decimal delta;
+			decimal delta, last;
 			if (lastTwo.Count == 2)
 			{
 				delta = lastTwo[0].price - lastTwo[1].price;
+				last = lastTwo.Last().price;
+			}
+			else if (lastTwo.Count == 1)
+			{
+				delta = lastTwo.Last().price;
+				last = lastTwo.Last().price;
 			}
 			else
 			{
-				delta = lastTwo.Last().price;
+				delta = 0;
+				last = 0;
 			}
 
-			return new LastPriceAndDelta { last_price = lastTwo.Last().price, price_delta = delta };
+			return new LastPriceAndDelta { last_price = last, price_delta = delta };
 		}
 
 		/// <summary>	Updates the market statistics. </summary>

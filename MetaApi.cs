@@ -19,6 +19,7 @@ namespace MetaExchange
 	public partial class MetaServer : IDisposable
 	{
 		const int kAggregateTimeoutMillis = 5000;
+		const int kMb = 1024 * 1024;
 
 		/// <summary>	Make sure this request really came from one of our daemons </summary>
 		///
@@ -145,11 +146,17 @@ namespace MetaExchange
 		/// <param name="dummy">	The dummy. </param>
 		///
 		/// <returns>	A Task. </returns>
-		Task OnPushTransactions(RequestContext ctx, IDummy dummy)
+		async Task OnPushTransactions(RequestContext ctx, IDummy dummy)
 		{
 			if (ConfirmDaemon(ctx, dummy))
 			{
-				List<TransactionsRow> newTrans = JsonSerializer.DeserializeFromString<List<TransactionsRow>>(ctx.Request.Body);
+				string allTrans = ctx.Request.Body;
+				if (ctx.Request.m_Truncated)
+				{
+					allTrans += await ctx.Request.GetBody(kMb);
+				}
+							
+				List<TransactionsRow> newTrans = JsonSerializer.DeserializeFromString<List<TransactionsRow>>(allTrans);
 
 				OnPushTransactions(newTrans, dummy.m_database);
 
@@ -159,8 +166,6 @@ namespace MetaExchange
 			{
 				ctx.Respond<bool>(false);
 			}
-
-			return null;
 		}
 
 		/// <summary>	Executes the push market action. </summary>

@@ -270,7 +270,6 @@ namespace MetaDaemon
 					if (l.memo.StartsWith(kSetPricesMemoStart))
 					{
 						HandlePriceSetting(parts, l, handler, market);
-
 						return true;
 					}
 					else if (l.memo.StartsWith(kWithdrawMemo))
@@ -370,11 +369,6 @@ namespace MetaDaemon
 									kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
 								}
 							}
-						}
-						else
-						{
-							// this was a command, so we're done trying to route it any more
-							break;
 						}
 					}
 
