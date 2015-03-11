@@ -135,5 +135,30 @@ namespace WebDaemonShared
 			ctx.Respond<List<TransactionsRow>>(m_database.GetAllTransactionsSince(tid));
 			return null;
 		}
+
+		/// <summary>	Executes the API exception action. </summary>
+		///
+		/// <remarks>	Paul, 25/01/2015. </remarks>
+		///
+		/// <param name="sender">	The sender. </param>
+		/// <param name="e">	 	The ExceptionWithCtx to process. </param>
+		public void OnApiException(object sender, ExceptionWithCtx e)
+		{
+			if (e.m_e is ApiException)
+			{
+				ApiException apiE = (ApiException)e.m_e;
+				e.m_ctx.Respond<ApiError>(apiE.m_error);
+			}
+			else if (e.m_ctx != null)
+			{
+				m_database.LogGeneralException(e.m_e.ToString());
+
+				e.m_ctx.Respond<ApiError>(new ApiExceptionGeneral().m_error);
+			}
+			else
+			{
+				throw e.m_e;
+			}
+		}
 	}
 }
