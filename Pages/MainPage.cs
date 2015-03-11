@@ -86,7 +86,7 @@ namespace MetaExchange.Pages
 													"aria-controls", "buyId",
 													"data-target", "#buyId");
 
-							using (new Panel(stream, "Buy {{market.base_symbol}}", "panel panel-success collapse", false, "buyId"))
+							using (new Panel(stream, "Buy {{market.base_symbol}}", "panel panel-success collapse in", false, "buyId"))
 							{
 								P("Once you enter your BitShares account name, we will generate your deposit address and send your {{market.base_symbol}} to you after 1 confirmation.");
 
@@ -102,6 +102,10 @@ namespace MetaExchange.Pages
 										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.name, WebForms.kOrderType,
 														HtmlAttributes.value, MetaOrderType.buy.ToString());
+
+										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+														HtmlAttributes.name, WebForms.kReferralId,
+														HtmlAttributes.value, "0");
 
 										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.name, WebForms.kSymbolPair,
@@ -155,7 +159,7 @@ namespace MetaExchange.Pages
 													"aria-controls", "sellId",
 													"data-target", "#sellId");
 
-							using (new Panel(stream, "Sell {{market.base_symbol}}", "panel panel-danger collapse", false, "sellId"))
+							using (new Panel(stream, "Sell {{market.base_symbol}}", "panel panel-danger collapse in", false, "sellId"))
 							{
 								P("Once you enter your bitcoin receiving address, we will generate your deposit address and send your bitcoins to you the instant we receive your {{market.base_symbol}}.");
 
@@ -167,6 +171,10 @@ namespace MetaExchange.Pages
 									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.name, WebForms.kOrderType,
 														HtmlAttributes.value, MetaOrderType.sell.ToString());
+
+									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
+														HtmlAttributes.name, WebForms.kReferralId,
+														HtmlAttributes.value, "0");
 
 									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.id, "symbolPairId",

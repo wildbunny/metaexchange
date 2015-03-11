@@ -84,16 +84,22 @@ namespace MetaData
 		public string deposit_address;
 		public string receiving_address;
 		public string symbol_pair;
+		public uint referral_user;
 	}
 
 	public class FeeCollectionRow : ICoreType
 	{
-		public uint uid;
+		public uint hash;
+		public string symbol_pair;
 		public string buy_trxid;
 		public string sell_trxid;
 		public decimal buy_fee;
 		public decimal sell_fee;
 		public DateTime date;
+		public string exception;
+		public uint transaction_processed_uid;
+		public string start_txid;
+		public string end_txid;
 	}
 
 	public class ReferralUserRow : ICoreType
@@ -113,5 +119,11 @@ namespace MetaData
 	{
 		public decimal last_price;
 		public decimal price_delta;
+	}
+
+	public class ConfigRow : ICoreType
+	{
+		public string email_from;
+		public string email_to;
 	}
 }

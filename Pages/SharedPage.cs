@@ -51,7 +51,7 @@ namespace MetaExchange.Pages
 		/// <returns></returns>
 		protected string[] GetFilenames(string jsListFile)
 		{
-			return File.OpenText(jsListFile).ReadToEnd().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+			return File.OpenText(jsListFile).ReadToEnd().Split(new string[] { "\r\n","\n" }, StringSplitOptions.RemoveEmptyEntries);
 		}
 		
 		/// <summary>

@@ -11,12 +11,13 @@ using WebDaemonShared;
 using WebDaemonSharedTables;
 using Casascius.Bitcoin;
 using MetaData;
+using ApiHost;
 
 namespace MetaDaemon.Markets
 {
 	public abstract class MarketBase
 	{
-		protected const int kMaxTransactionsBeforeCollectFees = 20;
+		protected const int kMaxTransactionsBeforeCollectFees = 0;
 
 		protected MarketRow m_market;
 		protected MetaDaemonApi m_daemon;
@@ -54,9 +55,9 @@ namespace MetaDaemon.Markets
 
 		public abstract void HandleBitsharesDeposit(KeyValuePair<string, BitsharesLedgerEntry> kvp);
 		public abstract void HandleBitcoinDeposit(TransactionSinceBlock t);
-		public abstract SubmitAddressResponse OnSubmitAddress(string receivingAddress, MetaOrderType orderType);
+		public abstract SubmitAddressResponse OnSubmitAddress(string receivingAddress, MetaOrderType orderType, uint referralUser);
 		public abstract bool CanDepositAsset(CurrencyTypes asset);
-		public abstract void CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount);
+		public abstract bool CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount);
 		
 		/// <summary>	Sends the bitcoins to depositor. </summary>
 		///
@@ -180,9 +181,11 @@ namespace MetaDaemon.Markets
 			// look that address up in our map of sender->deposit address
 			
 			// pull the market uid out of the memo
-			string symbolPair = MemoGetUid(l.memo);
+			string symbolPair;
+			uint referralUser;
+			MemoExtract(l.memo, out symbolPair, out referralUser);
 
-			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(l.memo, symbolPair);
+			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(l.memo, symbolPair, referralUser);
 			if (senderToDeposit != null)
 			{
 				return senderToDeposit;
@@ -203,7 +206,7 @@ namespace MetaDaemon.Markets
 		protected SenderToDepositRow GetBitsharesAccountFromBitcoinDeposit(TransactionSinceBlock t)
 		{
 			// look up the deposit address in our map of sender->deposit
-			SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromDeposit(t.Address, m_market.symbol_pair);
+			SenderToDepositRow senderToDeposit = m_daemon.m_Database.GetSenderDepositIgnoreReferral(t.Address, m_market.symbol_pair);
 			if (senderToDeposit != null)
 			{
 				return senderToDeposit;
@@ -365,9 +368,23 @@ namespace MetaDaemon.Markets
 		/// <param name="memo">	The memo. </param>
 		///
 		/// <returns>	An uint. </returns>
-		static public string MemoGetUid(string memo)
+		static public void MemoExtract(string memo, out string symbolPair, out uint referralUser)
 		{
-			return memo.Split('-')[0];
+			string[] parts = memo.Split('-');
+			if (parts.Length == 2)
+			{
+				symbolPair = parts[0];
+				referralUser = 0;
+			}
+			else if (parts.Length == 3)
+			{
+				symbolPair = parts[0];
+				referralUser = uint.Parse(parts[1]);
+			}
+			else
+			{
+				throw new UnexpectedCaseException();
+			}
 		}
 
 		/// <summary>	Creates a memo. </summary>
@@ -378,9 +395,9 @@ namespace MetaDaemon.Markets
 		/// <param name="marketUid">	 	The market UID. </param>
 		///
 		/// <returns>	The new memo. </returns>
-		static public string CreateMemo(string bitcoinAddress, string symbolPair)
+		static public string CreateMemo(string bitcoinAddress, string symbolPair, uint referralUser)
 		{
-			string start = symbolPair + "-";
+			string start = symbolPair + "-" + referralUser + "-";
 			string memo = start + bitcoinAddress.Substring(0, Math.Min(BitsharesWallet.kBitsharesMaxMemoLength, bitcoinAddress.Length) - start.Length);
 			return memo;
 		}

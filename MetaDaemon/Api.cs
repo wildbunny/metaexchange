@@ -50,6 +50,7 @@ namespace MetaDaemon
 			string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
 			string receivingAddress = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kReceivingAddress);
 			MetaOrderType orderType = RestHelpers.GetPostArg<MetaOrderType, ApiExceptionMissingParameter>(ctx, WebForms.kOrderType);
+			uint referralUser = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
 
 			if (!m_marketHandlers.ContainsKey(symbolPair))
 			{
@@ -57,7 +58,7 @@ namespace MetaDaemon
 			}
 
 			// prevent our own deposit addresses from being used as receiving addresses
-			if (m_dataAccess.GetSenderDepositFromDeposit(receivingAddress, symbolPair) != null)
+			if (m_dataAccess.GetSenderDepositFromDeposit(receivingAddress, symbolPair, referralUser) != null)
 			{
 				throw new ApiExceptionInvalidAddress("<internal deposit address>");
 			}
@@ -66,7 +67,7 @@ namespace MetaDaemon
 			MarketBase market = m_marketHandlers[symbolPair];
 
 			// get the response and send it
-			SubmitAddressResponse response = market.OnSubmitAddress(receivingAddress, orderType);
+			SubmitAddressResponse response = market.OnSubmitAddress(receivingAddress, orderType, referralUser);
 
 			ctx.Respond<SubmitAddressResponse>(response);
 

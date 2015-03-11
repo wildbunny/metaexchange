@@ -270,7 +270,6 @@ namespace MetaDaemon
 					if (l.memo.StartsWith(kSetPricesMemoStart))
 					{
 						HandlePriceSetting(parts, l, handler, market);
-
 						return true;
 					}
 					else if (l.memo.StartsWith(kWithdrawMemo))
@@ -371,11 +370,6 @@ namespace MetaDaemon
 								}
 							}
 						}
-						else
-						{
-							// this was a command, so we're done trying to route it any more
-							break;
-						}
 					}
 
 					// this needs to happen for every transaction
@@ -400,16 +394,7 @@ namespace MetaDaemon
 					// this needs to happen for every transaction
 					RecomputeTransactionLimitsAndPrices(allMarkets);
 				}
-
-				if (m_bitcoinFeeAddress != null && m_bitshaaresFeeAccount != null)
-				{
-					// collect our fees
-					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
-					{
-						kvpHandler.Value.CollectFees(m_bitcoinFeeAddress, m_bitshaaresFeeAccount);
-					}
-				}
-
+				
 				//
 				// push any new transactions, make sure site acknowledges receipt
 				//
@@ -442,6 +427,37 @@ namespace MetaDaemon
 						ApiPush<MarketRow>(Routes.kPushMarket, kvpHandler.Value.m_Market);
 
 						kvpHandler.Value.m_IsDirty = false;
+					}
+				}
+
+				//
+				// push fee collections
+				// 
+
+				if (m_bitcoinFeeAddress != null && m_bitshaaresFeeAccount != null)
+				{
+					uint lastFeeId = m_dataAccess.GetSiteLastFeeUid();
+
+					// collect our fees
+					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
+					{
+						kvpHandler.Value.CollectFees(m_bitcoinFeeAddress, m_bitshaaresFeeAccount);
+					}
+
+					// keep the site up to date, make sure it acknowledges receipt
+					uint latestFeeId = m_dataAccess.GetLastFeeCollectionUid();
+					if (latestFeeId > lastFeeId)
+					{
+						List<FeeCollectionRow> fees = m_dataAccess.GetFeeCollectionsSince(lastFeeId);
+						string result = await ApiPush<List<FeeCollectionRow>>(Routes.kPushFees, fees);
+						if (bool.Parse(result))
+						{
+							m_dataAccess.UpdateSiteLastFeeUid(latestFeeId);
+						}
+						else
+						{
+							throw new Exception("API push response unknown! " + result);
+						}
 					}
 				}
 			}

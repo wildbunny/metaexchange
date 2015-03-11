@@ -27,7 +27,7 @@ namespace MetaDaemon.Markets
 		public const decimal kMinBtcFee = 0.1M;
 		#else
 		public const decimal kMaxTransactionFactor = 0.1M;
-		public const decimal kMinBtcFee = 0.1M;
+		public const decimal kMinBtcFee = 0.0001M;
 		#endif
 
 		protected BitsharesAsset m_asset;
@@ -349,7 +349,7 @@ namespace MetaDaemon.Markets
 		/// <param name="orderType">	   	Type of the order. </param>
 		///
 		/// <returns>	A SubmitAddressResponse. </returns>
-		public override SubmitAddressResponse OnSubmitAddress(string receivingAddress, MetaOrderType orderType)
+		public override SubmitAddressResponse OnSubmitAddress(string receivingAddress, MetaOrderType orderType, uint referralUser)
 		{
 			SubmitAddressResponse response;
 
@@ -364,7 +364,7 @@ namespace MetaDaemon.Markets
 				}
 
 				// try and retrieve a previous entry
-				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(accountName, m_market.symbol_pair);
+				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(accountName, m_market.symbol_pair, referralUser);
 				if (senderToDeposit == null)
 				{
 					// no dice, create a new entry
@@ -376,7 +376,7 @@ namespace MetaDaemon.Markets
 
 						// generate a new bitcoin address and tie it to this account
 						string depositAdress = m_bitcoin.GetNewAddress();
-						senderToDeposit = m_daemon.InsertSenderToDeposit(account.name, depositAdress, m_market.symbol_pair);
+						senderToDeposit = m_daemon.InsertSenderToDeposit(account.name, depositAdress, m_market.symbol_pair, referralUser);
 					}
 					catch (BitsharesRpcException)
 					{
@@ -402,11 +402,11 @@ namespace MetaDaemon.Markets
 				}
 
 				// try and retrieve a previous entry
-				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(bitcoinAddress, m_market.symbol_pair);
+				SenderToDepositRow senderToDeposit = m_daemon.GetSenderDepositFromReceiver(bitcoinAddress, m_market.symbol_pair, referralUser);
 				if (senderToDeposit == null)
 				{
 					// generate a memo field to use instead
-					senderToDeposit = m_daemon.InsertSenderToDeposit(bitcoinAddress, MarketBase.CreateMemo(bitcoinAddress, m_market.symbol_pair), m_market.symbol_pair);
+					senderToDeposit = m_daemon.InsertSenderToDeposit(bitcoinAddress, MarketBase.CreateMemo(bitcoinAddress, m_market.symbol_pair, referralUser), m_market.symbol_pair, referralUser);
 				}
 
 				response =	new SubmitAddressResponse 
@@ -430,9 +430,9 @@ namespace MetaDaemon.Markets
 		///
 		/// <param name="bitcoinFeeAddress">  	The bitcoin fee address. </param>
 		/// <param name="bitsharesFeeAccount">	The bitshares fee account. </param>
-		public override void CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount)
+		public override bool CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount)
 		{
-			List<TransactionsRow> transSince = m_daemon.GetTransactionsInMarketSince(m_market.symbol_pair, m_market.transaction_processed_uid);
+			List<TransactionsRow> transSince = m_daemon.GetCompletedTransactionsInMarketSince(m_market.symbol_pair, m_market.transaction_processed_uid);
 
 			if (transSince.Count > kMaxTransactionsBeforeCollectFees)
 			{
@@ -474,9 +474,21 @@ namespace MetaDaemon.Markets
 						exception = e.ToString();
 					}
 
-					m_daemon.InsertFeeTransaction(m_market.symbol_pair, bitsharesTrxId, bitcoinTxId, buyFees, sellFees, transSince.Last().uid, exception);
+					m_daemon.m_Database.InsertFeeTransaction(	m_market.symbol_pair, 
+																bitsharesTrxId, 
+																bitcoinTxId, 
+																buyFees, 
+																sellFees, 
+																transSince.Last().uid, 
+																exception,
+																transSince.First().received_txid,
+																transSince.Last().received_txid);
+
+					return true;
 				}
 			}
+
+			return false;
 		}
 	}
 }

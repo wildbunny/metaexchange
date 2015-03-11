@@ -100,7 +100,7 @@ namespace MetaDaemonUnitTests
 		{
 			string content = SubmitAddress(kBitcoinAddress, MetaOrderType.sell, market);
 
-			string memo = MarketBase.CreateMemo(kBitcoinAddress, GetMarket(market).symbol_pair);
+			string memo = MarketBase.CreateMemo(kBitcoinAddress, GetMarket(market).symbol_pair, 0);
 
 			string reality = JsonSerializer.SerializeToString<SubmitAddressResponse>(new SubmitAddressResponse { deposit_address = m_api.m_DaemonAccount, memo = memo });
 
