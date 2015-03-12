@@ -27,7 +27,7 @@ namespace MetaExchange.Pages
 
 			AddResource(new CssResource(Constants.kWebRoot, "/css/markets.css", true));
 
-			ImgResource logo = new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg" );
+			ImgResource logo = CreateLogo();
 			AddResource(logo);
 
 			// render head

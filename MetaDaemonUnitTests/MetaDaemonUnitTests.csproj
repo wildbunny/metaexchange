@@ -75,6 +75,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CurrencyTypeMigration.cs" />
+    <Compile Include="Deprecated.cs" />
     <Compile Include="MiscTest.cs" />
     <Compile Include="PriceDiscovery.cs" />
     <Compile Include="SubmitAddressTest.cs" />

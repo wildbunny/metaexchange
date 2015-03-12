@@ -26,16 +26,21 @@ namespace MetaDaemonUnitTests
 		const string kDatabaseName = "metaexchange";
 		const string kDatabaseUser = "metaexchange";
 		const string kDatabasePassword = "ZSbyH7bGCz6BXHRY";
-		protected string kApiRoot = "http://localhost:1236/";
+		protected string kApiRoot = "http://192.168.0.2:1236/";
 
 		protected const string kBitcoinAddress = "n2HPFvf376vxQV1mour4pYjLRbrD9vZUpn";
 		protected const string kBitsharesAccount = "monsterer";
 
 		protected Database m_database;
+		protected MySqlData m_data;
 		protected MetaDaemonApi m_api;
 
 		protected string m_defaultSymbolPair;
 		protected string m_alternateMarket;
+
+		protected Dictionary<string, CurrenciesRow> m_currencies;
+
+		const string kBtc = "BTC";
  
 		public TestBase()
 		{
@@ -43,8 +48,11 @@ namespace MetaDaemonUnitTests
 
 			RedisWrapper.Initialise("test");
 
-			m_defaultSymbolPair = CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC);
-			m_alternateMarket = CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitGOLD, CurrencyTypes.BTC);
+			m_data = new MySqlData(kDatabaseName, kDatabaseUser, kDatabasePassword);
+			m_currencies = m_data.GetAllCurrencies();
+
+			m_defaultSymbolPair = CurrencyHelpers.GetMarketSymbolPair(m_currencies["bitBTC"], m_currencies[kBtc]);
+			m_alternateMarket = CurrencyHelpers.GetMarketSymbolPair(m_currencies["bitGOLD"], m_currencies[kBtc]);
 
 			Thread thread = new Thread(() =>
 			{
@@ -71,7 +79,7 @@ namespace MetaDaemonUnitTests
 															new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
 															bitsharesAccount,
 															database, databaseUser, databasePassword,
-															apiListen, null, null, "gatewayclient", "http://192.168.0.2/", "192.168.0.2");
+															apiListen, null, null, "gatewayclient", "http://192.168.0.2:1235/", "192.168.0.2");
 
 				m_api.m_ApiServer.m_HttpServer.m_DdosProtector.m_Enabled = false;
 
@@ -85,7 +93,10 @@ namespace MetaDaemonUnitTests
 
 		public void Dispose()
 		{
-			m_api.Dispose();
+			if (m_api != null)
+			{
+				m_api.Dispose();
+			}
 		}
 
 		void OnException(Exception e)

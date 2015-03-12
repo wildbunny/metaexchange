@@ -33,6 +33,7 @@ namespace MetaDaemon
 
 		Dictionary<string, MarketBase> m_marketHandlers;
 		Dictionary<int, BitsharesAsset> m_allBitsharesAssets;
+		Dictionary<string, CurrenciesRow> m_allCurrencies;
 		List<BitsharesMarket> m_allDexMarkets;
 
 		string m_bitshaaresFeeAccount;
@@ -74,6 +75,8 @@ namespace MetaDaemon
 			m_allDexMarkets = m_bitshares.BlockchainListMarkets().Where(m => m.last_error == null &&
 																		m_allBitsharesAssets.ContainsKey(m.base_id) &&
 																		m_allBitsharesAssets.ContainsKey(m.quote_id)).ToList();
+
+			m_allCurrencies = m_dataAccess.GetAllCurrencies();
 
 			List<MarketRow> markets = GetAllMarkets();
 			foreach (MarketRow r in markets)
@@ -169,14 +172,14 @@ namespace MetaDaemon
 		/// <returns>	The new handler for market. </returns>
 		MarketBase CreateHandlerForMarket(MarketRow market)
 		{
-			CurrencyTypes @base, quote;
-			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(market.symbol_pair, out @base, out quote);
+			CurrenciesRow @base, quote;
+			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(market.symbol_pair, m_allCurrencies, out @base, out quote);
 
-			if ( CurrencyHelpers.IsBitsharesAsset(@base) && quote == CurrencyTypes.BTC)
+			if ( CurrencyHelpers.IsBitsharesAsset(@base) && !CurrencyHelpers.IsBitsharesAsset(quote))
 			{
 				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, @base);
 			}
-			else if (@base == CurrencyTypes.BTC && CurrencyHelpers.IsBitsharesAsset(quote))
+			else if (!CurrencyHelpers.IsBitsharesAsset(@base) && CurrencyHelpers.IsBitsharesAsset(quote))
 			{
 				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, @quote);
 			}
@@ -245,7 +248,7 @@ namespace MetaDaemon
 					decimal quotePrice = decimal.Parse(parts[3]);
 
 					// go do it!
-					handler.SetPricesFromSingleUnitQuantities(basePrice, quotePrice, market.GetBase() == CurrencyTypes.BTC, market);
+					handler.SetPricesFromSingleUnitQuantities(basePrice, quotePrice, market.flipped, market);
 				}
 			}
 		}
@@ -281,11 +284,11 @@ namespace MetaDaemon
 							if (!m_dataAccess.IsWithdrawalProcessed(trxid))
 							{
 								decimal amount = decimal.Parse(parts[1]);
-								CurrencyTypes type = CurrencyHelpers.FromSymbol(parts[2]);
+								CurrenciesRow type = CurrencyHelpers.FromSymbol(parts[2], m_allCurrencies);
 								string to;
 
 								string txid;
-								if (type == CurrencyTypes.BTC)
+								if ( !CurrencyHelpers.IsBitsharesAsset(type) )
 								{
 									to = m_dataAccess.GetStats().bitcoin_withdraw_address;
 									Debug.Assert(to != null);
@@ -324,6 +327,7 @@ namespace MetaDaemon
 			try
 			{
 				Dictionary<string, MarketRow> allMarkets = GetAllMarkets().ToDictionary(m => m.symbol_pair);
+				m_allCurrencies = m_dataAccess.GetAllCurrencies();
 
 				// create any handlers we need for new markets
 				CheckMarketHandlers(allMarkets);
@@ -364,7 +368,7 @@ namespace MetaDaemon
 							if (IsDepositForMarket(l.memo, m.symbol_pair))
 							{
 								// make sure the deposit is for this market!
-								if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol)))
+								if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol, m_allCurrencies)))
 								{
 									kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
 								}
@@ -489,6 +493,14 @@ namespace MetaDaemon
 		public Dictionary<int, BitsharesAsset> m_AllBitsharesAssets
 		{
 			get { return m_allBitsharesAssets; }
+		}
+
+		/// <summary>	Gets all currencies. </summary>
+		///
+		/// <value>	The m all currencies. </value>
+		public Dictionary<string, CurrenciesRow> m_AllCurrencies
+		{
+			get { return m_allCurrencies; }
 		}
 	}
 }

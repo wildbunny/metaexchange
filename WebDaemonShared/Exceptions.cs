@@ -15,6 +15,7 @@ namespace WebDaemonShared
 		InvalidAddress,
 		InvalidAccount,
 		OrderNotFound,
+		UnknownCurrency
 	}
 
 	public class ApiError
@@ -107,5 +108,10 @@ namespace WebDaemonShared
 	public class ApiExceptionOrderNotFound : ApiException
 	{
 		public ApiExceptionOrderNotFound(string txid) : base(new ApiError("Order " + txid + " not found!", ApiErrorCode.OrderNotFound)) { }
+	}
+
+	public class ApiExceptionUnknownCurrency : ApiException
+	{
+		public ApiExceptionUnknownCurrency(string symbol) : base(new ApiError("Unknown currency " + symbol, ApiErrorCode.UnknownCurrency)) { }
 	}
 }

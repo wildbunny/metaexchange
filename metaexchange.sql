@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Mar 08, 2015 at 06:25 PM
+-- Generation Time: Mar 12, 2015 at 08:12 AM
 -- Server version: 5.1.41
 -- PHP Version: 5.3.1
 
@@ -18,6 +18,19 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 --
 -- Database: `metaexchange`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `currencies`
+--
+
+CREATE TABLE IF NOT EXISTS `currencies` (
+  `symbol` varchar(10) NOT NULL,
+  `bitshares` tinyint(1) NOT NULL,
+  `uia` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`symbol`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -40,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `fee_collections` (
   `end_txid` varchar(64) NOT NULL,
   PRIMARY KEY (`uid`),
   UNIQUE KEY `hash` (`hash`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
 
 -- --------------------------------------------------------
 
@@ -87,6 +100,7 @@ CREATE TABLE IF NOT EXISTS `markets` (
   `spread_percent` decimal(18,8) NOT NULL DEFAULT '0.00000000',
   `window_percent` decimal(18,8) NOT NULL DEFAULT '10.00000000',
   `price_discovery` tinyint(1) NOT NULL DEFAULT '0',
+  `flipped` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`symbol_pair`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -141,7 +155,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `deposit_address` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`uid`),
   UNIQUE KEY `received_txid` (`received_txid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=180 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=189 ;
 
 -- --------------------------------------------------------
 

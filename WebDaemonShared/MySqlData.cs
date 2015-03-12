@@ -188,8 +188,8 @@ namespace WebDaemonShared
 		/// <param name="market">	The market. </param>
 		public bool UpdateMarketInDatabase(MarketRow market)
 		{
-			return  m_database.Statement(	"UPDATE markets SET ask=@a, bid=@b, ask_max=@c, bid_max=@d, ask_fee_percent=@e, bid_fee_percent=@f WHERE symbol_pair=@g;",
-											market.ask, market.bid, market.ask_max, market.bid_max, market.ask_fee_percent, market.bid_fee_percent, market.symbol_pair) > 0;
+			return  m_database.Statement(	"UPDATE markets SET ask=@a, bid=@b, ask_max=@c, bid_max=@d, ask_fee_percent=@e, bid_fee_percent=@f, flipped=@h WHERE symbol_pair=@g;",
+											market.ask, market.bid, market.ask_max, market.bid_max, market.ask_fee_percent, market.bid_fee_percent, market.flipped, market.symbol_pair) > 0;
 		}
 
 		/// <summary>	Inserts a market. </summary>
@@ -762,6 +762,16 @@ namespace WebDaemonShared
 		public long CountFeeRows()
 		{
 			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM fee_collections;");
+		}
+
+		/// <summary>	Gets all currencies. </summary>
+		///
+		/// <remarks>	Paul, 10/03/2015. </remarks>
+		///
+		/// <returns>	all currencies. </returns>
+		public Dictionary<string, CurrenciesRow> GetAllCurrencies()
+		{
+			return m_database.Query<CurrenciesRow>("SELECT * FROM currencies;").ToDictionary(r => r.symbol);
 		}
 	}
 }

@@ -183,5 +183,15 @@ namespace MetaExchange.Pages
 
 			base.Dispose();
 		}
+
+		/// <summary>	Creates the logo. </summary>
+		///
+		/// <remarks>	Paul, 11/03/2015. </remarks>
+		///
+		/// <returns>	The new logo. </returns>
+		protected ImgResource CreateLogo()
+		{
+			return new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg hidden-xs");
+		}
 	}
 }

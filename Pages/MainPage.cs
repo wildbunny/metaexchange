@@ -41,7 +41,7 @@ namespace MetaExchange.Pages
 				ctx.Respond(System.Net.HttpStatusCode.NotFound);
 			}
 
-			ImgResource logo = new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg");
+			ImgResource logo = CreateLogo();
 			AddResource(logo);
 
 			// render head

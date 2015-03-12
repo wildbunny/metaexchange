@@ -56,7 +56,7 @@ namespace MetaDaemon.Markets
 		public abstract void HandleBitsharesDeposit(KeyValuePair<string, BitsharesLedgerEntry> kvp);
 		public abstract void HandleBitcoinDeposit(TransactionSinceBlock t);
 		public abstract SubmitAddressResponse OnSubmitAddress(string receivingAddress, MetaOrderType orderType, uint referralUser);
-		public abstract bool CanDepositAsset(CurrencyTypes asset);
+		public abstract bool CanDepositAsset(CurrenciesRow asset);
 		public abstract bool CollectFees(string bitcoinFeeAddress, string bitsharesFeeAccount);
 		
 		/// <summary>	Sends the bitcoins to depositor. </summary>

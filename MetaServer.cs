@@ -54,6 +54,7 @@ namespace MetaExchange
 		MetaWebServer m_server;
 		SharedApi<IDummy> m_api;
 		MysqlAuthenticator m_auth;
+		Dictionary<string, CurrenciesRow> m_allCurrencies;
 
 		string m_webAddress;
 
@@ -67,6 +68,8 @@ namespace MetaExchange
 			Serialisation.Defaults();
 
 			m_auth = new MysqlAuthenticator(database, databaseUser, databasePassword, Thread.CurrentThread.ManagedThreadId);
+
+			m_allCurrencies = m_auth.m_Database.GetAllCurrencies();
 
 			string[] listenOn = uri.Split(',');
 
@@ -149,6 +152,7 @@ namespace MetaExchange
 		async public void Update()
 		{
 			// ping all the daemons
+			m_allCurrencies = m_auth.m_Database.GetAllCurrencies();
 			List<MarketRow> allMarkets = m_auth.m_Database.GetAllMarkets();
 			List<string> allDaemons = allMarkets.Select<MarketRow, string>(r => r.daemon_url).Distinct().ToList();
 
@@ -175,7 +179,7 @@ namespace MetaExchange
 			// collect market stats
 			foreach (MarketRow r in allMarkets)
 			{
-				decimal btcVolume24h = m_auth.m_Database.Get24HourBtcVolume(r.symbol_pair, r.GetQuote() != CurrencyTypes.BTC);
+				decimal btcVolume24h = m_auth.m_Database.Get24HourBtcVolume(r.symbol_pair, r.flipped);
 				LastPriceAndDelta lastPrice = m_auth.m_Database.GetLastPriceAndDelta(r.symbol_pair);
 
 				decimal realisedSpreadPercent = 100 * (1 - r.bid/r.ask);

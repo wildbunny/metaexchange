@@ -45,10 +45,10 @@ namespace MetaDaemon.Markets
 		/// <param name="bitshares">	   	The bitshares. </param>
 		/// <param name="bitcoin">		   	The bitcoin. </param>
 		/// <param name="bitsharesAccount">	The bitshares account. </param>
-		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount, CurrencyTypes bitsharesAsset) : 
+		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount, CurrenciesRow bitsharesAsset) : 
 								base(daemon, market, bitshares, bitcoin, bitsharesAccount)
 		{
-			m_flipped = m_market.GetBase() != bitsharesAsset;
+			m_flipped = m_market.GetBase(daemon.m_AllCurrencies) != bitsharesAsset;
 			m_asset = m_bitshares.BlockchainGetAsset(CurrencyHelpers.ToBitsharesSymbol(bitsharesAsset));
 
 			Dictionary<int, ulong> allBitsharesBalances = m_bitshares.WalletAccountBalance(bitsharesAccount)[bitsharesAccount];
@@ -83,10 +83,10 @@ namespace MetaDaemon.Markets
 		/// <returns>	A decimal. </returns>
 		decimal RecomputeFeedPriceInBtc()
 		{
-			decimal bitsharesPriceInBtc = m_bitshares.BlockchainMedianFeedPrice(CurrencyTypes.BTC.ToString());
+			decimal bitsharesPriceInBtc = m_bitshares.BlockchainMedianFeedPrice(CurrencyHelpers.kBtcSymbol);
 			decimal bitsharesPriceInBitasset;
-			
-			if (m_asset.symbol != CurrencyTypes.BTS.ToString())
+
+			if (m_asset.symbol != CurrencyHelpers.kBtsSymbol)
 			{
 				bitsharesPriceInBitasset = m_bitshares.BlockchainMedianFeedPrice(m_asset.symbol);
 			}
@@ -161,7 +161,7 @@ namespace MetaDaemon.Markets
 				
 				decimal bitsharesBalance = m_asset.GetAmountFromLarimers(bitsharesBalances[m_asset.id]);
 
-				if (m_asset.symbol == CurrencyTypes.BTC.ToString())
+				if (m_asset.symbol == CurrencyHelpers.kBtcSymbol)
 				{
 					m_lastFeedPrice = 1;
 				}
@@ -196,10 +196,10 @@ namespace MetaDaemon.Markets
 		/// <param name="asset">	The asset. </param>
 		///
 		/// <returns>	true if we can deposit asset, false if not. </returns>
-		public override bool CanDepositAsset(CurrencyTypes asset)
+		public override bool CanDepositAsset(CurrenciesRow asset)
 		{
-			CurrencyTypes baseSymbol, quoteSymbol;
-			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(m_market.symbol_pair, out baseSymbol, out quoteSymbol);
+			CurrenciesRow baseSymbol, quoteSymbol;
+			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(m_market.symbol_pair, m_daemon.m_AllCurrencies, out baseSymbol, out quoteSymbol);
 
 			return baseSymbol == asset || quoteSymbol == asset;
 		}

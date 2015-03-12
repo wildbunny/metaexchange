@@ -229,7 +229,7 @@ namespace MetaExchange.Pages
 				H4("API detail");
 
 				string siteUrl = ctx.Request.Url.AbsoluteUri.TrimEnd(ctx.Request.Url.LocalPath);
-				string market = CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC);
+				string market = authObj.m_database.GetAllMarkets()[0].symbol_pair;
 
 				CodeExample<SubmitAddressResponse>(siteUrl, stream, Routes.kSubmitAddress, WebRequestMethods.Http.Post, "The main function. This will take your supplied receiving address and provide you with a deposit address and a memo (depending on the market).",
 							new List<DocParam>
@@ -244,7 +244,7 @@ namespace MetaExchange.Pages
 												name = WebForms.kOrderType,
 												type = DocType.@string},
 							},
-							null, Routes.kSubmitAddress + RestHelpers.BuildArgs(WebForms.kSymbolPair, CurrencyHelpers.GetMarketSymbolPair(CurrencyTypes.bitBTC, CurrencyTypes.BTC),
+							null, Routes.kSubmitAddress + RestHelpers.BuildArgs(WebForms.kSymbolPair, market,
 																				WebForms.kReceivingAddress, "monsterer",
 																				WebForms.kOrderType, MetaOrderType.buy), new SubmitAddressResponse { deposit_address = "mrveCRH4nRZDpS7fxgAiLTX7GKvJ1cARY9" });
 
