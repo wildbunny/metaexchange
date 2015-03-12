@@ -61,8 +61,10 @@ namespace MetaDaemon
 
 			// don't ban on exception here because we'll only end up banning the webserver!
 			m_server = new ApiServer<IDummyDaemon>(new string[] { listenAddress }, null, false, eDdosMaxRequests.Ignore, eDdosInSeconds.One);
-			m_server.ExceptionEvent += OnApiException;
 
+			m_api = new SharedApi<IDummyDaemon>(m_dataAccess);
+			m_server.ExceptionEvent += m_api.OnApiException;
+			
 			// only allow the main site to post to us
 			m_server.SetIpLock(masterSiteIp);
 
@@ -83,9 +85,7 @@ namespace MetaDaemon
 			{
 				m_marketHandlers[r.symbol_pair] = CreateHandlerForMarket(r);
 			}
-
-			m_api = new SharedApi<IDummyDaemon>(m_dataAccess);
-
+			
 			m_server.HandlePostRoute(Routes.kSubmitAddress,				OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 			m_server.HandleGetRoute(Routes.kGetAllMarkets,				m_api.OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 
@@ -133,31 +133,6 @@ namespace MetaDaemon
 		public void Dispose()
 		{
 			m_server.Dispose();
-		}
-
-		/// <summary>	Executes the API exception action. </summary>
-		///
-		/// <remarks>	Paul, 25/01/2015. </remarks>
-		///
-		/// <param name="sender">	The sender. </param>
-		/// <param name="e">	 	The ExceptionWithCtx to process. </param>
-		void OnApiException(object sender, ExceptionWithCtx e)
-		{
-			if (e.m_e is ApiException)
-			{
-				ApiException apiE = (ApiException)e.m_e;
-				e.m_ctx.Respond<ApiError>(apiE.m_error);
-			}
-			else if (e.m_ctx != null)
-			{
-				LogGeneralException(e.m_e.ToString());
-
-				e.m_ctx.Respond<ApiError>(new ApiExceptionGeneral().m_error);
-			}
-			else
-			{
-				throw e.m_e;
-			}
 		}
 
 		/// <summary>	Creates handler for market. </summary>

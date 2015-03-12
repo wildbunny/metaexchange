@@ -40,10 +40,22 @@ namespace MetaExchange
 			List<string> ips = new List<string>();
 			foreach (string d in daemons)
 			{
-				ips.Add(new Uri(d).Host);
+				IPAddress[] e = Dns.GetHostAddresses(new Uri(d).Host);
+
+				foreach (IPAddress ip in e)
+				{
+					ips.Add(ip.ToString());
+				}
 			}
 
-			return ips.Contains(from) || ourIps.Contains(from);
+			bool allowed = ips.Contains(from) || ourIps.Contains(from);
+
+			if (!allowed)
+			{
+				m_Database.LogGeneralException("ConfirmDaemon(" + from + ") failed...");
+			}
+
+			return allowed;
 		}
 
 		/// <summary>	Executes the submit address action. </summary>
@@ -489,7 +501,7 @@ namespace MetaExchange
 			string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
 
 			MarketRow market = m_Database.GetMarket(symbolPair);
-			if (market == null || !market.visible)
+			if (market == null)// || !market.visible)
 			{
 				throw new ApiExceptionUnknownMarket(symbolPair);
 			}

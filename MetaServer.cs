@@ -220,5 +220,13 @@ namespace MetaExchange
 		{
 			get { return m_auth.m_Database; }
 		}
+
+		/// <summary>	Gets the API. </summary>
+		///
+		/// <value>	The m API. </value>
+		public SharedApi<IDummy> m_Api
+		{
+			get { return m_api; }
+		}
 	}
 }

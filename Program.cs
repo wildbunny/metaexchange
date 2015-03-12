@@ -70,6 +70,7 @@ namespace MetaExchange
 		
 		static void OnServerException(object sender, ExceptionWithCtx e)
 		{
+			m_gServer.m_Api.OnApiException(sender, e);
 			m_gServer.m_Database.LogGeneralException(e.m_e.ToString());
 		}
 
