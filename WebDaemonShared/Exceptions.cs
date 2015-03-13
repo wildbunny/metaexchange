@@ -74,9 +74,9 @@ namespace WebDaemonShared
 			m_error = error;
 		}
 
-		public override string ToString()
+		public override string Message
 		{
-			return m_error.message;
+			get { return m_error.message; }
 		}
 	}
 

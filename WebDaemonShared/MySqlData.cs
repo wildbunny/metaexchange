@@ -188,8 +188,8 @@ namespace WebDaemonShared
 		/// <param name="market">	The market. </param>
 		public bool UpdateMarketInDatabase(MarketRow market)
 		{
-			return  m_database.Statement(	"UPDATE markets SET ask=@a, bid=@b, ask_max=@c, bid_max=@d, ask_fee_percent=@e, bid_fee_percent=@f, flipped=@h WHERE symbol_pair=@g;",
-											market.ask, market.bid, market.ask_max, market.bid_max, market.ask_fee_percent, market.bid_fee_percent, market.flipped, market.symbol_pair) > 0;
+			return  m_database.Statement(	"UPDATE markets SET ask=@a, bid=@b, ask_max=@c, bid_max=@d, ask_fee_percent=@e, bid_fee_percent=@f WHERE symbol_pair=@g;",
+											market.ask, market.bid, market.ask_max, market.bid_max, market.ask_fee_percent, market.bid_fee_percent, market.symbol_pair) > 0;
 		}
 
 		/// <summary>	Inserts a market. </summary>

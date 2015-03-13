@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Net;
 using System.Diagnostics;
+using System.Threading;
 
 using BitcoinRpcSharp.Responses;
 using BitsharesRpc;
@@ -28,6 +29,8 @@ namespace MetaDaemon
 
 	public partial class MetaDaemonApi : DaemonMySql, IDisposable
 	{
+		AsyncPump m_scheduler;
+
 		ApiServer<IDummyDaemon> m_server;
 		SharedApi<IDummyDaemon> m_api;
 
@@ -47,13 +50,16 @@ namespace MetaDaemon
 								string bitsharesFeeAccount,
 								string adminUsernames,
 								string masterSiteUrl,
-								string masterSiteIp) : 
+								string masterSiteIp,
+								AsyncPump scheduler) : 
 								base(bitsharesConfig, bitcoinConfig, bitsharesAccount, adminUsernames,
 								databaseName, databaseUser, databasePassword)
 		{
 			m_bitshaaresFeeAccount = bitsharesFeeAccount;
 			m_bitcoinFeeAddress = bitcoinFeeAddress;
 			m_masterSiteUrl = masterSiteUrl.TrimEnd('/');
+
+			m_scheduler = scheduler;
 
 			ServicePointManager.ServerCertificateValidationCallback = Validator;
 
@@ -439,11 +445,40 @@ namespace MetaDaemon
 						}
 					}
 				}
+
+				//
+				// wait for a stop command to exit gracefully
+				//
+
+				string command = await ReadConsoleAsync(new CancellationTokenSource(5 * 1000).Token);
+				if (command != null)
+				{
+					Console.WriteLine("got command: " + command);
+
+					if (command == "stop")
+					{
+						m_scheduler.Dispose();
+					}
+				}
+
+				// remember we never get here unless a command was entered
 			}
 			catch (Exception e)
 			{
 				LogGeneralException(e.ToString());
 			}
+		}
+
+		/// <summary>	Reads console asynchronous. </summary>
+		///
+		/// <remarks>	Paul, 13/03/2015. </remarks>
+		///
+		/// <param name="cancel">	The cancel. </param>
+		///
+		/// <returns>	The console asynchronous. </returns>
+		public static Task<string> ReadConsoleAsync(CancellationToken cancel)
+		{
+			return Task.Run(() => Console.ReadLine(), cancel);
 		}
 
 		/// <summary>	Gets the API server. </summary>
