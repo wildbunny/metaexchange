@@ -41,6 +41,8 @@ namespace MetaDaemon
 
 		string m_bitshaaresFeeAccount;
 		string m_bitcoinFeeAddress;
+
+		Task<string> m_lastCommand;
 		
 		public MetaDaemonApi(	RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
 								string bitsharesAccount,
@@ -94,16 +96,6 @@ namespace MetaDaemon
 			
 			m_server.HandlePostRoute(Routes.kSubmitAddress,				OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 			m_server.HandleGetRoute(Routes.kGetAllMarkets,				m_api.OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-
-			//m_server.HandlePostRoute(Routes.kGetOrderStatus,			m_api.OnGetOrderStatus, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			//m_server.HandlePostRoute(Routes.kGetMarket,					m_api.OnGetMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			/*m_server.HandlePostRoute(Routes.kGetLastTransactions,		m_api.OnGetLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetMyLastTransactions,		m_api.OnGetMyLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);*/
-			
-
-			// internal requests
-			//m_server.HandleGetRoute(Routes.kPing,						OnPing, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			//m_server.HandlePostRoute(Routes.kGetAllTransactionsSince,	m_api.OnGetAllTransactionsSinceInternal, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 		}
 
 		/// <summary>
@@ -314,7 +306,6 @@ namespace MetaDaemon
 				CheckMarketHandlers(allMarkets);
 
 				// get all markets
-				//Dictionary<string, MarketRow> allMarkets = m_marketHandlers.Select<KeyValuePair<string, MarketBase>, MarketRow>(h => h.Value.m_Market).ToDictionary(m => m.symbol_pair);
 				RecomputeTransactionLimitsAndPrices(allMarkets);
 
 				//
@@ -365,6 +356,8 @@ namespace MetaDaemon
 				// process bitcoin deposits
 				// 
 
+				List<TransactionsRow> pendingTransactions = m_dataAccess.GetAllPendingTransactions();
+
 				foreach (TransactionSinceBlock deposit in bitcoinDeposits)
 				{
 					// figure out which market each deposit belongs to
@@ -379,15 +372,34 @@ namespace MetaDaemon
 					// this needs to happen for every transaction
 					RecomputeTransactionLimitsAndPrices(allMarkets);
 				}
+
+				//
+				// handle changes in transaction status
+				//
+
+				List<TransactionsRow> updatedTrans = new List<TransactionsRow>();
+				foreach (TransactionsRow pending in pendingTransactions)
+				{
+					TransactionsRow updated = m_dataAccess.GetTransaction(pending.received_txid);
+					if (updated.status != MetaOrderStatus.pending)
+					{
+						updatedTrans.Add(updated);
+					}
+				}
 				
 				//
 				// push any new transactions, make sure site acknowledges receipt
 				//
 
 				uint latestTid = m_dataAccess.GetLastTransactionUid();
-				if (latestTid > siteLastTid)
+				if (latestTid > siteLastTid || updatedTrans.Count > 0)
 				{
 					List<TransactionsRow> newTrans = m_dataAccess.GetAllTransactionsSince(siteLastTid);
+
+					// lump them together
+					newTrans.AddRange(updatedTrans);
+
+					// send 'em all
 					string result = await ApiPush<List<TransactionsRow>>(Routes.kPushTransactions, newTrans);
 					if (bool.Parse(result))
 					{
@@ -450,18 +462,23 @@ namespace MetaDaemon
 				// wait for a stop command to exit gracefully
 				//
 
-				string command = await ReadConsoleAsync(new CancellationTokenSource(5 * 1000).Token);
-				if (command != null)
+				if (m_lastCommand == null)
 				{
+					m_lastCommand = ReadConsoleAsync();
+
+					string command = await m_lastCommand;
+
+					// remember we never get here unless a command was entered
+				
 					Console.WriteLine("got command: " + command);
 
 					if (command == "stop")
 					{
 						m_scheduler.Dispose();
 					}
-				}
 
-				// remember we never get here unless a command was entered
+					m_lastCommand = null;
+				}
 			}
 			catch (Exception e)
 			{
@@ -476,9 +493,9 @@ namespace MetaDaemon
 		/// <param name="cancel">	The cancel. </param>
 		///
 		/// <returns>	The console asynchronous. </returns>
-		public static Task<string> ReadConsoleAsync(CancellationToken cancel)
+		public static Task<string> ReadConsoleAsync()
 		{
-			return Task.Run(() => Console.ReadLine(), cancel);
+			return Task.Run(() => Console.ReadLine());
 		}
 
 		/// <summary>	Gets the API server. </summary>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 using Monsterer.Request;
 using MetaData;
@@ -103,6 +104,41 @@ namespace WebDaemonShared
 			return null;
 		}
 
+		/// <summary>	Executes the produce report action. </summary>
+		///
+		/// <remarks>	Paul, 14/03/2015. </remarks>
+		///
+		/// <param name="ctx">  	The context. </param>
+		/// <param name="dummy">	The dummy. </param>
+		///
+		/// <returns>	A Task. </returns>
+		public Task OnProduceReport(RequestContext ctx, T dummy)
+		{
+			uint sinceTid = RestHelpers.GetQueryArg<uint, ApiExceptionMissingParameter>(ctx, WebForms.kSince);
+			string market = RestHelpers.GetQueryArg<string>(ctx, WebForms.kSymbolPair);
+
+			MarketRow m = m_database.GetMarket(market);
+			if (m == null)
+			{
+				throw new ApiExceptionUnknownMarket(market);
+			}
+
+			List<TransactionsRow> allTrans = m_database.GetCompletedTransactionsInMarketSince(market, sinceTid);
+
+			StringWriter stream = new StringWriter();
+
+			stream.WriteLine("All completed transactions in market " + market + " since tid " + sinceTid + "<br/>");
+			stream.WriteLine("<br/>");
+			stream.WriteLine("Tid, Type, Price, Amount, Fee, Date<br/>");
+			foreach (TransactionsRow t in allTrans)
+			{
+				stream.WriteLine(t.uid + "," + t.order_type + "," + t.price + "," + t.amount + "," + t.fee + "," + t.date + "<br/>");
+			}
+
+			ctx.Respond(stream.ToString(), System.Net.HttpStatusCode.OK);
+			return null;
+		}
+
 		/// <summary>	Executes the get my last transactions action. </summary>
 		///
 		/// <remarks>	Paul, 11/02/2015. </remarks>
@@ -147,13 +183,20 @@ namespace WebDaemonShared
 			if (e.m_e is ApiException)
 			{
 				ApiException apiE = (ApiException)e.m_e;
-				e.m_ctx.Respond<ApiError>(apiE.m_error);
+
+				if (e.m_ctx.ListenerResponse.Headers.Count == 0)
+				{
+					e.m_ctx.Respond<ApiError>(apiE.m_error);
+				}
 			}
 			else if (e.m_ctx != null)
 			{
 				m_database.LogGeneralException(e.m_e.ToString());
 
-				e.m_ctx.Respond<ApiError>(new ApiExceptionGeneral().m_error);
+				if (e.m_ctx.ListenerResponse.Headers.Count == 0)
+				{
+					e.m_ctx.Respond<ApiError>(new ApiExceptionGeneral().m_error);
+				}
 			}
 			else
 			{

@@ -68,7 +68,7 @@ namespace MetaExchange.Pages
 																
 								using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
 								{
-									SPAN("Service status: ");
+									SPAN("Market status: ");
 									SPAN("{{status}}", "", "label label-{{label}}");
 								}
 							}

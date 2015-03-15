@@ -28,7 +28,7 @@ var controlFunc = function ($scope, $http, $timeout)
 			}
 			else
 			{
-				$scope.status = "Green";
+				$scope.status = "Online";
 				$scope.label = "info";
 			}
 						

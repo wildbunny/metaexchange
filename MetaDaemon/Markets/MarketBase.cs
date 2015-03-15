@@ -81,7 +81,7 @@ namespace MetaDaemon.Markets
 
 			if (bitAssetAmount > m_market.bid_max)
 			{
-				throw new RefundBitsharesException("Over " + Numeric.TruncateDecimal(m_market.bid_max, 8) + " " + asset.symbol + "!");
+				throw new RefundBitsharesException("Over " + Numeric.SerialisedDecimal(m_market.bid_max) + " " + asset.symbol + "!");
 			}
 
 			// get the BTC amount we need to transfer
@@ -127,11 +127,11 @@ namespace MetaDaemon.Markets
 		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, SenderToDepositRow s2d, MetaOrderType orderType)
 		{
 			// make sure failures after this point do not result in repeated sending
-			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType);
+			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType, MetaOrderStatus.processing, TransactionPolicy.REPLACE);
 
 			if (t.Amount > m_market.ask_max)
 			{
-				throw new RefundBitcoinException("Over " + Numeric.TruncateDecimal(m_market.ask_max, 8) + " " + asset.symbol + "!");
+				throw new RefundBitcoinException("Over " + Numeric.SerialisedDecimal(m_market.ask_max) + " " + asset.symbol + "!");
 			}
 
 			string bitsharesAccount = s2d.receiving_address;
@@ -157,7 +157,7 @@ namespace MetaDaemon.Markets
 			decimal amountAsset = bitAssetAmountNoFee - fee;
 
 			amountAsset = asset.Truncate(amountAsset);
-			
+
 			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
 			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, bitAssetAmountNoFee, m_market.ask, fee);
 

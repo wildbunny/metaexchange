@@ -11,6 +11,13 @@ using WebDaemonSharedTables;
 
 namespace WebDaemonShared
 {
+	public enum TransactionPolicy
+	{
+		INSERT,
+		REPLACE,
+		IGNORE
+	}
+
 	public class MySqlData
 	{
 		protected Database m_database;
@@ -39,12 +46,14 @@ namespace WebDaemonShared
 
 		public bool HasDepositBeenCredited(string trxId)
 		{
-			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@trx;", trxId) > 0;
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM transactions WHERE received_txid=@trx AND status!=@pend;", trxId, MetaOrderStatus.pending) > 0;
 		}
 
-		public void MarkDespositAsCreditedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType)
+		public void MarkDespositAsCreditedStart(string receivedTxid, string depositAddress, string symbolPair, 
+												MetaOrderType orderType, MetaOrderStatus status = MetaOrderStatus.processing,
+												TransactionPolicy policy = TransactionPolicy.INSERT)
 		{
-			MarkTransactionStart(receivedTxid, depositAddress, symbolPair, orderType);
+			MarkTransactionStart(receivedTxid, depositAddress, symbolPair, orderType, status, policy);
 		}
 
 		public void MarkDespositAsCreditedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, decimal price, decimal fee)
@@ -112,9 +121,22 @@ namespace WebDaemonShared
 		/// <param name="notes">	   	(Optional) the notes. </param>
 		public void InsertTransaction(	string symbolPair, string depositAddress, MetaOrderType orderType, 
 										string receivedTxid, string sentTxid, decimal amount, decimal price, decimal fee,
-										MetaOrderStatus status, DateTime date, string notes = null, bool replace=false)
+										MetaOrderStatus status, DateTime date, string notes = null, TransactionPolicy policy = TransactionPolicy.INSERT)
 		{
-			string verb = replace ? "REPLACE" : "INSERT";
+			string verb;
+			if (policy == TransactionPolicy.INSERT || policy == TransactionPolicy.REPLACE)
+			{
+				verb = policy.ToString();
+			}
+			else if (policy == TransactionPolicy.IGNORE)
+			{
+				verb = "INSERT IGNORE";
+			}
+			else
+			{
+				throw new NotImplementedException();
+			}
+
 			m_database.Statement(	verb + " INTO transactions (received_txid, deposit_address, sent_txid, symbol_pair, amount, price, fee, date, status, notes, order_type) VALUES(@a,@b,@c,@d,@e,@f,@g,@h,@i,@j,@k);",
 									receivedTxid, depositAddress, sentTxid, symbolPair, amount, price, fee, date, status, notes, orderType);
 		}
@@ -128,9 +150,11 @@ namespace WebDaemonShared
 		/// <param name="symbolPair">	 	The symbol pair. </param>
 		/// <param name="orderType">	 	Type of the order. </param>
 		/// <param name="amount">		 	The amount. </param>
-		public void MarkTransactionStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType)
+		public void MarkTransactionStart(	string receivedTxid, string depositAddress, string symbolPair, 
+											MetaOrderType orderType, MetaOrderStatus status = MetaOrderStatus.processing,
+											TransactionPolicy policy = TransactionPolicy.INSERT)
 		{
-			InsertTransaction(symbolPair, depositAddress, orderType, receivedTxid, null, 0, 0, 0, MetaOrderStatus.processing, DateTime.UtcNow);
+			InsertTransaction(symbolPair, depositAddress, orderType, receivedTxid, null, 0, 0, 0, status, DateTime.UtcNow, null, policy);
 		}
 
 		/// <summary>	Mark transaction end./ </summary>
@@ -406,6 +430,16 @@ namespace WebDaemonShared
 			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE uid>@lastUid ORDER BY uid;", lastUid);
 		}
 
+		/// <summary>	Gets all pending transactions. </summary>
+		///
+		/// <remarks>	Paul, 13/03/2015. </remarks>
+		///
+		/// <returns>	all pending transactions. </returns>
+		public List<TransactionsRow> GetAllPendingTransactions()
+		{
+			return m_database.Query<TransactionsRow>("SELECT * FROM transactions WHERE status=@s;", MetaOrderStatus.pending);
+		}
+
 		/// <summary>	Updates the transaction processed for market. </summary>
 		///
 		/// <remarks>	Paul, 18/02/2015. </remarks>
@@ -527,7 +561,7 @@ namespace WebDaemonShared
 		/// <param name="tid">		 	The tid. </param>
 		public void UpdateLastSeenTransactionForSite(string symbolPair, uint tid)
 		{
-			m_database.Statement("UPDATE markets SET last_tid=@t WHERE symbol_pair=@s;", tid, symbolPair);
+			m_database.Statement("UPDATE markets SET last_tid=@t WHERE symbol_pair=@s AND last_tid<@old;", tid, symbolPair, tid);
 		}
 
 		/// <summary>	Updates the market status. </summary>

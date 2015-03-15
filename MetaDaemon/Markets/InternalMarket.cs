@@ -333,7 +333,18 @@ namespace MetaDaemon.Markets
 		{
 			SenderToDepositRow s2d = GetBitsharesAccountFromBitcoinDeposit(t);
 
-			BuyBitAsset(t, s2d);
+			if (t.Confirmations >= DaemonBase.kBitcoinConfirms)
+			{
+				BuyBitAsset(t, s2d);
+			}
+			else
+			{
+				// mark this transaction as pending if it doesn't already exist
+				if (m_daemon.m_Database.GetTransaction(t.TxId) == null)
+				{
+					m_daemon.m_Database.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, MetaOrderType.buy, MetaOrderStatus.pending);
+				}
+			}
 		}
 
 		/// <summary>	Executes the submit address action. </summary>

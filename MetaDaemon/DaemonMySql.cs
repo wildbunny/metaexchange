@@ -43,9 +43,11 @@ namespace MetaDaemon
 			return m_dataAccess.HasDepositBeenCredited(trxId);
 		}
 
-		public void MarkDespositAsCreditedStart(string receivedTxid, string depositAddress, string symbolPair, MetaOrderType orderType)
+		public void MarkDespositAsCreditedStart(string receivedTxid, string depositAddress, string symbolPair, 
+												MetaOrderType orderType, MetaOrderStatus status = MetaOrderStatus.processing,
+												TransactionPolicy policy = TransactionPolicy.INSERT)
 		{
-			m_dataAccess.MarkDespositAsCreditedStart(receivedTxid, depositAddress, symbolPair, orderType);
+			m_dataAccess.MarkDespositAsCreditedStart(receivedTxid, depositAddress, symbolPair, orderType, status, policy);
 		}
 
 		public void MarkDespositAsCreditedEnd(string receivedTxid, string sentTxid, MetaOrderStatus status, decimal amount, decimal price, decimal fee)
