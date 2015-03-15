@@ -83,6 +83,8 @@ namespace MetaExchange.Pages
 			// render head
 			base.Render(ctx, stream, authObj);
 
+			m_stream.WriteLine("<!-- Just for debugging purposes. Don't actually copy this line! -->		<!--[if lt IE 9]><script src=\"../../assets/js/ie8-responsive-file-warning.js\"></script><![endif]-->		<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->		<!--[if lt IE 9]>		<script src=\"https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js\"></script>	<script src=\"https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js\"></script><![endif]-->");
+
 			// begin body
 			m_stream.WriteLine("<body>");
 
@@ -182,6 +184,16 @@ namespace MetaExchange.Pages
 			m_stream.WriteLine("</body>");
 
 			base.Dispose();
+		}
+
+		/// <summary>	Creates the logo. </summary>
+		///
+		/// <remarks>	Paul, 11/03/2015. </remarks>
+		///
+		/// <returns>	The new logo. </returns>
+		protected ImgResource CreateLogo()
+		{
+			return new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg hidden-xs");
 		}
 	}
 }

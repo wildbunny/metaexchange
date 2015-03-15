@@ -123,7 +123,7 @@ namespace MetaExchange
 				foreach (TransactionsRow r in newTrans)
 				{
 					// this may have problems with partial transactions
-					database.InsertTransaction(r.symbol_pair, r.deposit_address, r.order_type, r.received_txid, r.sent_txid, r.amount, r.price, r.fee, r.status, r.date, r.notes, true);
+					database.InsertTransaction(r.symbol_pair, r.deposit_address, r.order_type, r.received_txid, r.sent_txid, r.amount, r.price, r.fee, r.status, r.date, r.notes, TransactionPolicy.REPLACE);
 
 					if (lastSeen.ContainsKey(r.symbol_pair))
 					{

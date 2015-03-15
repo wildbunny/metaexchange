@@ -27,7 +27,7 @@ namespace MetaExchange
 
 		void FeeReporting(List<FeeCollectionRow> allFees)
 		{
-			List<MarketRow> allMarkets = m_Database.GetAllMarkets();
+			Dictionary<string, MarketRow> allMarkets = m_Database.GetAllMarkets().ToDictionary(m => m.symbol_pair);
 			List<ReferralUserRow> allReferralUsers = m_Database.GetAllReferralUsers();
 
 			Dictionary<uint, ReferralUserRow> usersByUid = allReferralUsers.ToDictionary(u=>u.uid);
@@ -39,12 +39,12 @@ namespace MetaExchange
 
 			foreach (FeeCollectionRow feeRow in allFees)
 			{
-				CurrencyTypes @base, quote;
-				CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(feeRow.symbol_pair, out @base, out quote);
+				CurrenciesRow @base, quote;
+				CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(feeRow.symbol_pair, m_allCurrencies, out @base, out quote);
 
 				string bitAsset;
 				string bitcoin;
-				if (@base == CurrencyTypes.BTC)
+				if (allMarkets[feeRow.symbol_pair].flipped)
 				{
 					bitAsset = quote.ToString();
 					bitcoin = @base.ToString();

@@ -14,7 +14,8 @@ namespace WebDaemonSharedTables
 		none = 1,
 		processing,
 		completed,
-		refunded
+		refunded,
+		pending
 	}
 
 	public enum MetaOrderType

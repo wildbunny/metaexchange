@@ -88,6 +88,7 @@
     <Compile Include="DaemonBase.cs" />
     <Compile Include="DaemonMySql.cs" />
     <Compile Include="DatabaseTables.cs" />
+    <Compile Include="Deprecated.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

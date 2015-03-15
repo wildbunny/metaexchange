@@ -31,9 +31,9 @@ namespace MetaDaemon
 		public const string kWithdrawMemo = "WITHDRAW";
 
 		#if MONO
-		protected const int kBitcoinConfirms = 1;
+		public const int kBitcoinConfirms = 1;
 		#else
-		protected const int kBitcoinConfirms = 0;
+		public const int kBitcoinConfirms = 0;
 		#endif
 		
 		protected BitsharesWallet m_bitshares;
@@ -172,7 +172,7 @@ namespace MetaDaemon
 			string latestBlockHash = m_bitcoin.GetBlockHash(blockHeight);
 
 			// get all transactions of category 'receive'
-			IEnumerable<TransactionSinceBlock> transactions = m_bitcoin.ListSinceBlock(lastBlockHash, 1).transactions.Where(t => t.Category == TransactionCategory.receive && t.Confirmations >= kBitcoinConfirms);
+			IEnumerable<TransactionSinceBlock> transactions = m_bitcoin.ListSinceBlock(lastBlockHash, 1).transactions.Where(t => t.Category == TransactionCategory.receive);
 
 			foreach (TransactionSinceBlock t in transactions)
 			{

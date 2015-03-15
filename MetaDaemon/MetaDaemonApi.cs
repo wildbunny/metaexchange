@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Net;
 using System.Diagnostics;
+using System.Threading;
 
 using BitcoinRpcSharp.Responses;
 using BitsharesRpc;
@@ -28,15 +29,20 @@ namespace MetaDaemon
 
 	public partial class MetaDaemonApi : DaemonMySql, IDisposable
 	{
+		AsyncPump m_scheduler;
+
 		ApiServer<IDummyDaemon> m_server;
 		SharedApi<IDummyDaemon> m_api;
 
 		Dictionary<string, MarketBase> m_marketHandlers;
 		Dictionary<int, BitsharesAsset> m_allBitsharesAssets;
+		Dictionary<string, CurrenciesRow> m_allCurrencies;
 		List<BitsharesMarket> m_allDexMarkets;
 
 		string m_bitshaaresFeeAccount;
 		string m_bitcoinFeeAddress;
+
+		Task<string> m_lastCommand;
 		
 		public MetaDaemonApi(	RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
 								string bitsharesAccount,
@@ -46,13 +52,16 @@ namespace MetaDaemon
 								string bitsharesFeeAccount,
 								string adminUsernames,
 								string masterSiteUrl,
-								string masterSiteIp) : 
+								string masterSiteIp,
+								AsyncPump scheduler) : 
 								base(bitsharesConfig, bitcoinConfig, bitsharesAccount, adminUsernames,
 								databaseName, databaseUser, databasePassword)
 		{
 			m_bitshaaresFeeAccount = bitsharesFeeAccount;
 			m_bitcoinFeeAddress = bitcoinFeeAddress;
 			m_masterSiteUrl = masterSiteUrl.TrimEnd('/');
+
+			m_scheduler = scheduler;
 
 			ServicePointManager.ServerCertificateValidationCallback = Validator;
 
@@ -77,6 +86,8 @@ namespace MetaDaemon
 																		m_allBitsharesAssets.ContainsKey(m.base_id) &&
 																		m_allBitsharesAssets.ContainsKey(m.quote_id)).ToList();
 
+			m_allCurrencies = m_dataAccess.GetAllCurrencies();
+
 			List<MarketRow> markets = GetAllMarkets();
 			foreach (MarketRow r in markets)
 			{
@@ -85,16 +96,6 @@ namespace MetaDaemon
 			
 			m_server.HandlePostRoute(Routes.kSubmitAddress,				OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 			m_server.HandleGetRoute(Routes.kGetAllMarkets,				m_api.OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-
-			//m_server.HandlePostRoute(Routes.kGetOrderStatus,			m_api.OnGetOrderStatus, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			//m_server.HandlePostRoute(Routes.kGetMarket,					m_api.OnGetMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			/*m_server.HandlePostRoute(Routes.kGetLastTransactions,		m_api.OnGetLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandlePostRoute(Routes.kGetMyLastTransactions,		m_api.OnGetMyLastTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);*/
-			
-
-			// internal requests
-			//m_server.HandleGetRoute(Routes.kPing,						OnPing, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			//m_server.HandlePostRoute(Routes.kGetAllTransactionsSince,	m_api.OnGetAllTransactionsSinceInternal, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 		}
 
 		/// <summary>
@@ -144,14 +145,14 @@ namespace MetaDaemon
 		/// <returns>	The new handler for market. </returns>
 		MarketBase CreateHandlerForMarket(MarketRow market)
 		{
-			CurrencyTypes @base, quote;
-			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(market.symbol_pair, out @base, out quote);
+			CurrenciesRow @base, quote;
+			CurrencyHelpers.GetBaseAndQuoteFromSymbolPair(market.symbol_pair, m_allCurrencies, out @base, out quote);
 
-			if ( CurrencyHelpers.IsBitsharesAsset(@base) && quote == CurrencyTypes.BTC)
+			if ( CurrencyHelpers.IsBitsharesAsset(@base) && !CurrencyHelpers.IsBitsharesAsset(quote))
 			{
 				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, @base);
 			}
-			else if (@base == CurrencyTypes.BTC && CurrencyHelpers.IsBitsharesAsset(quote))
+			else if (!CurrencyHelpers.IsBitsharesAsset(@base) && CurrencyHelpers.IsBitsharesAsset(quote))
 			{
 				return new InternalMarket(this, market, m_bitshares, m_bitcoin, m_bitsharesAccount, @quote);
 			}
@@ -220,7 +221,7 @@ namespace MetaDaemon
 					decimal quotePrice = decimal.Parse(parts[3]);
 
 					// go do it!
-					handler.SetPricesFromSingleUnitQuantities(basePrice, quotePrice, market.GetBase() == CurrencyTypes.BTC, market);
+					handler.SetPricesFromSingleUnitQuantities(basePrice, quotePrice, market.flipped, market);
 				}
 			}
 		}
@@ -256,11 +257,11 @@ namespace MetaDaemon
 							if (!m_dataAccess.IsWithdrawalProcessed(trxid))
 							{
 								decimal amount = decimal.Parse(parts[1]);
-								CurrencyTypes type = CurrencyHelpers.FromSymbol(parts[2]);
+								CurrenciesRow type = CurrencyHelpers.FromSymbol(parts[2], m_allCurrencies);
 								string to;
 
 								string txid;
-								if (type == CurrencyTypes.BTC)
+								if ( !CurrencyHelpers.IsBitsharesAsset(type) )
 								{
 									to = m_dataAccess.GetStats().bitcoin_withdraw_address;
 									Debug.Assert(to != null);
@@ -299,12 +300,12 @@ namespace MetaDaemon
 			try
 			{
 				Dictionary<string, MarketRow> allMarkets = GetAllMarkets().ToDictionary(m => m.symbol_pair);
+				m_allCurrencies = m_dataAccess.GetAllCurrencies();
 
 				// create any handlers we need for new markets
 				CheckMarketHandlers(allMarkets);
 
 				// get all markets
-				//Dictionary<string, MarketRow> allMarkets = m_marketHandlers.Select<KeyValuePair<string, MarketBase>, MarketRow>(h => h.Value.m_Market).ToDictionary(m => m.symbol_pair);
 				RecomputeTransactionLimitsAndPrices(allMarkets);
 
 				//
@@ -339,7 +340,7 @@ namespace MetaDaemon
 							if (IsDepositForMarket(l.memo, m.symbol_pair))
 							{
 								// make sure the deposit is for this market!
-								if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol)))
+								if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol, m_allCurrencies)))
 								{
 									kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
 								}
@@ -355,6 +356,8 @@ namespace MetaDaemon
 				// process bitcoin deposits
 				// 
 
+				List<TransactionsRow> pendingTransactions = m_dataAccess.GetAllPendingTransactions();
+
 				foreach (TransactionSinceBlock deposit in bitcoinDeposits)
 				{
 					// figure out which market each deposit belongs to
@@ -369,15 +372,34 @@ namespace MetaDaemon
 					// this needs to happen for every transaction
 					RecomputeTransactionLimitsAndPrices(allMarkets);
 				}
+
+				//
+				// handle changes in transaction status
+				//
+
+				List<TransactionsRow> updatedTrans = new List<TransactionsRow>();
+				foreach (TransactionsRow pending in pendingTransactions)
+				{
+					TransactionsRow updated = m_dataAccess.GetTransaction(pending.received_txid);
+					if (updated.status != MetaOrderStatus.pending)
+					{
+						updatedTrans.Add(updated);
+					}
+				}
 				
 				//
 				// push any new transactions, make sure site acknowledges receipt
 				//
 
 				uint latestTid = m_dataAccess.GetLastTransactionUid();
-				if (latestTid > siteLastTid)
+				if (latestTid > siteLastTid || updatedTrans.Count > 0)
 				{
 					List<TransactionsRow> newTrans = m_dataAccess.GetAllTransactionsSince(siteLastTid);
+
+					// lump them together
+					newTrans.AddRange(updatedTrans);
+
+					// send 'em all
 					string result = await ApiPush<List<TransactionsRow>>(Routes.kPushTransactions, newTrans);
 					if (bool.Parse(result))
 					{
@@ -435,11 +457,45 @@ namespace MetaDaemon
 						}
 					}
 				}
+
+				//
+				// wait for a stop command to exit gracefully
+				//
+
+				if (m_lastCommand == null)
+				{
+					m_lastCommand = ReadConsoleAsync();
+
+					string command = await m_lastCommand;
+
+					// remember we never get here unless a command was entered
+				
+					Console.WriteLine("got command: " + command);
+
+					if (command == "stop")
+					{
+						m_scheduler.Dispose();
+					}
+
+					m_lastCommand = null;
+				}
 			}
 			catch (Exception e)
 			{
 				LogGeneralException(e.ToString());
 			}
+		}
+
+		/// <summary>	Reads console asynchronous. </summary>
+		///
+		/// <remarks>	Paul, 13/03/2015. </remarks>
+		///
+		/// <param name="cancel">	The cancel. </param>
+		///
+		/// <returns>	The console asynchronous. </returns>
+		public static Task<string> ReadConsoleAsync()
+		{
+			return Task.Run(() => Console.ReadLine());
 		}
 
 		/// <summary>	Gets the API server. </summary>
@@ -464,6 +520,14 @@ namespace MetaDaemon
 		public Dictionary<int, BitsharesAsset> m_AllBitsharesAssets
 		{
 			get { return m_allBitsharesAssets; }
+		}
+
+		/// <summary>	Gets all currencies. </summary>
+		///
+		/// <value>	The m all currencies. </value>
+		public Dictionary<string, CurrenciesRow> m_AllCurrencies
+		{
+			get { return m_allCurrencies; }
 		}
 	}
 }

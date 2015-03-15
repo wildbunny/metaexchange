@@ -27,6 +27,13 @@ namespace MetaExchange.Pages
 
 			IEnumerable<string> markets = ctx.Request.GetWildcardParameters(2);
 
+			// get any referral partner out of the query args
+			int refid = 0;
+			if (ctx.Request.QueryArgs.Args.ContainsKey(WebForms.kReferralId))
+			{
+				int.TryParse((string)ctx.Request.QueryArgs.Args[WebForms.kReferralId], out refid);
+			}
+
 			string @base="", quote="";
 			if (markets.Count() == 2)
 			{
@@ -41,7 +48,7 @@ namespace MetaExchange.Pages
 				ctx.Respond(System.Net.HttpStatusCode.NotFound);
 			}
 
-			ImgResource logo = new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg");
+			ImgResource logo = CreateLogo();
 			AddResource(logo);
 
 			// render head
@@ -61,7 +68,7 @@ namespace MetaExchange.Pages
 																
 								using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
 								{
-									SPAN("Service status: ");
+									SPAN("Market status: ");
 									SPAN("{{status}}", "", "label label-{{label}}");
 								}
 							}
@@ -105,7 +112,7 @@ namespace MetaExchange.Pages
 
 										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.name, WebForms.kReferralId,
-														HtmlAttributes.value, "0");
+														HtmlAttributes.value, refid);
 
 										fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.name, WebForms.kSymbolPair,
@@ -174,7 +181,7 @@ namespace MetaExchange.Pages
 
 									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.name, WebForms.kReferralId,
-														HtmlAttributes.value, "0");
+														HtmlAttributes.value, refid);
 
 									fm.Input(stream, HtmlAttributes.type, InputTypes.hidden,
 														HtmlAttributes.id, "symbolPairId",

@@ -67,15 +67,16 @@ namespace MetaData
 		public string asset_name;
 		public decimal realised_spread_percent;
 		public decimal price_delta;
-		
-		public CurrencyTypes GetBase()
+		public bool flipped;
+
+		public CurrenciesRow GetBase(Dictionary<string, CurrenciesRow> currencyMap)
 		{
-			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[0]);
+			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[0], currencyMap);
 		}
 
-		public CurrencyTypes GetQuote()
+		public CurrenciesRow GetQuote(Dictionary<string, CurrenciesRow> currencyMap)
 		{
-			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[1]);
+			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[1], currencyMap);
 		}
 	}
 
@@ -125,5 +126,17 @@ namespace MetaData
 	{
 		public string email_from;
 		public string email_to;
+	}
+
+	public class CurrenciesRow : ICoreType
+	{
+		public string symbol;
+		public bool bitshares;
+		public bool uia;
+
+		public override string ToString()
+		{
+			return symbol;
+		}
 	}
 }

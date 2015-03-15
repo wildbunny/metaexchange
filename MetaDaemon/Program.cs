@@ -46,15 +46,17 @@ namespace MetaDaemon
 				// create a scheduler so we can be sure of thread affinity
 				AsyncPump scheduler = new AsyncPump(Thread.CurrentThread, OnException);
 
-				MetaDaemonApi daemon = new MetaDaemonApi(	new RpcConfig { m_url = bitsharesUrl, m_rpcUser = bitsharesUser, m_rpcPassword = bitsharesPassword },
-															new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
-															bitsharesAccount, 
-															database, databaseUser, databasePassword,
-															apiListen,
-															bitcoinFeeAddress, bitsharesFeeAccount, adminUsernames,
-															masterSiteUrl, masterSiteIp);
-
-				scheduler.RunWithUpdate(daemon.Start, daemon.Update, 5);
+				using (MetaDaemonApi daemon = new MetaDaemonApi(new RpcConfig { m_url = bitsharesUrl, m_rpcUser = bitsharesUser, m_rpcPassword = bitsharesPassword },
+																new RpcConfig { m_url = bitcoinUrl, m_rpcUser = bitcoinUser, m_rpcPassword = bitcoinPassword, m_useTestnet = bitcoinUseTestNet },
+																bitsharesAccount,
+																database, databaseUser, databasePassword,
+																apiListen,
+																bitcoinFeeAddress, bitsharesFeeAccount, adminUsernames,
+																masterSiteUrl, masterSiteIp,
+																scheduler))
+				{
+					scheduler.RunWithUpdate(daemon.Start, daemon.Update, 5);
+				}
 
 				Console.WriteLine("Exiting...");
 			}

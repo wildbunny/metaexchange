@@ -15,6 +15,7 @@ namespace WebDaemonShared
 		public const string kGetAllMarkets = "/api/1/getAllMarkets";
 		public const string kGetLastTransactions = "/api/1/getLastTransactions";
 		public const string kGetMyLastTransactions = "/api/1/getMyLastTransactions";
+		public const string kProduceReport = "/api/1/report";
 
 		public const string kPushSenderToDeposit = "/api/1/pushSenderToDeposit";
 		public const string kPushTransactions = "/api/1/pushTransactions";

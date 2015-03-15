@@ -27,7 +27,7 @@ namespace MetaExchange.Pages
 
 			AddResource(new CssResource(Constants.kWebRoot, "/css/markets.css", true));
 
-			ImgResource logo = new ImgResource(Constants.kWebRoot, "/images/logoSplash.png", "", false, HtmlAttributes.@class, "splashImg" );
+			ImgResource logo = CreateLogo();
 			AddResource(logo);
 
 			// render head
@@ -57,7 +57,7 @@ namespace MetaExchange.Pages
 						{
 							using (new Table(stream, "", 4, 4, "table table-striped table-hover noMargin", new string[] 
 								{ "",		"hidden-sm hidden-xs hidden-md",	"",			"",						"",			"hidden-xs",		"hidden-xs",	"hidden-xs hidden-sm",	"hidden-xs hidden-sm" },
-								"Market",	"Asset name",						"Price",	"24 hour volume (BTC)", "Spread %", "Ask",				"Bid",				"Buy fee (%)",	"Sell fee (%)"))
+								"Market",	"Currency",						"Price",	"Volume (BTC)", "Spread %", "Ask",				"Bid",				"Buy fee (%)",	"Sell fee (%)"))
 							{
 								using (var tr = new TR(stream, "ng-repeat", "t in allMarkets", HtmlAttributes.@class, "clickable-row",
 																								"ng-click", 
