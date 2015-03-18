@@ -32,6 +32,7 @@ namespace MetaDaemon.Markets
 
 		protected BitsharesAsset m_asset;
 		protected PriceDiscovery m_prices;
+		protected CurrenciesRow m_currency;
 
 		protected decimal m_lastFeedPrice;
 		
@@ -45,9 +46,11 @@ namespace MetaDaemon.Markets
 		/// <param name="bitshares">	   	The bitshares. </param>
 		/// <param name="bitcoin">		   	The bitcoin. </param>
 		/// <param name="bitsharesAccount">	The bitshares account. </param>
-		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount, CurrenciesRow bitsharesAsset) : 
+		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, 
+								string bitsharesAccount, CurrenciesRow bitsharesAsset) : 
 								base(daemon, market, bitshares, bitcoin, bitsharesAccount)
 		{
+			m_currency = bitsharesAsset;
 			m_flipped = m_market.GetBase(daemon.m_AllCurrencies) != bitsharesAsset;
 			m_asset = m_bitshares.BlockchainGetAsset(CurrencyHelpers.ToBitsharesSymbol(bitsharesAsset));
 
@@ -118,6 +121,22 @@ namespace MetaDaemon.Markets
 			{
 				// only non zero balances return data, so this guard is necessary
 				baseBalance = m_asset.GetAmountFromLarimers(bitsharesBalances[m_asset.id]);
+			}
+
+			if (m_currency.uia)
+			{
+				// with UIA we got to handle the maximum buy size differently
+				BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
+				if (m_asset.issuer_account_id == account.id)
+				{
+					// we are the issuer!
+
+					// refresh the asset
+					m_asset = m_bitshares.BlockchainGetAsset(m_asset.symbol);
+
+					// this is how much we can issue, so lets stick that in there
+					baseBalance = m_asset.GetAmountFromLarimers(m_asset.maximum_share_supply - m_asset.current_share_supply);
+				}
 			}
 
 			decimal newAskMax, newBidMax;
@@ -228,7 +247,7 @@ namespace MetaDaemon.Markets
 				}
 
 				string btcAddress = s2d.receiving_address;
-				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_asset, s2d.deposit_address, MetaOrderType.sell);
+				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_asset, s2d.deposit_address, MetaOrderType.sell,  m_currency.uia);
 
 				if (m_market.price_discovery)
 				{
@@ -303,7 +322,7 @@ namespace MetaDaemon.Markets
 					m_market.ask = m_prices.GetAskForBuy(informed);
 				}
 
-				SendBitAssetsToDepositor(t, m_asset, s2d, MetaOrderType.buy);
+				SendBitAssetsToDepositor(t, m_asset, s2d, MetaOrderType.buy, m_currency.uia);
 
 				if (m_market.price_discovery)
 				{

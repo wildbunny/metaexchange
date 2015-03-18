@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 using BitsharesRpc;
 using BitcoinRpcSharp;
@@ -72,7 +73,8 @@ namespace MetaDaemon.Markets
 		/// <param name="asset">	 	The asset. </param>
 		///
 		/// <returns>	A string. </returns>
-		protected virtual string SendBitcoinsToDepositor(string btcAddress, string trxId, ulong amount, BitsharesAsset asset, string depositAddress, MetaOrderType orderType)
+		protected virtual string SendBitcoinsToDepositor(	string btcAddress, string trxId, ulong amount, BitsharesAsset asset,
+															string depositAddress, MetaOrderType orderType, bool burnUia)
 		{
 			// make sure failures after this point dont result in multiple credits
 			m_daemon.MarkDespositAsCreditedStart(trxId, depositAddress, m_market.symbol_pair, orderType);
@@ -110,6 +112,16 @@ namespace MetaDaemon.Markets
 			// mark this in our records
 			m_daemon.MarkDespositAsCreditedEnd(trxId, txid, MetaOrderStatus.completed, bitAssetAmount, m_market.bid, fee);
 
+			if (burnUia)
+			{
+				// make sure we were the issuer for this asset before we start burning it!
+				BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
+				if (asset.issuer_account_id == account.id)
+				{
+					m_bitshares.WalletBurn(bitAssetAmount, asset.symbol, m_bitsharesAccount, BurnForOrAgainst.@for, m_bitsharesAccount);
+				}
+			}
+
 			return txid;
 		}
 
@@ -124,7 +136,9 @@ namespace MetaDaemon.Markets
 		/// <param name="asset">	The asset. </param>
 		///
 		/// <returns>	A BitsharesTransactionResponse. </returns>
-		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, SenderToDepositRow s2d, MetaOrderType orderType)
+		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, 
+																		SenderToDepositRow s2d, MetaOrderType orderType,
+																		bool issueUia)
 		{
 			// make sure failures after this point do not result in repeated sending
 			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType, MetaOrderStatus.processing, TransactionPolicy.REPLACE);
@@ -158,7 +172,16 @@ namespace MetaDaemon.Markets
 
 			amountAsset = asset.Truncate(amountAsset);
 
-			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
+			BitsharesTransactionResponse bitsharesTrx;
+			if (issueUia)
+			{
+				bitsharesTrx = m_bitshares.WalletIssueAsset(amountAsset, asset.symbol, bitsharesAccount);
+			}
+			else
+			{
+				bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
+			}
+			
 			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, bitAssetAmountNoFee, m_market.ask, fee);
 
 			return bitsharesTrx;

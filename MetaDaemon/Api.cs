@@ -47,45 +47,63 @@ namespace MetaDaemon
 		/// <returns>	A Task. </returns>
 		Task OnSubmitAddress(RequestContext ctx, IDummyDaemon dummy)
 		{
-			string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
-			string receivingAddress = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kReceivingAddress);
-			MetaOrderType orderType = RestHelpers.GetPostArg<MetaOrderType, ApiExceptionMissingParameter>(ctx, WebForms.kOrderType);
-			uint referralUser = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
-
-			if (!m_marketHandlers.ContainsKey(symbolPair))
+			if (m_suspended)
 			{
-				throw new ApiExceptionUnknownMarket(symbolPair);
+				throw new ApiExceptionNetworkAlert();
 			}
-
-			// prevent our own deposit addresses from being used as receiving addresses
-			if (m_dataAccess.GetSenderDepositFromDeposit(receivingAddress, symbolPair, referralUser) != null)
+			else
 			{
-				throw new ApiExceptionInvalidAddress("<internal deposit address>");
+				string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
+				string receivingAddress = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kReceivingAddress);
+				MetaOrderType orderType = RestHelpers.GetPostArg<MetaOrderType, ApiExceptionMissingParameter>(ctx, WebForms.kOrderType);
+				uint referralUser = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
+
+				if (!m_marketHandlers.ContainsKey(symbolPair))
+				{
+					throw new ApiExceptionUnknownMarket(symbolPair);
+				}
+
+				// prevent our own deposit addresses from being used as receiving addresses
+				if (m_dataAccess.GetSenderDepositFromDeposit(receivingAddress, symbolPair, referralUser) != null)
+				{
+					throw new ApiExceptionInvalidAddress("<internal deposit address>");
+				}
+				else if (m_bitsharesAccount == receivingAddress)
+				{
+					throw new ApiExceptionInvalidAccount(m_bitsharesAccount);
+				}
+
+				// get the handler for this market
+				MarketBase market = m_marketHandlers[symbolPair];
+
+				// get the response and send it
+				SubmitAddressResponse response = market.OnSubmitAddress(receivingAddress, orderType, referralUser);
+
+				//ctx.Respond<SubmitAddressResponse>(response);
+				m_api.SendCorsResponse<SubmitAddressResponse>(ctx, response);
 			}
-
-			// get the handler for this market
-			MarketBase market = m_marketHandlers[symbolPair];
-
-			// get the response and send it
-			SubmitAddressResponse response = market.OnSubmitAddress(receivingAddress, orderType, referralUser);
-
-			ctx.Respond<SubmitAddressResponse>(response);
 
 			return null;
 		}
 
-		/// <summary>	Executes the ping action. </summary>
+		/// <summary>	Executes the submit address action. </summary>
 		///
-		/// <remarks>	Paul, 21/02/2015. </remarks>
+		/// <remarks>	Paul, 17/03/2015. </remarks>
 		///
 		/// <param name="ctx">  	The context. </param>
 		/// <param name="dummy">	The dummy. </param>
 		///
 		/// <returns>	A Task. </returns>
-		public Task OnPing(RequestContext ctx, IDummyDaemon dummy)
+		Task OnGetAllMarkets(RequestContext ctx, IDummyDaemon dummy)
 		{
-			ctx.Respond<bool>(true);
-			return null;
+			if (m_suspended)
+			{
+				throw new ApiExceptionNetworkAlert();
+			}
+			else
+			{
+				return m_api.OnGetAllMarkets(ctx, dummy);
+			}
 		}
 	}
 }

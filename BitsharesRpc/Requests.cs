@@ -185,6 +185,12 @@ namespace BitsharesRpc
 		vote_recommended
 	}
 
+	public enum BurnForOrAgainst
+	{
+		@for,
+		against
+	}
+
 	/// <summary>
 	/// {"jsonrpc":"2.0","id":1,"method":"blockchain_list_assets","params":[]}
 	/// </summary>

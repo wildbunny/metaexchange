@@ -157,7 +157,7 @@ namespace WebDaemonShared
 		/// <param name="symbol">	The symbol. </param>
 		///
 		/// <returns>	The CurrencyTypes. </returns>
-		static public CurrenciesRow FromBitsharesSymbol(string symbol, Dictionary<string, CurrenciesRow> currencyMap)
+		static public CurrenciesRow FromBitsharesSymbol(string symbol, Dictionary<string, CurrenciesRow> currencyMap, bool isUia)
 		{
 			if (symbol == kBtsSymbol)
 			{
@@ -166,7 +166,8 @@ namespace WebDaemonShared
 			}
 			else
 			{
-				return FromSymbol(kBitassetPrefix + symbol, currencyMap);
+				string prefix = isUia ? "" : kBitassetPrefix;
+				return FromSymbol(prefix + symbol, currencyMap);
 			}
 		}
 

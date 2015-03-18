@@ -375,6 +375,25 @@ namespace BitsharesRpc
 			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue, amount, symbol, toAccount, memo);
 		}
 
+		/// <summary>	Wallet burn. </summary>
+		///
+		/// <remarks>	Paul, 16/03/2015. </remarks>
+		///
+		/// <param name="amount">			The amount. </param>
+		/// <param name="symbol">			The symbol. </param>
+		/// <param name="fromAccount">  	from account. </param>
+		/// <param name="vote">				The vote. </param>
+		/// <param name="toAccount">		to account. </param>
+		/// <param name="publicMessage">	(Optional) message describing the public. </param>
+		/// <param name="annonymous">   	(Optional) true to annonymous. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		public BitsharesTransactionResponse WalletBurn(decimal amount, string symbol, string fromAccount, BurnForOrAgainst vote, string toAccount, 
+														string publicMessage="", bool annonymous=false)
+		{
+			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_burn, amount, symbol, fromAccount, vote, toAccount, publicMessage, annonymous);
+		}
+
 		/// <summary>	Wallet address create. </summary>
 		///
 		/// <remarks>	Paul, 25/01/2015. </remarks>

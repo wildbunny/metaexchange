@@ -267,6 +267,29 @@ namespace MetaExchange
 			return null;
 		}
 
+		/// <summary>	Result is exception. </summary>
+		///
+		/// <remarks>	Paul, 17/03/2015. </remarks>
+		///
+		/// <param name="result">	The result. </param>
+		///
+		/// <returns>	An ApiError. </returns>
+		ApiError GetExceptionFromResult(string result)
+		{
+			ApiError errorCheck = null;
+			try
+			{
+				errorCheck = JsonSerializer.DeserializeFromString<ApiError>(result);
+				if (errorCheck.error == ApiErrorCode.None)
+				{
+					errorCheck = null;
+				}
+			}
+			catch (SerializationException) { }
+
+			return errorCheck;
+		}
+
 		/// <summary>	Forward track IP bans. </summary>
 		///
 		/// <remarks>	Paul, 16/02/2015. </remarks>
@@ -287,15 +310,10 @@ namespace MetaExchange
 				ctx.RespondJsonFromString(result);
 
 				// handle ban on exception forwarding
-				try
+				if (GetExceptionFromResult(result) != null)
 				{
-					ApiError errorCheck = JsonSerializer.DeserializeFromString<ApiError>(result);
-					if (errorCheck.error != ApiErrorCode.None)
-					{
-						throw new ApiExceptionGeneral();
-					}
+					throw new ApiExceptionGeneral();
 				}
-				catch (SerializationException) { }
 
 				return result;
 			}
@@ -481,7 +499,8 @@ namespace MetaExchange
 		/// <returns>	A Task. </returns>
 		Task OnGetAllMarkets(RequestContext ctx, IDummy dummy)
 		{
-			ctx.Respond<List<MarketRow>>(GetVisisbleMarkets(m_Database.GetAllMarkets()).ToList());
+			//ctx.Respond<List<MarketRow>>(GetVisisbleMarkets(m_Database.GetAllMarkets()).ToList());
+			m_api.SendCorsResponse<List<MarketRow>>(ctx, GetVisisbleMarkets(m_Database.GetAllMarkets()).ToList());
 			return null;
 		}
 
@@ -507,7 +526,8 @@ namespace MetaExchange
 			}
 			else
 			{
-				ctx.Respond<MarketRow>(market);
+				//ctx.Respond<MarketRow>(market);
+				m_api.SendCorsResponse<MarketRow>(ctx, market);
 			}
 
 			return null;

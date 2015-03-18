@@ -47,7 +47,7 @@ namespace BitsharesRpc
 		public string name;
 		public string description;
 		public string public_data;
-		public ulong issuer_account_id;
+		public uint issuer_account_id;
 		public ulong precision;
 		public DateTime registration_date;
 		public DateTime last_update;

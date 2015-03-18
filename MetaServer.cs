@@ -159,15 +159,21 @@ namespace MetaExchange
 
 			foreach (string daemon in allDaemons)
 			{
-				bool up;
+				bool up = false;
 				try
 				{
-					List<MarketRow> daemonMarkets = await Rest.JsonApiGetAsync<List<MarketRow>>(ApiUrl(daemon, Routes.kGetAllMarkets), 5000);
-					foreach (MarketRow m in daemonMarkets)
+					string response = await Rest.ExecuteGetAsync(ApiUrl(daemon, Routes.kGetAllMarkets), 5000);
+
+					ApiError exception = GetExceptionFromResult(response);
+					if (exception == null)
 					{
-						m_auth.m_Database.UpdateMarketInDatabase(m);
+						List<MarketRow> daemonMarkets = JsonSerializer.DeserializeFromString<List<MarketRow>>(response);
+						foreach (MarketRow m in daemonMarkets)
+						{
+							m_auth.m_Database.UpdateMarketInDatabase(m);
+						}
+						up = true;
 					}
-					up = true;
 				}
 				catch (Exception)
 				{

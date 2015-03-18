@@ -374,7 +374,7 @@ namespace MetaExchange.Pages
 
 						Href(stream, "Click to open in BitShares",	
 											HtmlAttributes.id, "bitsharesLinkId",
-											HtmlAttributes.href, "bts:{{sell.sendToAccount}}/transfer/amount/{{sell.quantity}}/memo/{{sell.memo}}/from/{{sell.payFrom}}/asset/{{(market.base_symbol).substr(3)}}",
+											HtmlAttributes.href, "bts:{{sell.sendToAccount}}/transfer/amount/{{sell.quantity}}/memo/{{sell.memo}}/from/{{sell.payFrom}}/asset/{{(market.base_symbol).TrimStart('bit')}}",
 											HtmlAttributes.style, "display:none",
 											HtmlAttributes.@class, "btn btn-success");
 					}

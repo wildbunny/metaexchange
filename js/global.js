@@ -101,3 +101,21 @@ function renameSymbolPair(name)
 {
 	return name != undefined ? name.replace("_", "/") : "";
 }
+
+/**
+*/
+String.prototype.TrimStart = function (c)
+{
+	if (this.length == 0)
+		return this;
+
+	var i = this.indexOf(c);
+	if (i >= 0)
+	{
+		return this.slice(i + c.length);
+	}
+	else
+	{
+		return this;
+	}
+}
