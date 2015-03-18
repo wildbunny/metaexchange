@@ -107,7 +107,7 @@ namespace MetaDaemon.Markets
 			decimal btcTotal = Numeric.TruncateDecimal(btcNoFee - fee, 8);
 						
 			// do the transfer
-			string txid = m_bitcoin.SendToAddress(btcAddress, btcTotal);
+			string txid = m_bitcoin.SendToAddress(btcAddress, btcTotal, "mX: " + orderType + " " + asset.symbol);
 
 			// mark this in our records
 			m_daemon.MarkDespositAsCreditedEnd(trxId, txid, MetaOrderStatus.completed, bitAssetAmount, m_market.bid, fee);
@@ -137,8 +137,7 @@ namespace MetaDaemon.Markets
 		///
 		/// <returns>	A BitsharesTransactionResponse. </returns>
 		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, 
-																		SenderToDepositRow s2d, MetaOrderType orderType,
-																		bool issueUia)
+																		SenderToDepositRow s2d, MetaOrderType orderType)
 		{
 			// make sure failures after this point do not result in repeated sending
 			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType, MetaOrderStatus.processing, TransactionPolicy.REPLACE);
@@ -172,19 +171,35 @@ namespace MetaDaemon.Markets
 
 			amountAsset = asset.Truncate(amountAsset);
 
-			BitsharesTransactionResponse bitsharesTrx;
-			if (issueUia)
-			{
-				bitsharesTrx = m_bitshares.WalletIssueAsset(amountAsset, asset.symbol, bitsharesAccount);
-			}
-			else
-			{
-				bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
-			}
+			BitsharesTransactionResponse bitsharesTrx = SendBitAssets(amountAsset, asset, bitsharesAccount, "mX: " + orderType + " " + asset.symbol);
 			
 			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, bitAssetAmountNoFee, m_market.ask, fee);
 
 			return bitsharesTrx;
+		}
+
+		/// <summary>	Sends bitAssets, either issue or transfer them </summary>
+		///
+		/// <remarks>	Paul, 18/03/2015. </remarks>
+		///
+		/// <param name="amount">   	The amount. </param>
+		/// <param name="asset">		The asset. </param>
+		/// <param name="toAccount">	to account. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		protected BitsharesTransactionResponse SendBitAssets(decimal amount, BitsharesAsset asset, string toAccount, string memo="")
+		{
+			BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
+			if (asset.issuer_account_id == account.id)
+			{
+				// issue it
+				return m_bitshares.WalletIssueAsset(amount, asset.symbol, toAccount, memo);
+			}
+			else
+			{
+				// transfer it
+				return m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, toAccount, memo);
+			}
 		}
 
 		/// <summary>	Bitshares transaction to bitcoin address. </summary>

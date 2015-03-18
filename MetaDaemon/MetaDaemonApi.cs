@@ -192,7 +192,9 @@ namespace MetaDaemon
 		{
 			// get balances for both wallets
 			Dictionary<int, ulong> bitsharesBalances = m_bitshares.WalletAccountBalance(m_bitsharesAccount)[m_bitsharesAccount];
-			decimal bitcoinBalance = m_bitcoin.GetBalance("", kBitcoinConfirms);
+
+			// has to be at 1 minimum because we can't spend at 0 confirmations
+			decimal bitcoinBalance = m_bitcoin.GetBalance("", Math.Max(kBitcoinConfirms, 1));
 
 			// update all the limits in our handlers
 			foreach (KeyValuePair<string, MarketBase> kvp in m_marketHandlers)

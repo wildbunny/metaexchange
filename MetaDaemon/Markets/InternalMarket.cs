@@ -27,7 +27,7 @@ namespace MetaDaemon.Markets
 		public const decimal kMinBtcFee = 0.1M;
 		#else
 		public const decimal kMaxTransactionFactor = 0.1M;
-		public const decimal kMinBtcFee = 0.0001M;
+		public const decimal kMinBtcFee = 0.00001M;
 		#endif
 
 		protected BitsharesAsset m_asset;
@@ -322,7 +322,7 @@ namespace MetaDaemon.Markets
 					m_market.ask = m_prices.GetAskForBuy(informed);
 				}
 
-				SendBitAssetsToDepositor(t, m_asset, s2d, MetaOrderType.buy, m_currency.uia);
+				SendBitAssetsToDepositor(t, m_asset, s2d, MetaOrderType.buy);
 
 				if (m_market.price_discovery)
 				{
@@ -493,11 +493,11 @@ namespace MetaDaemon.Markets
 					string exception = null;
 					try
 					{
-						BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(buyFees, m_asset.symbol, m_bitsharesAccount, bitsharesFeeAccount);
+						BitsharesTransactionResponse bitsharesTrx = SendBitAssets(buyFees, m_asset, bitsharesFeeAccount, "Fee payment");
 						bitsharesTrxId = bitsharesTrx.record_id;
 						
 						// WTUPID BTC DUST SIZE PREVENTS SMALL TRANSACGTIOJNs
-						bitcoinTxId = m_bitcoin.SendToAddress(bitcoinFeeAddress, sellFees);
+						bitcoinTxId = m_bitcoin.SendToAddress(bitcoinFeeAddress, sellFees, "Fee payment");
 					}
 					catch (Exception e)
 					{
