@@ -13,6 +13,7 @@ using ApiHost;
 using WebDaemonSharedTables;
 using MetaData;
 using BestPrice;
+using BitsharesCore;
 
 namespace MetaDaemon.Markets
 {
@@ -123,6 +124,8 @@ namespace MetaDaemon.Markets
 				baseBalance = m_asset.GetAmountFromLarimers(bitsharesBalances[m_asset.id]);
 			}
 
+			decimal maxTransactionFactor;
+
 			if (m_currency.uia)
 			{
 				// with UIA we got to handle the maximum buy size differently
@@ -137,6 +140,17 @@ namespace MetaDaemon.Markets
 					// this is how much we can issue, so lets stick that in there
 					baseBalance = m_asset.GetAmountFromLarimers(m_asset.maximum_share_supply - m_asset.current_share_supply);
 				}
+				else
+				{
+					throw new UnexpectedCaseException();
+				}
+
+				maxTransactionFactor = 1;
+				//maxTransactionFactor = kMaxTransactionFactor;
+			}
+			else
+			{
+				maxTransactionFactor = kMaxTransactionFactor;
 			}
 
 			decimal newAskMax, newBidMax;
@@ -152,8 +166,8 @@ namespace MetaDaemon.Markets
 				// ask = 240
 				// askMax = 10 / 240 = 0.04 BTC
 
-				newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * kMaxTransactionFactor, 8);
-				newBidMax = Numeric.TruncateDecimal((quoteBalance * m_market.bid) * kMaxTransactionFactor, 8);
+				newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * maxTransactionFactor, 8);
+				newBidMax = Numeric.TruncateDecimal((quoteBalance * m_market.bid) * maxTransactionFactor, 8);
 			}
 			else
 			{
@@ -163,8 +177,8 @@ namespace MetaDaemon.Markets
 				// ask = 0.00004
 				// askMax = 1 * 0.0004 = 0.0004 BTC
 
-				newAskMax = Numeric.TruncateDecimal((baseBalance * m_market.ask) * kMaxTransactionFactor, 8);
-				newBidMax = Numeric.TruncateDecimal((quoteBalance / m_market.bid) * kMaxTransactionFactor, 8);
+				newAskMax = Numeric.TruncateDecimal((baseBalance * m_market.ask) * maxTransactionFactor, 8);
+				newBidMax = Numeric.TruncateDecimal((quoteBalance / m_market.bid) * maxTransactionFactor, 8);
 			}
 
 			m_isDirty |= newAskMax != m_market.ask_max || newBidMax != m_market.bid_max;
@@ -386,9 +400,11 @@ namespace MetaDaemon.Markets
 			if (orderType == MetaOrderType.buy)
 			{
 				string accountName = receivingAddress;
+				bool isPublicKey = BitsharesPubKey.IsValidPublicKey(accountName);
 
 				// check for theoretical validity
-				if (!BitsharesWallet.IsValidAccountName(accountName))
+				
+				if (!isPublicKey && !BitsharesWallet.IsValidAccountName(accountName))
 				{
 					throw new ApiExceptionInvalidAccount(accountName);
 				}
@@ -402,11 +418,21 @@ namespace MetaDaemon.Markets
 					// check for actual validity
 					try
 					{
-						BitsharesAccount account = m_bitshares.WalletGetAccount(accountName);
+						string rcA;
+
+						if (!isPublicKey)
+						{
+							BitsharesAccount account = m_bitshares.WalletGetAccount(accountName);
+							rcA = account.name;
+						}
+						else
+						{
+							rcA = accountName;
+						}
 
 						// generate a new bitcoin address and tie it to this account
 						string depositAdress = m_bitcoin.GetNewAddress();
-						senderToDeposit = m_daemon.InsertSenderToDeposit(account.name, depositAdress, m_market.symbol_pair, referralUser);
+						senderToDeposit = m_daemon.InsertSenderToDeposit(rcA, depositAdress, m_market.symbol_pair, referralUser);
 					}
 					catch (BitsharesRpcException)
 					{

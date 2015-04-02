@@ -113,9 +113,9 @@ namespace MetaExchange
 				m_server.HandleGetRoute(Routes.kProduceReport,			m_api.OnProduceReport, eDdosMaxRequests.One, eDdosInSeconds.One, true, false);
 
 				// handle push from daemons
-				m_server.HandlePostRoute(Routes.kPushFees,				OnPushFeeCollection, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
-				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, true);
-				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushFees,				OnPushFeeCollection,	eDdosMaxRequests.Unlimited, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions,		eDdosMaxRequests.Unlimited, eDdosInSeconds.Ignore, true, true);
+				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket,			eDdosMaxRequests.Unlimited, eDdosInSeconds.Ignore, true, false);
 				
 				
 				// serve the pages

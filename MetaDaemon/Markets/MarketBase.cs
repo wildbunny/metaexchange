@@ -13,6 +13,7 @@ using WebDaemonSharedTables;
 using Casascius.Bitcoin;
 using MetaData;
 using ApiHost;
+using BitsharesCore;
 
 namespace MetaDaemon.Markets
 {
@@ -184,21 +185,43 @@ namespace MetaDaemon.Markets
 		///
 		/// <param name="amount">   	The amount. </param>
 		/// <param name="asset">		The asset. </param>
-		/// <param name="toAccount">	to account. </param>
+		/// <param name="sendTo">	to account. </param>
 		///
 		/// <returns>	A BitsharesTransactionResponse. </returns>
-		protected BitsharesTransactionResponse SendBitAssets(decimal amount, BitsharesAsset asset, string toAccount, string memo="")
+		protected BitsharesTransactionResponse SendBitAssets(decimal amount, BitsharesAsset asset, string sendTo, string memo="", bool allowIssue=true)
 		{
 			BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
-			if (asset.issuer_account_id == account.id)
+			if (asset.issuer_account_id == account.id && allowIssue)
 			{
-				// issue it
-				return m_bitshares.WalletIssueAsset(amount, asset.symbol, toAccount, memo);
+				if (BitsharesPubKey.IsValidPublicKey(sendTo))
+				{
+					string address = new BitsharesPubKey(sendTo).m_Address;
+
+					return m_bitshares.WalletAssetIssueToAddresses(asset.symbol,	new Dictionary<string, ulong> 
+																					{ 
+																						{ address, asset.GetLarimersFromAmount(amount) } 
+																					});
+				}
+				else
+				{
+					// issue it
+					return m_bitshares.WalletAssetIssue(amount, asset.symbol, sendTo, memo);
+				}
 			}
 			else
 			{
-				// transfer it
-				return m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, toAccount, memo);
+				if (BitsharesPubKey.IsValidPublicKey(sendTo))
+				{
+					// turn pubkey into an address
+					string address = new BitsharesPubKey(sendTo).m_Address;
+
+					return m_bitshares.WalletTransferToAddress(amount, asset.symbol, m_bitsharesAccount, address, memo);
+				}
+				else
+				{
+					// transfer it
+					return m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, sendTo, memo);
+				}
 			}
 		}
 
@@ -283,8 +306,8 @@ namespace MetaDaemon.Markets
 			// make sure failures after this point don't result in multiple refunds
 			m_daemon.MarkTransactionAsRefundedStart(depositId, depositAddress, m_market.symbol_pair, orderType);
 			
-			BitsharesAccount account = GetAccountFromLedger(fromAccount);
-			BitsharesTransactionResponse response = m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, fromAccount, memo);
+			BitsharesTransactionResponse response = SendBitAssets(amount, asset, fromAccount, memo, false);
+			//BitsharesTransactionResponse response = m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, fromAccount, memo);
 			
 			m_daemon.MarkTransactionAsRefundedEnd(depositId, response.record_id, MetaOrderStatus.refunded, amount, memo);
 		}

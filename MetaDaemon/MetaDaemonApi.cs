@@ -29,7 +29,7 @@ namespace MetaDaemon
 
 	public partial class MetaDaemonApi : DaemonMySql, IDisposable
 	{
-		const decimal kMinDelegateParticipation = 90;
+		const decimal kMinDelegateParticipation = 80;
 
 		AsyncPump m_scheduler;
 
@@ -436,8 +436,10 @@ namespace MetaDaemon
 						if (kvpHandler.Value.m_IsDirty)
 						{
 							m_dataAccess.UpdateMarketInDatabase(kvpHandler.Value.m_Market);
-
+							
+							#pragma warning disable 4014
 							ApiPush<MarketRow>(Routes.kPushMarket, kvpHandler.Value.m_Market);
+							#pragma warning restore 4014
 
 							kvpHandler.Value.m_IsDirty = false;
 						}

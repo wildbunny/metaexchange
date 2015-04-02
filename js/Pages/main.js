@@ -191,3 +191,17 @@ function CreateLink()
 		$('#bitsharesLinkId').hide();
 	}	
 }
+
+function UpdateAssetDetails(data)
+{
+	data = JSON.parse(data.substr(5));
+
+	$('#assetSymbolId').text(data.symbol);
+	$('#assetNameId').text(data.name);
+	$('#assetDescriptionId').text(data.description);
+
+	var s = parseFloat(data.current_share_supply) / parseFloat(data.precision);
+	var m = parseFloat(data.maximum_share_supply) / parseFloat(data.precision);
+
+	$('#assetSupplyId').text(s + " / " + m);
+}

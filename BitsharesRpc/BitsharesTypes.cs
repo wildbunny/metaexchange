@@ -65,6 +65,11 @@ namespace BitsharesRpc
 			return (decimal)larmiers / precision;
 		}
 
+		public ulong GetLarimersFromAmount(decimal amount)
+		{
+			return (ulong)(precision*amount);
+		}
+
 		public decimal Truncate(decimal amount)
 		{
 			return (ulong)(amount * precision) / (decimal)precision;

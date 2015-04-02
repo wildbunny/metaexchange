@@ -368,13 +368,34 @@ namespace BitsharesRpc
 		/// <param name="memo">			(Optional) the memo. </param>
 		///
 		/// <returns>	A BitsharesTransactionResponse. </returns>
-		public BitsharesTransactionResponse WalletIssueAsset(decimal amount, string symbol, string toAccount, string memo="")
+		public BitsharesTransactionResponse WalletAssetIssue(decimal amount, string symbol, string toAccount, string memo="")
 		{
 			memo = TrucateMemo(memo);
 
 			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue, amount, symbol, toAccount, memo);
 		}
 
+		/// <summary>	Wallet asset issue to addresses. </summary>
+		///
+		/// <remarks>	Paul, 30/03/2015. </remarks>
+		///
+		/// <param name="symbol">			 	The symbol. </param>
+		/// <param name="addressToAmountMap">	The address to amount map. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		public BitsharesTransactionResponse WalletAssetIssueToAddresses(string symbol, Dictionary<string, ulong> addressToAmountMap)
+		{
+			// convert into an array of arrays
+			List<object[]> stupidRpc = new List<object[]>();
+
+			foreach (KeyValuePair<string, ulong> kvp in addressToAmountMap)
+			{
+				stupidRpc.Add( new object[] {kvp.Key, kvp.Value} );
+			}
+
+			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue_to_addresses, symbol, stupidRpc);
+		}
+		
 		/// <summary>	Wallet burn. </summary>
 		///
 		/// <remarks>	Paul, 16/03/2015. </remarks>

@@ -10,6 +10,8 @@ using Casascius.Bitcoin;
 
 namespace BitsharesCore
 {
+	public class BadChecksumException : Exception { }
+
 	public class BitsharesPubKey
 	{
 		byte[] m_compressed;
@@ -56,11 +58,34 @@ namespace BitsharesCore
 			// check the hash first four bytes are equal to the last four bytes of the pub key
 			for (int i = 0; i < 4; i++)
 			{
-				Debug.Assert(pubkeyCheck[i] == data[i + 33]);
+				if (pubkeyCheck[i] != data[i + 33])
+				{
+					throw new BadChecksumException();
+				}
 			}
 
 			m_compressed = new byte[33];
 			Array.Copy(data, 0, m_compressed, 0, m_compressed.Length);
+		}
+
+		/// <summary>	Query if 'base58Hex' is valid public key. </summary>
+		///
+		/// <remarks>	Paul, 19/03/2015. </remarks>
+		///
+		/// <param name="base58Hex">	The base 58 hexadecimal. </param>
+		///
+		/// <returns>	true if valid public key, false if not. </returns>
+		static public bool IsValidPublicKey(string base58Hex)
+		{
+			try
+			{
+				new BitsharesPubKey(base58Hex);
+				return true;
+			}
+			catch (Exception)
+			{
+				return false;
+			}
 		}
 
 		/// <summary>	Create a bitshares public key from a hex bitcoin public key </summary>

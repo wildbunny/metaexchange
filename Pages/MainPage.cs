@@ -65,12 +65,40 @@ namespace MetaExchange.Pages
 							using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
 							{
 								RenderJumbo(stream, logo);
-																
+
 								using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
 								{
 									SPAN("Market status: ");
 									SPAN("{{status}}", "", "label label-{{label}}");
 								}
+																
+								/*using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
+								{
+									SPAN("Market status: ");
+									SPAN("{{status}}", "", "label label-{{label}}");
+									HR();
+
+									SPAN("Symbol: ");
+									SPAN("", "assetSymbolId", "label label-success");
+									BR();
+
+									SPAN("Name: ");
+									SPAN("", "assetNameId", "label label-success");
+									BR();
+
+									SPAN("Description: ");
+									SPAN("", "assetDescriptionId", "label label-success");
+									BR();
+
+									SPAN("Supply: ");
+									SPAN("", "assetSupplyId", "label label-success");
+									BR();
+
+									using (new Script(stream, HtmlAttributes.src, "https://api.bitsharesblocks.com/v2/assets/" + @base + "?callback=UpdateAssetDetails"))
+									{
+
+									}
+								}*/
 							}
 						}
 					}
