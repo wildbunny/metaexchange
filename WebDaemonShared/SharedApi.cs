@@ -36,9 +36,9 @@ namespace WebDaemonShared
 		/// <param name="data">	The data. </param>
 		///
 		/// <returns>	A JsonResponse. </returns>
-		public JsonResponse SendCorsResponse<T>(RequestContext ctx, T data)
+		public JsonResponse SendCorsResponse<B>(RequestContext ctx, B data)
 		{
-			JsonResponse r = ctx.Response<T>(data);
+			JsonResponse r = ctx.Response<B>(data);
 
 			// allow all
 			r.Headers[Response.kAccessControlOrigin] = "*";

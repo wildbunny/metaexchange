@@ -178,5 +178,14 @@ namespace MetaDaemonUnitTests
 		{
 			Assert.IsTrue(BitsharesWallet.IsValidAccountName("argentina-marketing.matt608"));
 		}
+
+		[Test]
+		public void DateTimeZone()
+		{
+			DateTime t = m_data.GetTransaction("4b9134079ae5d2091cab4a20de477959a10479040533ff0e2efea48511e4c76d").date;
+
+			Console.WriteLine(t.Kind);
+			Console.WriteLine(t.ToUniversalTime());
+		}
 	}
 }
