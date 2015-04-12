@@ -30,7 +30,7 @@ namespace UnitTestDebugging
 		{
 			using (MiscTest test = new MiscTest())
 			{
-				test.GetAllMarketsInvalidParams();
+				test.DateTimeZone();
 			}
 		}
 	}

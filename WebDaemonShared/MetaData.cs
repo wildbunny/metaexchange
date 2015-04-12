@@ -69,6 +69,11 @@ namespace MetaData
 		public decimal price_delta;
 		public bool flipped;
 
+		public decimal buy_quantity;
+		public decimal sell_quantity;
+
+		public string notes;
+
 		public CurrenciesRow GetBase(Dictionary<string, CurrenciesRow> currencyMap)
 		{
 			return CurrencyHelpers.FromSymbol(symbol_pair.Split('_')[0], currencyMap);

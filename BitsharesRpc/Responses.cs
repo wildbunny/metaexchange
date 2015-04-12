@@ -34,7 +34,7 @@ namespace BitsharesRpc
 		public uint blockchain_head_block_num;
 		public string blockchain_head_block_age;
 		public DateTime? blockchain_head_block_timestamp;
-		public string blockchain_average_delegate_participation;
+		public decimal blockchain_average_delegate_participation;
 		public int blockchain_confirmation_requirement;
 		public string blockchain_delegate_pay_rate;
 		public string blockchain_share_supply;

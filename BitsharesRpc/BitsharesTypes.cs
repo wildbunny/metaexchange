@@ -47,7 +47,7 @@ namespace BitsharesRpc
 		public string name;
 		public string description;
 		public string public_data;
-		public ulong issuer_account_id;
+		public uint issuer_account_id;
 		public ulong precision;
 		public DateTime registration_date;
 		public DateTime last_update;
@@ -63,6 +63,11 @@ namespace BitsharesRpc
 		public decimal GetAmountFromLarimers(ulong larmiers)
 		{
 			return (decimal)larmiers / precision;
+		}
+
+		public ulong GetLarimersFromAmount(decimal amount)
+		{
+			return (ulong)(precision*amount);
 		}
 
 		public decimal Truncate(decimal amount)

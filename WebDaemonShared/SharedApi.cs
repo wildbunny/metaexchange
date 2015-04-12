@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
+using Monsterer.Responses;
 using Monsterer.Request;
 using MetaData;
 using ApiHost;
@@ -16,10 +17,36 @@ namespace WebDaemonShared
 	{
 		MySqlData m_database;
 
+		/// <summary>	Constructor. </summary>
+		///
+		/// <remarks>	Paul, 16/03/2015. </remarks>
+		///
+		/// <param name="database">	The database. </param>
 		public SharedApi(MySqlData database)
 		{
 			m_database = database;
 		}
+
+		/// <summary>	Sends the cors response. </summary>
+		///
+		/// <remarks>	Paul, 16/03/2015. </remarks>
+		///
+		/// <typeparam name="T">	Generic type parameter. </typeparam>
+		/// <param name="ctx"> 	The context. </param>
+		/// <param name="data">	The data. </param>
+		///
+		/// <returns>	A JsonResponse. </returns>
+		public JsonResponse SendCorsResponse<B>(RequestContext ctx, B data)
+		{
+			JsonResponse r = ctx.Response<B>(data);
+
+			// allow all
+			r.Headers[Response.kAccessControlOrigin] = "*";
+			r.Send();
+
+			return r;
+		}
+
 			/// <summary>	Executes the get market action. </summary>
 		///
 		/// <remarks>	Paul, 11/02/2015. </remarks>
@@ -42,7 +69,8 @@ namespace WebDaemonShared
 			}
 			else
 			{
-				ctx.Respond<MarketRow>(market);
+				//ctx.Respond<MarketRow>(market);
+				SendCorsResponse<MarketRow>(ctx, market);
 			}
 
 			return null;
@@ -58,7 +86,9 @@ namespace WebDaemonShared
 		/// <returns>	A Task. </returns>
 		public Task OnGetAllMarkets(RequestContext ctx, T dummy)
 		{
-			ctx.Respond<List<MarketRow>>(m_database.GetAllMarkets());
+			//ctx.Respond<List<MarketRow>>(m_database.GetAllMarkets());
+
+			SendCorsResponse<List<MarketRow>>(ctx, m_database.GetAllMarkets());
 			return null;
 		}
 
@@ -83,7 +113,8 @@ namespace WebDaemonShared
 				throw new ApiExceptionOrderNotFound(txid);
 			}
 
-			ctx.Respond<TransactionsRow>(t);
+			//ctx.Respond<TransactionsRow>(t);
+			SendCorsResponse<TransactionsRow>(ctx, t);
 			return null;
 		}
 
@@ -100,7 +131,8 @@ namespace WebDaemonShared
 			uint limit = RestHelpers.GetPostArg<uint, ApiExceptionMissingParameter>(ctx, WebForms.kLimit);
 			string market = RestHelpers.GetPostArg<string>(ctx, WebForms.kSymbolPair);
 
-			ctx.Respond<List<TransactionsRowNoUid>>(m_database.GetLastTransactions(limit, market));
+			//ctx.Respond<List<TransactionsRowNoUid>>(m_database.GetLastTransactions(limit, market));
+			SendCorsResponse<List<TransactionsRowNoUid>>(ctx, m_database.GetLastTransactions(limit, market));
 			return null;
 		}
 
@@ -153,7 +185,8 @@ namespace WebDaemonShared
 			string memo = RestHelpers.GetPostArg<string>(ctx, WebForms.kMemo);
 			string depositAddress = RestHelpers.GetPostArg<string>(ctx, WebForms.kDepositAddress);
 
-			ctx.Respond<List<TransactionsRowNoUid>>(m_database.GetLastTransactionsFromDeposit(memo, depositAddress, limit));
+			//ctx.Respond<List<TransactionsRowNoUid>>(m_database.GetLastTransactionsFromDeposit(memo, depositAddress, limit));
+			SendCorsResponse<List<TransactionsRowNoUid>>(ctx, m_database.GetLastTransactionsFromDeposit(memo, depositAddress, limit));
 			return null;
 		}
 
@@ -168,7 +201,8 @@ namespace WebDaemonShared
 		public Task OnGetAllTransactionsSinceInternal(RequestContext ctx, T dummy)
 		{
 			uint tid = RestHelpers.GetPostArg<uint>(ctx, WebForms.kSince);
-			ctx.Respond<List<TransactionsRow>>(m_database.GetAllTransactionsSince(tid));
+			//ctx.Respond<List<TransactionsRow>>(m_database.GetAllTransactionsSince(tid));
+			SendCorsResponse<List<TransactionsRow>>(ctx, m_database.GetAllTransactionsSince(tid));
 			return null;
 		}
 
@@ -186,7 +220,8 @@ namespace WebDaemonShared
 
 				if (e.m_ctx.ListenerResponse.Headers.Count == 0)
 				{
-					e.m_ctx.Respond<ApiError>(apiE.m_error);
+					//e.m_ctx.Respond<ApiError>(apiE.m_error);
+					SendCorsResponse<ApiError>(e.m_ctx, apiE.m_error);
 				}
 			}
 			else if (e.m_ctx != null)
@@ -195,7 +230,8 @@ namespace WebDaemonShared
 
 				if (e.m_ctx.ListenerResponse.Headers.Count == 0)
 				{
-					e.m_ctx.Respond<ApiError>(new ApiExceptionGeneral().m_error);
+					//e.m_ctx.Respond<ApiError>(new ApiExceptionGeneral().m_error);
+					SendCorsResponse<ApiError>(e.m_ctx, new ApiExceptionGeneral().m_error);
 				}
 			}
 			else

@@ -106,6 +106,7 @@ namespace BitsharesRpc
 		wallet_address_create,
 		wallet_asset_create,
 		wallet_asset_issue,
+		wallet_asset_issue_to_addresses,
 		wallet_backup_create,
 		wallet_backup_restore,
 		wallet_burn,
@@ -183,6 +184,12 @@ namespace BitsharesRpc
 		vote_all,
 		vote_random,
 		vote_recommended
+	}
+
+	public enum BurnForOrAgainst
+	{
+		@for,
+		against
 	}
 
 	/// <summary>

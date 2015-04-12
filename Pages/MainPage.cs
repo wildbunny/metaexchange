@@ -65,12 +65,40 @@ namespace MetaExchange.Pages
 							using (new DivContainer(stream, HtmlAttributes.@class, "col-xs-12"))
 							{
 								RenderJumbo(stream, logo);
-																
+
 								using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
 								{
 									SPAN("Market status: ");
 									SPAN("{{status}}", "", "label label-{{label}}");
 								}
+																
+								/*using (new DivContainer(stream, HtmlAttributes.id, "serviceStatusId"))
+								{
+									SPAN("Market status: ");
+									SPAN("{{status}}", "", "label label-{{label}}");
+									HR();
+
+									SPAN("Symbol: ");
+									SPAN("", "assetSymbolId", "label label-success");
+									BR();
+
+									SPAN("Name: ");
+									SPAN("", "assetNameId", "label label-success");
+									BR();
+
+									SPAN("Description: ");
+									SPAN("", "assetDescriptionId", "label label-success");
+									BR();
+
+									SPAN("Supply: ");
+									SPAN("", "assetSupplyId", "label label-success");
+									BR();
+
+									using (new Script(stream, HtmlAttributes.src, "https://api.bitsharesblocks.com/v2/assets/" + @base + "?callback=UpdateAssetDetails"))
+									{
+
+									}
+								}*/
 							}
 						}
 					}
@@ -291,7 +319,7 @@ namespace MetaExchange.Pages
 								{
 									H3("Your transactions");
 
-									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date", "Status", "Notes"))
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date", "Status", "Notes", "Inbound Tx", "Outbound Tx"))
 									{
 										using (var tr = new TR(stream, "ng-repeat", "t in myTransactions"))
 										{
@@ -303,6 +331,13 @@ namespace MetaExchange.Pages
 											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
 											tr.TD("{{t.status}}");
 											tr.TD("{{t.notes}}");
+											tr.TD("<a ng-if=\"t.order_type=='" + MetaOrderType.buy + "'\" target=\"_blank\" ng-href=\"https://blockchain.info/tx/{{t.received_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.sell + "'\" target=\"_blank\" ng-href=\"http://bitsharesblocks.com/blocks/block?trxid={{t.received_txid}}\">Look up</a>");
+
+											tr.TD("<a ng-if=\"t.order_type=='" + MetaOrderType.buy + "' && t.status == '" + MetaOrderStatus.completed + "'\" target=\"_blank\" ng-href=\"http://bitsharesblocks.com/blocks/block?trxid={{t.sent_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.buy + "' && t.status == '" + MetaOrderStatus.refunded + "'\" target=\"_blank\" ng-href=\"https://blockchain.info/tx/{{t.sent_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.sell + "' && t.status == '" + MetaOrderStatus.completed + "'\" target=\"_blank\" ng-href=\"https://blockchain.info/tx/{{t.sent_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.sell + "' && t.status == '" + MetaOrderStatus.refunded + "'\" target=\"_blank\" ng-href=\"http://bitsharesblocks.com/blocks/block?trxid={{t.sent_txid}}\">Look up</a>");
 										}
 									}
 								}
@@ -374,7 +409,7 @@ namespace MetaExchange.Pages
 
 						Href(stream, "Click to open in BitShares",	
 											HtmlAttributes.id, "bitsharesLinkId",
-											HtmlAttributes.href, "bts:{{sell.sendToAccount}}/transfer/amount/{{sell.quantity}}/memo/{{sell.memo}}/from/{{sell.payFrom}}/asset/{{(market.base_symbol).substr(3)}}",
+											HtmlAttributes.href, "bts:{{sell.sendToAccount}}/transfer/amount/{{sell.quantity}}/memo/{{sell.memo}}/from/{{sell.payFrom}}/asset/{{(market.base_symbol).TrimStart('bit')}}",
 											HtmlAttributes.style, "display:none",
 											HtmlAttributes.@class, "btn btn-success");
 					}

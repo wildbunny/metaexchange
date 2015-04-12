@@ -52,7 +52,7 @@ namespace MetaDaemonUnitTests
 			foreach (string s in symbols)
 			{
 				string old = CurrencyHelpersDep.FromBitsharesSymbol(s).ToString();
-				string n = CurrencyHelpers.FromBitsharesSymbol(s, m_currencies).ToString();
+				string n = CurrencyHelpers.FromBitsharesSymbol(s, m_currencies, false).ToString();
 
 				Assert.AreEqual(old, n);
 			}

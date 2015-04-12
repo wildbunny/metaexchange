@@ -113,9 +113,9 @@ namespace MetaExchange
 				m_server.HandleGetRoute(Routes.kProduceReport,			m_api.OnProduceReport, eDdosMaxRequests.One, eDdosInSeconds.One, true, false);
 
 				// handle push from daemons
-				m_server.HandlePostRoute(Routes.kPushFees,				OnPushFeeCollection, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
-				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, true);
-				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushFees,				OnPushFeeCollection,	eDdosMaxRequests.Unlimited, eDdosInSeconds.Ignore, true, false);
+				m_server.HandlePostRoute(Routes.kPushTransactions,		OnPushTransactions,		eDdosMaxRequests.Unlimited, eDdosInSeconds.Ignore, true, true);
+				m_server.HandlePostRoute(Routes.kPushMarket,			OnPushMarket,			eDdosMaxRequests.Unlimited, eDdosInSeconds.Ignore, true, false);
 				
 				
 				// serve the pages
@@ -159,15 +159,21 @@ namespace MetaExchange
 
 			foreach (string daemon in allDaemons)
 			{
-				bool up;
+				bool up = false;
 				try
 				{
-					List<MarketRow> daemonMarkets = await Rest.JsonApiGetAsync<List<MarketRow>>(ApiUrl(daemon, Routes.kGetAllMarkets), 5000);
-					foreach (MarketRow m in daemonMarkets)
+					string response = await Rest.ExecuteGetAsync(ApiUrl(daemon, Routes.kGetAllMarkets), 5000);
+
+					ApiError exception = GetExceptionFromResult(response);
+					if (exception == null)
 					{
-						m_auth.m_Database.UpdateMarketInDatabase(m);
+						List<MarketRow> daemonMarkets = JsonSerializer.DeserializeFromString<List<MarketRow>>(response);
+						foreach (MarketRow m in daemonMarkets)
+						{
+							m_auth.m_Database.UpdateMarketInDatabase(m);
+						}
+						up = true;
 					}
-					up = true;
 				}
 				catch (Exception)
 				{
@@ -185,7 +191,25 @@ namespace MetaExchange
 
 				decimal realisedSpreadPercent = 100 * (1 - r.bid/r.ask);
 
-				m_Database.UpdateMarketStats(r.symbol_pair, btcVolume24h, lastPrice.last_price, lastPrice.price_delta, realisedSpreadPercent);
+				decimal qa, qb;
+				if (r.flipped)
+				{
+					qb = r.ask;
+					qa = r.bid;
+				}
+				else
+				{
+					qa = 1 / r.ask;
+					qb = 1 / r.bid;
+				}
+
+				decimal buyFee = (qa * r.ask_fee_percent / 100);
+				decimal sellFee = (qb * r.bid_fee_percent / 100);
+
+				decimal buyQuantity = qa - buyFee;
+				decimal sellQuantity = qb + sellFee;
+
+				m_Database.UpdateMarketStats(r.symbol_pair, btcVolume24h, lastPrice.last_price, lastPrice.price_delta, realisedSpreadPercent, buyQuantity, sellQuantity);
 			}
 		}
 

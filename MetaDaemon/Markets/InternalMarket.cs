@@ -13,6 +13,7 @@ using ApiHost;
 using WebDaemonSharedTables;
 using MetaData;
 using BestPrice;
+using BitsharesCore;
 
 namespace MetaDaemon.Markets
 {
@@ -27,11 +28,12 @@ namespace MetaDaemon.Markets
 		public const decimal kMinBtcFee = 0.1M;
 		#else
 		public const decimal kMaxTransactionFactor = 0.1M;
-		public const decimal kMinBtcFee = 0.0001M;
+		public const decimal kMinBtcFee = 0.00001M;
 		#endif
 
 		protected BitsharesAsset m_asset;
 		protected PriceDiscovery m_prices;
+		protected CurrenciesRow m_currency;
 
 		protected decimal m_lastFeedPrice;
 		
@@ -45,9 +47,11 @@ namespace MetaDaemon.Markets
 		/// <param name="bitshares">	   	The bitshares. </param>
 		/// <param name="bitcoin">		   	The bitcoin. </param>
 		/// <param name="bitsharesAccount">	The bitshares account. </param>
-		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, string bitsharesAccount, CurrenciesRow bitsharesAsset) : 
+		public InternalMarket(	MetaDaemonApi daemon, MarketRow market, BitsharesWallet bitshares, BitcoinWallet bitcoin, 
+								string bitsharesAccount, CurrenciesRow bitsharesAsset) : 
 								base(daemon, market, bitshares, bitcoin, bitsharesAccount)
 		{
+			m_currency = bitsharesAsset;
 			m_flipped = m_market.GetBase(daemon.m_AllCurrencies) != bitsharesAsset;
 			m_asset = m_bitshares.BlockchainGetAsset(CurrencyHelpers.ToBitsharesSymbol(bitsharesAsset));
 
@@ -120,6 +124,35 @@ namespace MetaDaemon.Markets
 				baseBalance = m_asset.GetAmountFromLarimers(bitsharesBalances[m_asset.id]);
 			}
 
+			decimal maxTransactionFactor;
+
+			if (m_currency.uia)
+			{
+				// with UIA we got to handle the maximum buy size differently
+				BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
+				if (m_asset.issuer_account_id == account.id)
+				{
+					// we are the issuer!
+
+					// refresh the asset
+					m_asset = m_bitshares.BlockchainGetAsset(m_asset.symbol);
+
+					// this is how much we can issue, so lets stick that in there
+					baseBalance = m_asset.GetAmountFromLarimers(m_asset.maximum_share_supply - m_asset.current_share_supply);
+				}
+				else
+				{
+					throw new UnexpectedCaseException();
+				}
+
+				maxTransactionFactor = 1;
+				//maxTransactionFactor = kMaxTransactionFactor;
+			}
+			else
+			{
+				maxTransactionFactor = kMaxTransactionFactor;
+			}
+
 			decimal newAskMax, newBidMax;
 
 			// askMax is in BITCOINS
@@ -133,8 +166,8 @@ namespace MetaDaemon.Markets
 				// ask = 240
 				// askMax = 10 / 240 = 0.04 BTC
 
-				newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * kMaxTransactionFactor, 8);
-				newBidMax = Numeric.TruncateDecimal((quoteBalance * m_market.bid) * kMaxTransactionFactor, 8);
+				newAskMax = Numeric.TruncateDecimal((baseBalance / m_market.ask) * maxTransactionFactor, 8);
+				newBidMax = Numeric.TruncateDecimal((quoteBalance * m_market.bid) * maxTransactionFactor, 8);
 			}
 			else
 			{
@@ -144,8 +177,8 @@ namespace MetaDaemon.Markets
 				// ask = 0.00004
 				// askMax = 1 * 0.0004 = 0.0004 BTC
 
-				newAskMax = Numeric.TruncateDecimal((baseBalance * m_market.ask) * kMaxTransactionFactor, 8);
-				newBidMax = Numeric.TruncateDecimal((quoteBalance / m_market.bid) * kMaxTransactionFactor, 8);
+				newAskMax = Numeric.TruncateDecimal((baseBalance * m_market.ask) * maxTransactionFactor, 8);
+				newBidMax = Numeric.TruncateDecimal((quoteBalance / m_market.bid) * maxTransactionFactor, 8);
 			}
 
 			m_isDirty |= newAskMax != m_market.ask_max || newBidMax != m_market.bid_max;
@@ -228,7 +261,7 @@ namespace MetaDaemon.Markets
 				}
 
 				string btcAddress = s2d.receiving_address;
-				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_asset, s2d.deposit_address, MetaOrderType.sell);
+				SendBitcoinsToDepositor(btcAddress, trxId, l.amount.amount, m_asset, s2d.deposit_address, MetaOrderType.sell,  m_currency.uia);
 
 				if (m_market.price_discovery)
 				{
@@ -367,9 +400,11 @@ namespace MetaDaemon.Markets
 			if (orderType == MetaOrderType.buy)
 			{
 				string accountName = receivingAddress;
+				bool isPublicKey = BitsharesPubKey.IsValidPublicKey(accountName);
 
 				// check for theoretical validity
-				if (!BitsharesWallet.IsValidAccountName(accountName))
+				
+				if (!isPublicKey && !BitsharesWallet.IsValidAccountName(accountName))
 				{
 					throw new ApiExceptionInvalidAccount(accountName);
 				}
@@ -383,11 +418,21 @@ namespace MetaDaemon.Markets
 					// check for actual validity
 					try
 					{
-						BitsharesAccount account = m_bitshares.WalletGetAccount(accountName);
+						string rcA;
+
+						if (!isPublicKey)
+						{
+							BitsharesAccount account = m_bitshares.WalletGetAccount(accountName);
+							rcA = account.name;
+						}
+						else
+						{
+							rcA = accountName;
+						}
 
 						// generate a new bitcoin address and tie it to this account
 						string depositAdress = m_bitcoin.GetNewAddress();
-						senderToDeposit = m_daemon.InsertSenderToDeposit(account.name, depositAdress, m_market.symbol_pair, referralUser);
+						senderToDeposit = m_daemon.InsertSenderToDeposit(rcA, depositAdress, m_market.symbol_pair, referralUser);
 					}
 					catch (BitsharesRpcException)
 					{
@@ -474,11 +519,11 @@ namespace MetaDaemon.Markets
 					string exception = null;
 					try
 					{
-						BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(buyFees, m_asset.symbol, m_bitsharesAccount, bitsharesFeeAccount);
+						BitsharesTransactionResponse bitsharesTrx = SendBitAssets(buyFees, m_asset, bitsharesFeeAccount, "Fee payment");
 						bitsharesTrxId = bitsharesTrx.record_id;
 						
 						// WTUPID BTC DUST SIZE PREVENTS SMALL TRANSACGTIOJNs
-						bitcoinTxId = m_bitcoin.SendToAddress(bitcoinFeeAddress, sellFees);
+						bitcoinTxId = m_bitcoin.SendToAddress(bitcoinFeeAddress, sellFees, "Fee payment");
 					}
 					catch (Exception e)
 					{

@@ -29,6 +29,8 @@ namespace MetaDaemon
 
 	public partial class MetaDaemonApi : DaemonMySql, IDisposable
 	{
+		const decimal kMinDelegateParticipation = 80;
+
 		AsyncPump m_scheduler;
 
 		ApiServer<IDummyDaemon> m_server;
@@ -43,6 +45,7 @@ namespace MetaDaemon
 		string m_bitcoinFeeAddress;
 
 		Task<string> m_lastCommand;
+		bool m_suspended;
 		
 		public MetaDaemonApi(	RpcConfig bitsharesConfig, RpcConfig bitcoinConfig, 
 								string bitsharesAccount,
@@ -79,12 +82,15 @@ namespace MetaDaemon
 			m_marketHandlers = new Dictionary<string,MarketBase>();
 
 			// get all market pegged assets
-			m_allBitsharesAssets = m_bitshares.BlockchainListAssets("", int.MaxValue).Where(a => a.issuer_account_id <= 0).ToDictionary(a => a.id);
+			List<BitsharesAsset> allAssets = m_bitshares.BlockchainListAssets("", int.MaxValue);
+			m_allBitsharesAssets = allAssets.ToDictionary(a => a.id);
+			Dictionary<int, BitsharesAsset> peggedAssets = allAssets.Where(a => a.issuer_account_id <= 0).ToDictionary(a => a.id);
+			
 
 			// get all active markets containing those assets
 			m_allDexMarkets = m_bitshares.BlockchainListMarkets().Where(m => m.last_error == null &&
-																		m_allBitsharesAssets.ContainsKey(m.base_id) &&
-																		m_allBitsharesAssets.ContainsKey(m.quote_id)).ToList();
+																		peggedAssets.ContainsKey(m.base_id) &&
+																		peggedAssets.ContainsKey(m.quote_id)).ToList();
 
 			m_allCurrencies = m_dataAccess.GetAllCurrencies();
 
@@ -95,7 +101,7 @@ namespace MetaDaemon
 			}
 			
 			m_server.HandlePostRoute(Routes.kSubmitAddress,				OnSubmitAddress, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
-			m_server.HandleGetRoute(Routes.kGetAllMarkets,				m_api.OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
+			m_server.HandleGetRoute(Routes.kGetAllMarkets,				OnGetAllMarkets, eDdosMaxRequests.Ignore, eDdosInSeconds.Ignore, false);
 		}
 
 		/// <summary>
@@ -186,7 +192,9 @@ namespace MetaDaemon
 		{
 			// get balances for both wallets
 			Dictionary<int, ulong> bitsharesBalances = m_bitshares.WalletAccountBalance(m_bitsharesAccount)[m_bitsharesAccount];
-			decimal bitcoinBalance = m_bitcoin.GetBalance("", kBitcoinConfirms);
+
+			// has to be at 1 minimum because we can't spend at 0 confirmations
+			decimal bitcoinBalance = m_bitcoin.GetBalance("", Math.Max(kBitcoinConfirms, 1));
 
 			// update all the limits in our handlers
 			foreach (KeyValuePair<string, MarketBase> kvp in m_marketHandlers)
@@ -299,161 +307,172 @@ namespace MetaDaemon
 		{
 			try
 			{
-				Dictionary<string, MarketRow> allMarkets = GetAllMarkets().ToDictionary(m => m.symbol_pair);
-				m_allCurrencies = m_dataAccess.GetAllCurrencies();
-
-				// create any handlers we need for new markets
-				CheckMarketHandlers(allMarkets);
-
-				// get all markets
-				RecomputeTransactionLimitsAndPrices(allMarkets);
-
 				//
-				// handle bitshares->bitcoin
+				// don't process transactions if the network is in danger
 				//
-
-				Dictionary<string, BitsharesLedgerEntry> bitsharesDeposits = HandleBitsharesDesposits();
-
-				//
-				// handle bitcoin->bitshares
-				// 
-
-				List<TransactionSinceBlock> bitcoinDeposits = HandleBitcoinDeposits();
-
-				//
-				// process bitshares deposits
-				//
-
-				uint siteLastTid = m_dataAccess.GetSiteLastTransactionUid();
 				
-				foreach (KeyValuePair<string, BitsharesLedgerEntry> kvpDeposit in bitsharesDeposits)
+				GetInfoResponse info = m_bitshares.GetInfo();
+				m_suspended = info.blockchain_average_delegate_participation < kMinDelegateParticipation;
+				if (!m_suspended)
 				{
-					// figure out which market each deposit belongs to
-					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
-					{
-						BitsharesLedgerEntry l = kvpDeposit.Value;
-						MarketRow m = allMarkets[kvpHandler.Key];
-						BitsharesAsset depositAsset = m_allBitsharesAssets[l.amount.asset_id];
+					Dictionary<string, MarketRow> allMarkets = GetAllMarkets().ToDictionary(m => m.symbol_pair);
+					m_allCurrencies = m_dataAccess.GetAllCurrencies();
 
-						if (!HandleCommand(l, kvpHandler.Value, m, kvpDeposit.Key))
+					// create any handlers we need for new markets
+					CheckMarketHandlers(allMarkets);
+
+					// get all markets
+					RecomputeTransactionLimitsAndPrices(allMarkets);
+
+					//
+					// handle bitshares->bitcoin
+					//
+
+					Dictionary<string, BitsharesLedgerEntry> bitsharesDeposits = HandleBitsharesDesposits();
+
+					//
+					// handle bitcoin->bitshares
+					// 
+
+					List<TransactionSinceBlock> bitcoinDeposits = HandleBitcoinDeposits();
+
+					//
+					// process bitshares deposits
+					//
+
+					uint siteLastTid = m_dataAccess.GetSiteLastTransactionUid();
+
+					foreach (KeyValuePair<string, BitsharesLedgerEntry> kvpDeposit in bitsharesDeposits)
+					{
+						// figure out which market each deposit belongs to
+						foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
 						{
-							if (IsDepositForMarket(l.memo, m.symbol_pair))
+							BitsharesLedgerEntry l = kvpDeposit.Value;
+							MarketRow m = allMarkets[kvpHandler.Key];
+							BitsharesAsset depositAsset = m_allBitsharesAssets[l.amount.asset_id];
+
+							if (!HandleCommand(l, kvpHandler.Value, m, kvpDeposit.Key))
 							{
-								// make sure the deposit is for this market!
-								if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol, m_allCurrencies)))
+								if (IsDepositForMarket(l.memo, m.symbol_pair))
 								{
-									kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
+									// make sure the deposit is for this market!
+									if (kvpHandler.Value.CanDepositAsset(CurrencyHelpers.FromBitsharesSymbol(depositAsset.symbol, m_allCurrencies, depositAsset.IsUia())))
+									{
+										kvpHandler.Value.HandleBitsharesDeposit(kvpDeposit);
+									}
 								}
 							}
 						}
+
+						// this needs to happen for every transaction
+						RecomputeTransactionLimitsAndPrices(allMarkets);
 					}
 
-					// this needs to happen for every transaction
-					RecomputeTransactionLimitsAndPrices(allMarkets);
-				}
+					//
+					// process bitcoin deposits
+					// 
 
-				//
-				// process bitcoin deposits
-				// 
+					List<TransactionsRow> pendingTransactions = m_dataAccess.GetAllPendingTransactions();
 
-				List<TransactionsRow> pendingTransactions = m_dataAccess.GetAllPendingTransactions();
-
-				foreach (TransactionSinceBlock deposit in bitcoinDeposits)
-				{
-					// figure out which market each deposit belongs to
-					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
+					foreach (TransactionSinceBlock deposit in bitcoinDeposits)
 					{
-						if (IsDepositForMarket(deposit.Address, allMarkets[kvpHandler.Key].symbol_pair))
+						// figure out which market each deposit belongs to
+						foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
 						{
-							kvpHandler.Value.HandleBitcoinDeposit(deposit);
+							if (IsDepositForMarket(deposit.Address, allMarkets[kvpHandler.Key].symbol_pair))
+							{
+								kvpHandler.Value.HandleBitcoinDeposit(deposit);
+							}
+						}
+
+						// this needs to happen for every transaction
+						RecomputeTransactionLimitsAndPrices(allMarkets);
+					}
+
+					//
+					// handle changes in transaction status
+					//
+
+					List<TransactionsRow> updatedTrans = new List<TransactionsRow>();
+					foreach (TransactionsRow pending in pendingTransactions)
+					{
+						TransactionsRow updated = m_dataAccess.GetTransaction(pending.received_txid);
+						if (updated.status != MetaOrderStatus.pending)
+						{
+							updatedTrans.Add(updated);
 						}
 					}
 
-					// this needs to happen for every transaction
-					RecomputeTransactionLimitsAndPrices(allMarkets);
-				}
+					//
+					// push any new transactions, make sure site acknowledges receipt
+					//
 
-				//
-				// handle changes in transaction status
-				//
-
-				List<TransactionsRow> updatedTrans = new List<TransactionsRow>();
-				foreach (TransactionsRow pending in pendingTransactions)
-				{
-					TransactionsRow updated = m_dataAccess.GetTransaction(pending.received_txid);
-					if (updated.status != MetaOrderStatus.pending)
+					uint latestTid = m_dataAccess.GetLastTransactionUid();
+					if (latestTid > siteLastTid || updatedTrans.Count > 0)
 					{
-						updatedTrans.Add(updated);
-					}
-				}
-				
-				//
-				// push any new transactions, make sure site acknowledges receipt
-				//
+						List<TransactionsRow> newTrans = m_dataAccess.GetAllTransactionsSince(siteLastTid);
 
-				uint latestTid = m_dataAccess.GetLastTransactionUid();
-				if (latestTid > siteLastTid || updatedTrans.Count > 0)
-				{
-					List<TransactionsRow> newTrans = m_dataAccess.GetAllTransactionsSince(siteLastTid);
+						// lump them together
+						newTrans.AddRange(updatedTrans);
 
-					// lump them together
-					newTrans.AddRange(updatedTrans);
-
-					// send 'em all
-					string result = await ApiPush<List<TransactionsRow>>(Routes.kPushTransactions, newTrans);
-					if (bool.Parse(result))
-					{
-						m_dataAccess.UpdateSiteLastTransactionUid(latestTid);
-					}
-					else
-					{
-						throw new Exception("API push response unknown! " + result);
-					}
-				}
-
-				//
-				// push market updates
-				//
-
-				foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
-				{
-					if (kvpHandler.Value.m_IsDirty)
-					{
-						m_dataAccess.UpdateMarketInDatabase(kvpHandler.Value.m_Market);
-
-						ApiPush<MarketRow>(Routes.kPushMarket, kvpHandler.Value.m_Market);
-
-						kvpHandler.Value.m_IsDirty = false;
-					}
-				}
-
-				//
-				// push fee collections
-				// 
-
-				if (m_bitcoinFeeAddress != null && m_bitshaaresFeeAccount != null)
-				{
-					uint lastFeeId = m_dataAccess.GetSiteLastFeeUid();
-
-					// collect our fees
-					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
-					{
-						kvpHandler.Value.CollectFees(m_bitcoinFeeAddress, m_bitshaaresFeeAccount);
-					}
-
-					// keep the site up to date, make sure it acknowledges receipt
-					uint latestFeeId = m_dataAccess.GetLastFeeCollectionUid();
-					if (latestFeeId > lastFeeId)
-					{
-						List<FeeCollectionRow> fees = m_dataAccess.GetFeeCollectionsSince(lastFeeId);
-						string result = await ApiPush<List<FeeCollectionRow>>(Routes.kPushFees, fees);
+						// send 'em all
+						string result = await ApiPush<List<TransactionsRow>>(Routes.kPushTransactions, newTrans);
 						if (bool.Parse(result))
 						{
-							m_dataAccess.UpdateSiteLastFeeUid(latestFeeId);
+							m_dataAccess.UpdateSiteLastTransactionUid(latestTid);
 						}
 						else
 						{
 							throw new Exception("API push response unknown! " + result);
+						}
+					}
+
+					//
+					// push market updates
+					//
+
+					foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
+					{
+						if (kvpHandler.Value.m_IsDirty)
+						{
+							m_dataAccess.UpdateMarketInDatabase(kvpHandler.Value.m_Market);
+							
+							#pragma warning disable 4014
+							ApiPush<MarketRow>(Routes.kPushMarket, kvpHandler.Value.m_Market);
+							#pragma warning restore 4014
+
+							kvpHandler.Value.m_IsDirty = false;
+						}
+					}
+
+					//
+					// push fee collections
+					// 
+
+					if (m_bitcoinFeeAddress != null && m_bitshaaresFeeAccount != null)
+					{
+						uint lastFeeId = m_dataAccess.GetSiteLastFeeUid();
+
+						// collect our fees
+						foreach (KeyValuePair<string, MarketBase> kvpHandler in m_marketHandlers)
+						{
+							kvpHandler.Value.CollectFees(m_bitcoinFeeAddress, m_bitshaaresFeeAccount);
+						}
+
+						// keep the site up to date, make sure it acknowledges receipt
+						uint latestFeeId = m_dataAccess.GetLastFeeCollectionUid();
+						if (latestFeeId > lastFeeId)
+						{
+							List<FeeCollectionRow> fees = m_dataAccess.GetFeeCollectionsSince(lastFeeId);
+							string result = await ApiPush<List<FeeCollectionRow>>(Routes.kPushFees, fees);
+							if (bool.Parse(result))
+							{
+								m_dataAccess.UpdateSiteLastFeeUid(latestFeeId);
+							}
+							else
+							{
+								throw new Exception("API push response unknown! " + result);
+							}
 						}
 					}
 				}

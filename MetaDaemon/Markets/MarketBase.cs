@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 using BitsharesRpc;
 using BitcoinRpcSharp;
@@ -12,6 +13,7 @@ using WebDaemonSharedTables;
 using Casascius.Bitcoin;
 using MetaData;
 using ApiHost;
+using BitsharesCore;
 
 namespace MetaDaemon.Markets
 {
@@ -72,7 +74,8 @@ namespace MetaDaemon.Markets
 		/// <param name="asset">	 	The asset. </param>
 		///
 		/// <returns>	A string. </returns>
-		protected virtual string SendBitcoinsToDepositor(string btcAddress, string trxId, ulong amount, BitsharesAsset asset, string depositAddress, MetaOrderType orderType)
+		protected virtual string SendBitcoinsToDepositor(	string btcAddress, string trxId, ulong amount, BitsharesAsset asset,
+															string depositAddress, MetaOrderType orderType, bool burnUia)
 		{
 			// make sure failures after this point dont result in multiple credits
 			m_daemon.MarkDespositAsCreditedStart(trxId, depositAddress, m_market.symbol_pair, orderType);
@@ -105,10 +108,20 @@ namespace MetaDaemon.Markets
 			decimal btcTotal = Numeric.TruncateDecimal(btcNoFee - fee, 8);
 						
 			// do the transfer
-			string txid = m_bitcoin.SendToAddress(btcAddress, btcTotal);
+			string txid = m_bitcoin.SendToAddress(btcAddress, btcTotal, "mX: " + orderType + " " + asset.symbol);
 
 			// mark this in our records
 			m_daemon.MarkDespositAsCreditedEnd(trxId, txid, MetaOrderStatus.completed, bitAssetAmount, m_market.bid, fee);
+
+			if (burnUia)
+			{
+				// make sure we were the issuer for this asset before we start burning it!
+				BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
+				if (asset.issuer_account_id == account.id)
+				{
+					m_bitshares.WalletBurn(bitAssetAmount, asset.symbol, m_bitsharesAccount, BurnForOrAgainst.@for, m_bitsharesAccount);
+				}
+			}
 
 			return txid;
 		}
@@ -124,7 +137,8 @@ namespace MetaDaemon.Markets
 		/// <param name="asset">	The asset. </param>
 		///
 		/// <returns>	A BitsharesTransactionResponse. </returns>
-		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, SenderToDepositRow s2d, MetaOrderType orderType)
+		protected BitsharesTransactionResponse SendBitAssetsToDepositor(TransactionSinceBlock t, BitsharesAsset asset, 
+																		SenderToDepositRow s2d, MetaOrderType orderType)
 		{
 			// make sure failures after this point do not result in repeated sending
 			m_daemon.MarkDespositAsCreditedStart(t.TxId, s2d.deposit_address, m_market.symbol_pair, orderType, MetaOrderStatus.processing, TransactionPolicy.REPLACE);
@@ -158,10 +172,57 @@ namespace MetaDaemon.Markets
 
 			amountAsset = asset.Truncate(amountAsset);
 
-			BitsharesTransactionResponse bitsharesTrx = m_bitshares.WalletTransfer(amountAsset, asset.symbol, m_bitsharesAccount, bitsharesAccount);
+			BitsharesTransactionResponse bitsharesTrx = SendBitAssets(amountAsset, asset, bitsharesAccount, "mX: " + orderType + " " + asset.symbol);
+			
 			m_daemon.MarkDespositAsCreditedEnd(t.TxId, bitsharesTrx.record_id, MetaOrderStatus.completed, bitAssetAmountNoFee, m_market.ask, fee);
 
 			return bitsharesTrx;
+		}
+
+		/// <summary>	Sends bitAssets, either issue or transfer them </summary>
+		///
+		/// <remarks>	Paul, 18/03/2015. </remarks>
+		///
+		/// <param name="amount">   	The amount. </param>
+		/// <param name="asset">		The asset. </param>
+		/// <param name="sendTo">	to account. </param>
+		///
+		/// <returns>	A BitsharesTransactionResponse. </returns>
+		protected BitsharesTransactionResponse SendBitAssets(decimal amount, BitsharesAsset asset, string sendTo, string memo="", bool allowIssue=true)
+		{
+			BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
+			if (asset.issuer_account_id == account.id && allowIssue)
+			{
+				if (BitsharesPubKey.IsValidPublicKey(sendTo))
+				{
+					string address = new BitsharesPubKey(sendTo).m_Address;
+
+					return m_bitshares.WalletAssetIssueToAddresses(asset.symbol,	new Dictionary<string, ulong> 
+																					{ 
+																						{ address, asset.GetLarimersFromAmount(amount) } 
+																					});
+				}
+				else
+				{
+					// issue it
+					return m_bitshares.WalletAssetIssue(amount, asset.symbol, sendTo, memo);
+				}
+			}
+			else
+			{
+				if (BitsharesPubKey.IsValidPublicKey(sendTo))
+				{
+					// turn pubkey into an address
+					string address = new BitsharesPubKey(sendTo).m_Address;
+
+					return m_bitshares.WalletTransferToAddress(amount, asset.symbol, m_bitsharesAccount, address, memo);
+				}
+				else
+				{
+					// transfer it
+					return m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, sendTo, memo);
+				}
+			}
 		}
 
 		/// <summary>	Bitshares transaction to bitcoin address. </summary>
@@ -245,8 +306,8 @@ namespace MetaDaemon.Markets
 			// make sure failures after this point don't result in multiple refunds
 			m_daemon.MarkTransactionAsRefundedStart(depositId, depositAddress, m_market.symbol_pair, orderType);
 			
-			BitsharesAccount account = GetAccountFromLedger(fromAccount);
-			BitsharesTransactionResponse response = m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, fromAccount, memo);
+			BitsharesTransactionResponse response = SendBitAssets(amount, asset, fromAccount, memo, false);
+			//BitsharesTransactionResponse response = m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, fromAccount, memo);
 			
 			m_daemon.MarkTransactionAsRefundedEnd(depositId, response.record_id, MetaOrderStatus.refunded, amount, memo);
 		}

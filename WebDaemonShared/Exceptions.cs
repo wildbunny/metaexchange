@@ -15,7 +15,8 @@ namespace WebDaemonShared
 		InvalidAddress,
 		InvalidAccount,
 		OrderNotFound,
-		UnknownCurrency
+		UnknownCurrency,
+		NetworkAlert
 	}
 
 	public class ApiError
@@ -113,5 +114,10 @@ namespace WebDaemonShared
 	public class ApiExceptionUnknownCurrency : ApiException
 	{
 		public ApiExceptionUnknownCurrency(string symbol) : base(new ApiError("Unknown currency " + symbol, ApiErrorCode.UnknownCurrency)) { }
+	}
+
+	public class ApiExceptionNetworkAlert : ApiException
+	{
+		public ApiExceptionNetworkAlert() : base(new ApiError("Service is suspended due to bitshares network alert", ApiErrorCode.NetworkAlert)) { }
 	}
 }
