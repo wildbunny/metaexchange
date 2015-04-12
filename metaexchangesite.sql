@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Mar 12, 2015 at 08:12 AM
+-- Generation Time: Apr 11, 2015 at 01:20 PM
 -- Server version: 5.1.41
 -- PHP Version: 5.3.1
 
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `fee_collections` (
   `end_txid` varchar(64) NOT NULL,
   PRIMARY KEY (`uid`),
   UNIQUE KEY `hash` (`hash`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=13 ;
 
 -- --------------------------------------------------------
 
@@ -104,6 +104,9 @@ CREATE TABLE IF NOT EXISTS `markets` (
   `asset_name` varchar(20) DEFAULT NULL,
   `realised_spread_percent` decimal(18,8) NOT NULL DEFAULT '0.00000000',
   `flipped` tinyint(1) NOT NULL DEFAULT '0',
+  `buy_quantity` decimal(18,8) NOT NULL DEFAULT '0.00000000',
+  `sell_quantity` decimal(18,8) NOT NULL DEFAULT '0.00000000',
+  `notes` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`symbol_pair`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -163,11 +166,11 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `fee` decimal(18,8) NOT NULL DEFAULT '0.00000000',
   `date` datetime NOT NULL,
   `notes` varchar(64) DEFAULT NULL,
-  `status` enum('none','processing','completed','refunded') NOT NULL,
+  `status` enum('none','processing','completed','refunded','pending') NOT NULL,
   `deposit_address` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`uid`),
   UNIQUE KEY `received_txid` (`received_txid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=188 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=294 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

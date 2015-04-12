@@ -35,28 +35,13 @@ var controlFunc = function ($scope, $http, $timeout)
 			data.base_symbol = data.symbol_pair.split('_')[0];
 			data.quote_symbol = data.symbol_pair.split('_')[1];
 			var qa, qb;
-			if (data.base_symbol == "BTC")
+			if (data.flipped)
 			{
 				var tmp = data.base_symbol;
 				data.base_symbol = data.quote_symbol;
 				data.quote_symbol = tmp;
-
-				// flipped market means flipped order types as well
-				qa = parseFloat(data.bid);
-				qb = parseFloat(data.ask);
-			}
-			else
-			{
-				qa = 1 / parseFloat(data.ask);
-				qb = 1 / parseFloat(data.bid);
 			}
 
-			var buyFee = (qa * data.ask_fee_percent / 100.0);
-			var sellFee = (qb * data.bid_fee_percent / 100.0);
-
-			data.buy_quantity = qa - buyFee;
-			data.sell_quantity = qb + sellFee;
-			
 			$scope.market = data;
 		}).finally(function (response)
 		{

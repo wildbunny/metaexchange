@@ -319,7 +319,7 @@ namespace MetaExchange.Pages
 								{
 									H3("Your transactions");
 
-									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date", "Status", "Notes"))
+									using (new Table(stream, "", 4, 4, "table noMargin", "Market", "Type", "Price", "Amount", "Fee", "Date", "Status", "Notes", "Inbound Tx", "Outbound Tx"))
 									{
 										using (var tr = new TR(stream, "ng-repeat", "t in myTransactions"))
 										{
@@ -331,6 +331,13 @@ namespace MetaExchange.Pages
 											tr.TD("{{t.date*1000 | date:'MMM d, HH:mm'}}");
 											tr.TD("{{t.status}}");
 											tr.TD("{{t.notes}}");
+											tr.TD("<a ng-if=\"t.order_type=='" + MetaOrderType.buy + "'\" target=\"_blank\" ng-href=\"https://blockchain.info/tx/{{t.received_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.sell + "'\" target=\"_blank\" ng-href=\"http://bitsharesblocks.com/blocks/block?trxid={{t.received_txid}}\">Look up</a>");
+
+											tr.TD("<a ng-if=\"t.order_type=='" + MetaOrderType.buy + "' && t.status == '" + MetaOrderStatus.completed + "'\" target=\"_blank\" ng-href=\"http://bitsharesblocks.com/blocks/block?trxid={{t.sent_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.buy + "' && t.status == '" + MetaOrderStatus.refunded + "'\" target=\"_blank\" ng-href=\"https://blockchain.info/tx/{{t.sent_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.sell + "' && t.status == '" + MetaOrderStatus.completed + "'\" target=\"_blank\" ng-href=\"https://blockchain.info/tx/{{t.sent_txid}}\">Look up</a>" +
+												"<a ng-if=\"t.order_type=='" + MetaOrderType.sell + "' && t.status == '" + MetaOrderStatus.refunded + "'\" target=\"_blank\" ng-href=\"http://bitsharesblocks.com/blocks/block?trxid={{t.sent_txid}}\">Look up</a>");
 										}
 									}
 								}

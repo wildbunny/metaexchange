@@ -59,7 +59,7 @@ namespace MetaExchange.Pages
 								{ "",		"hidden-sm hidden-xs hidden-md",	"",			"",						"",			"hidden-xs",		"hidden-xs",	"hidden-xs hidden-sm",	"hidden-xs hidden-sm" },
 								"Market",	"Currency",						"Price",	"Volume (BTC)", "Spread %", "Ask",				"Bid",				"Buy fee (%)",	"Sell fee (%)"))
 							{
-								using (var tr = new TR(stream, "ng-repeat", "t in allMarkets", HtmlAttributes.@class, "clickable-row",
+								using (var tr = new TR(stream, "ng-if", "!t.flipped", "ng-repeat", "t in allMarkets", HtmlAttributes.@class, "clickable-row",
 																								"ng-click", 
 																								"go(t)"))
 								{

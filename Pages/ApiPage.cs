@@ -229,7 +229,7 @@ namespace MetaExchange.Pages
 				H4("API detail");
 
 				string siteUrl = ctx.Request.Url.AbsoluteUri.TrimEnd(ctx.Request.Url.LocalPath);
-				string market = authObj.m_database.GetAllMarkets()[0].symbol_pair;
+				string market = "bitBTC_BTC";
 
 				CodeExample<SubmitAddressResponse>(siteUrl, stream, Routes.kSubmitAddress, WebRequestMethods.Http.Post, "The main function. This will take your supplied receiving address and provide you with a deposit address and a memo (depending on the market).",
 							new List<DocParam>
@@ -272,6 +272,11 @@ namespace MetaExchange.Pages
 
 				stream.WriteLine(EnumToPrettyTable("Possible order statuses", typeof(MetaOrderStatus)));
 
+				decimal ask = Numeric.TruncateDecimal(1/0.994M, 3);
+				decimal bid = Numeric.TruncateDecimal(0.994M, 3);
+				decimal bq = Numeric.TruncateDecimal(1/ask, 3);
+				decimal sq = Numeric.TruncateDecimal(1 / bid, 3);
+
 				CodeExample<MarketRow>(siteUrl, stream, Routes.kGetMarket, WebRequestMethods.Http.Post, "Get details about a particular market, such as bid/ask price and transaction limits.",
 							new List<DocParam>
 							{
@@ -283,21 +288,26 @@ namespace MetaExchange.Pages
 							null, Routes.kGetMarket + RestHelpers.BuildArgs(WebForms.kSymbolPair, market),
 							new MarketRow
 							{
-								ask= Numeric.TruncateDecimal(1/0.994M, 3),
-								bid=Numeric.TruncateDecimal(0.994M, 3),
+								ask = ask,
+								bid = bid,
+								buy_quantity = bq,
+								sell_quantity = sq,
 								ask_max=1,
 								bid_max=0.8M,
 								symbol_pair=market,
 							});
 
-
+				P("The values displayed in metaexchange for 1 BTC conversion quantity appear in the fields (1 BTC ->) <b>buy_quantity</b> and <b>sell_quantity</b> (-> 1 BTC).");
+				
 				CodeExample<List<MarketRow>>(siteUrl, stream, Routes.kGetAllMarkets, WebRequestMethods.Http.Get, "Get a list of all available markets along with the best prices and transaction limits.",
 							null,
 							null, Routes.kGetAllMarkets,
 							new List<MarketRow>{new MarketRow
 							{
-								ask = Numeric.TruncateDecimal(1 / 0.994M, 3),
-								bid = Numeric.TruncateDecimal(0.994M, 3),
+								ask = ask,
+								bid = bid,
+								buy_quantity = bq,
+								sell_quantity = sq,
 								ask_max = 1,
 								bid_max = 0.8M,
 								symbol_pair = market,

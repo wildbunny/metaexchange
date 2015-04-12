@@ -119,7 +119,7 @@ namespace MetaExchange.Pages
 								using (new UL(stream,	HtmlAttributes.@class, "dropdown-menu", 
 														"role","menu"))
 								{
-									foreach (MarketRow m in allMarkets)
+									foreach (MarketRow m in allMarkets.Where(m=>!m.flipped))
 									{
 										WriteLiHref(stream, CurrencyHelpers.RenameSymbolPair(m.symbol_pair), "", "", HtmlAttributes.href, "/markets/" + CurrencyHelpers.RenameSymbolPair(m.symbol_pair));
 									}

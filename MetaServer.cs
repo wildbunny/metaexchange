@@ -191,7 +191,25 @@ namespace MetaExchange
 
 				decimal realisedSpreadPercent = 100 * (1 - r.bid/r.ask);
 
-				m_Database.UpdateMarketStats(r.symbol_pair, btcVolume24h, lastPrice.last_price, lastPrice.price_delta, realisedSpreadPercent);
+				decimal qa, qb;
+				if (r.flipped)
+				{
+					qb = r.ask;
+					qa = r.bid;
+				}
+				else
+				{
+					qa = 1 / r.ask;
+					qb = 1 / r.bid;
+				}
+
+				decimal buyFee = (qa * r.ask_fee_percent / 100);
+				decimal sellFee = (qb * r.bid_fee_percent / 100);
+
+				decimal buyQuantity = qa - buyFee;
+				decimal sellQuantity = qb + sellFee;
+
+				m_Database.UpdateMarketStats(r.symbol_pair, btcVolume24h, lastPrice.last_price, lastPrice.price_delta, realisedSpreadPercent, buyQuantity, sellQuantity);
 			}
 		}
 

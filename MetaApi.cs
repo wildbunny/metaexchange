@@ -69,6 +69,15 @@ namespace MetaExchange
 		async Task OnSubmitAddress(RequestContext ctx, IDummy dummy)
 		{
 			// intercept the response and stick it in the site database so we can handle forwarding future queries
+			string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
+			uint referralUser = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
+			string receivingAddress = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kReceivingAddress);
+
+			// do this at the site level, because we need to prevent this from occuring across nodes
+			if (dummy.m_database.IsAnyDepositAddress(receivingAddress))
+			{
+				throw new ApiExceptionInvalidAddress("<internal deposit address>");
+			}
 
 			// forward the post on
 			string response = await ForwardPostSpecific(ctx, dummy);
@@ -79,9 +88,6 @@ namespace MetaExchange
 				SubmitAddressResponse data = JsonSerializer.DeserializeFromString<SubmitAddressResponse>(response);
 
 				// pull the market out of the request
-				string symbolPair = RestHelpers.GetPostArg<string, ApiExceptionMissingParameter>(ctx, WebForms.kSymbolPair);
-				uint referralUser = RestHelpers.GetPostArg<uint>(ctx, WebForms.kReferralId);
-
 				MarketRow m = dummy.m_database.GetMarket(symbolPair);
 
 				// stick it in the master database

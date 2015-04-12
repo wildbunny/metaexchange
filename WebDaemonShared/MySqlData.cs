@@ -295,7 +295,7 @@ namespace WebDaemonShared
 
 		/// <summary>	Inserts a sender to deposit. </summary>
 		///
-		/// <remarks>	Paul, 04/03/2015. </remarks>
+		/// <remarks>	Paul, 10/04/2015. </remarks>
 		///
 		/// <param name="recevingAddress">	The receving address. </param>
 		/// <param name="depositAddress"> 	The deposit address. </param>
@@ -676,10 +676,12 @@ namespace WebDaemonShared
 		/// <param name="lastPrice">				The last price. </param>
 		/// <param name="priceDelta">				The price delta. </param>
 		/// <param name="realisedSpreadPercent">	The realised spread percent. </param>
-		public void UpdateMarketStats(string symbolPair, decimal btcVolume24h, decimal lastPrice, decimal priceDelta, decimal realisedSpreadPercent)
+		public void UpdateMarketStats(	string symbolPair, decimal btcVolume24h, decimal lastPrice, 
+										decimal priceDelta, decimal realisedSpreadPercent,
+										decimal buyQuantity, decimal sellQuantity)
 		{
-			m_database.Statement("UPDATE markets SET btc_volume_24h=@vol, last_price=@price, price_delta=@delta, realised_spread_percent=@spread WHERE symbol_pair=@market;",
-									btcVolume24h, lastPrice, priceDelta, realisedSpreadPercent, symbolPair);
+			m_database.Statement("UPDATE markets SET btc_volume_24h=@vol, last_price=@price, price_delta=@delta, realised_spread_percent=@spread, buy_quantity=@ra, sell_quantity=@rb WHERE symbol_pair=@market;",
+									btcVolume24h, lastPrice, priceDelta, realisedSpreadPercent, buyQuantity, sellQuantity, symbolPair);
 		}
 
 		/// <summary>	Begins a transaction. </summary>
@@ -806,6 +808,18 @@ namespace WebDaemonShared
 		public Dictionary<string, CurrenciesRow> GetAllCurrencies()
 		{
 			return m_database.Query<CurrenciesRow>("SELECT * FROM currencies;").ToDictionary(r => r.symbol);
+		}
+
+		/// <summary>	Query if 'address' is any deposit address. </summary>
+		///
+		/// <remarks>	Paul, 10/04/2015. </remarks>
+		///
+		/// <param name="address">	The address. </param>
+		///
+		/// <returns>	true if any deposit address, false if not. </returns>
+		public bool IsAnyDepositAddress(string address)
+		{
+			return m_database.QueryScalar<long>("SELECT COUNT(*) FROM sender_to_deposit WHERE deposit_address=@d;", address) > 0;
 		}
 	}
 }

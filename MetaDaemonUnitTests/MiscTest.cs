@@ -187,5 +187,29 @@ namespace MetaDaemonUnitTests
 			Console.WriteLine(t.Kind);
 			Console.WriteLine(t.ToUniversalTime());
 		}
+
+		decimal GetBtcVolume(string symbolPair, bool flippedMarket)
+		{
+			if (flippedMarket)
+			{
+				return m_database.QueryScalar<decimal>("SELECT SUM(amount / price) FROM transactions WHERE symbol_pair=@market AND status=@s;", symbolPair, MetaOrderStatus.completed);
+			}
+			else
+			{
+				return m_database.QueryScalar<decimal>("SELECT SUM(amount * price) FROM transactions WHERE symbol_pair=@market AND status=@s;", symbolPair, MetaOrderStatus.completed);
+			}
+		}
+
+		public decimal GetTotalBtcVolume()
+		{
+			decimal volume = 0;
+			List<MarketRow> allMarkets = m_data.GetAllMarkets();
+			foreach (MarketRow r in allMarkets)
+			{
+				volume += GetBtcVolume(r.symbol_pair, r.flipped);
+			}
+
+			return volume;
+		}
 	}
 }
