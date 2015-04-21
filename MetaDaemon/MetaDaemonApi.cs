@@ -84,7 +84,7 @@ namespace MetaDaemon
 			// get all market pegged assets
 			List<BitsharesAsset> allAssets = m_bitshares.BlockchainListAssets("", int.MaxValue);
 			m_allBitsharesAssets = allAssets.ToDictionary(a => a.id);
-			Dictionary<int, BitsharesAsset> peggedAssets = allAssets.Where(a => a.issuer_account_id <= 0).ToDictionary(a => a.id);
+			Dictionary<int, BitsharesAsset> peggedAssets = allAssets.Where(a => a.issuer_id <= 0).ToDictionary(a => a.id);
 			
 
 			// get all active markets containing those assets

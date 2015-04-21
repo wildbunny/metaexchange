@@ -52,9 +52,17 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ApiHost, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Users\paul\Dropbox\Projects\PayDirtBTC\ApiHost\bin\Debug\ApiHost.dll</HintPath>
+    </Reference>
     <Reference Include="Casascius, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\libs\Casascius.dll</HintPath>
+    </Reference>
+    <Reference Include="Monsterer, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Users\paul\Dropbox\Projects\SatoshiDiceTest\Monsterer\bin\Debug\Monsterer.dll</HintPath>
     </Reference>
     <Reference Include="MySqlDatabase, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

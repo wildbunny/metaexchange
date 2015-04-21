@@ -47,16 +47,17 @@ namespace BitsharesRpc
 		public string name;
 		public string description;
 		public string public_data;
-		public uint issuer_account_id;
+		public uint issuer_id;
 		public ulong precision;
 		public DateTime registration_date;
 		public DateTime last_update;
-		public ulong current_share_supply;
-		public ulong maximum_share_supply;
+		public ulong current_supply;
+		public ulong max_supply;
 		public ulong collected_fees;
 		public uint flags;
-		public uint issuer_permissions;
-		public ulong transaction_fee;
+		public uint authority_flag_permissions;
+		public ulong withdrawal_fee;
+		public ulong market_fee_rate;
 		public BitsharesAuthority authority;
 		public uint last_proposal_id;
 
@@ -77,7 +78,7 @@ namespace BitsharesRpc
 
 		public bool IsUia()
 		{
-			return this.issuer_account_id > 0;
+			return this.issuer_id > 0;
 		}
 	}
 	

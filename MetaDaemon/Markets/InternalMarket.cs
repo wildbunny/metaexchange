@@ -130,7 +130,7 @@ namespace MetaDaemon.Markets
 			{
 				// with UIA we got to handle the maximum buy size differently
 				BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
-				if (m_asset.issuer_account_id == account.id)
+				if (m_asset.issuer_id == account.id)
 				{
 					// we are the issuer!
 
@@ -138,7 +138,7 @@ namespace MetaDaemon.Markets
 					m_asset = m_bitshares.BlockchainGetAsset(m_asset.symbol);
 
 					// this is how much we can issue, so lets stick that in there
-					baseBalance = m_asset.GetAmountFromLarimers(m_asset.maximum_share_supply - m_asset.current_share_supply);
+					baseBalance = m_asset.GetAmountFromLarimers(m_asset.max_supply - m_asset.current_supply);
 				}
 				else
 				{
@@ -416,28 +416,26 @@ namespace MetaDaemon.Markets
 					// no dice, create a new entry
 
 					// check for actual validity
-					try
-					{
-						string rcA;
+					string rcA;
 
-						if (!isPublicKey)
+					if (!isPublicKey)
+					{
+						BitsharesAccount account = m_bitshares.GetAccount(accountName);
+						if (account == null)
 						{
-							BitsharesAccount account = m_bitshares.WalletGetAccount(accountName);
-							rcA = account.name;
-						}
-						else
-						{
-							rcA = accountName;
+							throw new ApiExceptionInvalidAccount(accountName);
 						}
 
-						// generate a new bitcoin address and tie it to this account
-						string depositAdress = m_bitcoin.GetNewAddress();
-						senderToDeposit = m_daemon.InsertSenderToDeposit(rcA, depositAdress, m_market.symbol_pair, referralUser);
+						rcA = account.name;
 					}
-					catch (BitsharesRpcException)
+					else
 					{
-						throw new ApiExceptionInvalidAccount(accountName);
+						rcA = accountName;
 					}
+
+					// generate a new bitcoin address and tie it to this account
+					string depositAdress = m_bitcoin.GetNewAddress();
+					senderToDeposit = m_daemon.InsertSenderToDeposit(rcA, depositAdress, m_market.symbol_pair, referralUser);
 				}
 
 				response =	new SubmitAddressResponse 
