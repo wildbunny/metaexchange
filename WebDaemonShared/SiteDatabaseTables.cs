@@ -15,14 +15,19 @@ namespace WebDaemonSharedTables
 		processing,
 		completed,
 		refunded,
-		pending
+		pending,
+		placed,
+		partialFill,
+		failure
 	}
 
 	public enum MetaOrderType
 	{
 		none = 1,
 		buy,
-		sell
+		sell,
+		buyLimit,
+		sellLimit
 	}
 
 	public class TransactionsRow : TransactionsRowNoUid

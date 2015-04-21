@@ -117,7 +117,7 @@ namespace MetaDaemon.Markets
 			{
 				// make sure we were the issuer for this asset before we start burning it!
 				BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
-				if (asset.issuer_account_id == account.id)
+				if (asset.issuer_id == account.id)
 				{
 					m_bitshares.WalletBurn(bitAssetAmount, asset.symbol, m_bitsharesAccount, BurnForOrAgainst.@for, m_bitsharesAccount);
 				}
@@ -191,37 +191,15 @@ namespace MetaDaemon.Markets
 		protected BitsharesTransactionResponse SendBitAssets(decimal amount, BitsharesAsset asset, string sendTo, string memo="", bool allowIssue=true)
 		{
 			BitsharesAccount account = m_bitshares.WalletGetAccount(m_bitsharesAccount);
-			if (asset.issuer_account_id == account.id && allowIssue)
+			if (asset.issuer_id == account.id && allowIssue)
 			{
-				if (BitsharesPubKey.IsValidPublicKey(sendTo))
-				{
-					string address = new BitsharesPubKey(sendTo).m_Address;
-
-					return m_bitshares.WalletAssetIssueToAddresses(asset.symbol,	new Dictionary<string, ulong> 
-																					{ 
-																						{ address, asset.GetLarimersFromAmount(amount) } 
-																					});
-				}
-				else
-				{
-					// issue it
-					return m_bitshares.WalletAssetIssue(amount, asset.symbol, sendTo, memo);
-				}
+				// issue it
+				return m_bitshares.WalletUiaIssue(amount, asset.symbol, sendTo, memo);
 			}
 			else
 			{
-				if (BitsharesPubKey.IsValidPublicKey(sendTo))
-				{
-					// turn pubkey into an address
-					string address = new BitsharesPubKey(sendTo).m_Address;
-
-					return m_bitshares.WalletTransferToAddress(amount, asset.symbol, m_bitsharesAccount, address, memo);
-				}
-				else
-				{
-					// transfer it
-					return m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, sendTo, memo);
-				}
+				// transfer it
+				return m_bitshares.WalletTransfer(amount, asset.symbol, m_bitsharesAccount, sendTo, memo);
 			}
 		}
 

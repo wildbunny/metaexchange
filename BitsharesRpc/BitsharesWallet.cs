@@ -180,6 +180,28 @@ namespace BitsharesRpc
 			}
 		}
 
+		/// <summary>	Gets an account. </summary>
+		///
+		/// <remarks>	Paul, 21/04/2015. </remarks>
+		///
+		/// <exception cref="BitsharesRpcException">	Thrown when the Bitshares RPC error condition
+		/// 											occurs. </exception>
+		///
+		/// <param name="accountName">	name of the account. </param>
+		///
+		/// <returns>	The account. </returns>
+		public BitsharesAccount GetAccount(string accountName)
+		{
+			if (IsValidAccountName(accountName))
+			{
+				return ApiPostSync<BitsharesAccount>(BitsharesMethods.get_account, accountName);
+			}
+			else
+			{
+				throw new BitsharesRpcException(new BitsharesError { message = "Invalid account name;" });
+			}
+		}
+
 		/// <summary>	Wallet account transaction history. </summary>
 		///
 		/// <remarks>	Paul, 27/11/2014. </remarks>
@@ -332,70 +354,23 @@ namespace BitsharesRpc
 																voteMethod);
 		}
 
-		/// <summary>	Wallet transfer to address. </summary>
-		///
-		/// <remarks>	Paul, 22/12/2014. </remarks>
-		///
-		/// <param name="amount">	  	The amount. </param>
-		/// <param name="asset">	  	The asset. </param>
-		/// <param name="fromAccount">	from account. </param>
-		/// <param name="toAddress">  	to address. </param>
-		/// <param name="memo">		  	(Optional) the memo. </param>
-		/// <param name="voteMethod"> 	(Optional) the vote method. </param>
-		///
-		/// <returns>	A BitsharesTransactionResponse. </returns>
-		public BitsharesTransactionResponse WalletTransferToAddress(decimal amount, string asset,
-																	string fromAccount, string toAddress,
-																	string memo = "",
-																	VoteMethod voteMethod = VoteMethod.vote_recommended)
-		{
-			memo = TrucateMemo(memo);
-
-			return ApiPostSync<BitsharesTransactionResponse>(	BitsharesMethods.wallet_transfer_to_address, amount, asset,
-																fromAccount,
-																toAddress,
-																memo,
-																voteMethod);
-		}
-
 		/// <summary>	Wallet issue asset. </summary>
 		///
 		/// <remarks>	Paul, 17/01/2015. </remarks>
 		///
 		/// <param name="amount">   	The amount. </param>
 		/// <param name="symbol">   	The symbol. </param>
-		/// <param name="toAccount">	to account. </param>
+		/// <param name="sendTo">	to account. </param>
 		/// <param name="memo">			(Optional) the memo. </param>
 		///
 		/// <returns>	A BitsharesTransactionResponse. </returns>
-		public BitsharesTransactionResponse WalletAssetIssue(decimal amount, string symbol, string toAccount, string memo="")
+		public BitsharesTransactionResponse WalletUiaIssue(decimal amount, string symbol, string sendTo, string memo="")
 		{
 			memo = TrucateMemo(memo);
 
-			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue, amount, symbol, toAccount, memo);
+			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_uia_issue, amount, symbol, sendTo, memo);
 		}
 
-		/// <summary>	Wallet asset issue to addresses. </summary>
-		///
-		/// <remarks>	Paul, 30/03/2015. </remarks>
-		///
-		/// <param name="symbol">			 	The symbol. </param>
-		/// <param name="addressToAmountMap">	The address to amount map. </param>
-		///
-		/// <returns>	A BitsharesTransactionResponse. </returns>
-		public BitsharesTransactionResponse WalletAssetIssueToAddresses(string symbol, Dictionary<string, ulong> addressToAmountMap)
-		{
-			// convert into an array of arrays
-			List<object[]> stupidRpc = new List<object[]>();
-
-			foreach (KeyValuePair<string, ulong> kvp in addressToAmountMap)
-			{
-				stupidRpc.Add( new object[] {kvp.Key, kvp.Value} );
-			}
-
-			return ApiPostSync<BitsharesTransactionResponse>(BitsharesMethods.wallet_asset_issue_to_addresses, symbol, stupidRpc);
-		}
-		
 		/// <summary>	Wallet burn. </summary>
 		///
 		/// <remarks>	Paul, 16/03/2015. </remarks>
