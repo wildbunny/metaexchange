@@ -33,7 +33,7 @@ namespace WebDaemonShared
 
 	public class UnsupportedTransactionException : Exception
 	{
-		string m_trxId;
+		public string m_trxId;
 
 		public UnsupportedTransactionException(string t)
 		{
@@ -42,7 +42,7 @@ namespace WebDaemonShared
 
 		public override string ToString()
 		{
-			return m_trxId;
+			return "Unsupported transaction detected: " + m_trxId;
 		}
 	}
 

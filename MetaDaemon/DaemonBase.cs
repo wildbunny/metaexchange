@@ -127,22 +127,21 @@ namespace MetaDaemon
 																													l.from_account != BitsharesWallet.kNetworkAccount));
 			foreach (BitsharesWalletTransaction t in assetDeposits)
 			{
-				IEnumerable<BitsharesLedgerEntry> deposits = t.ledger_entries.Where(l => l.to_account == m_bitsharesAccount);
-
-				if (deposits.Count() == 1)
+				// make sure we didn't already send bitcoins for this deposit
+				if (!HasDepositBeenCredited(t.trx_id) && !IsTransactionIgnored(t.trx_id))
 				{
-					BitsharesLedgerEntry l = deposits.First();
+					IEnumerable<BitsharesLedgerEntry> deposits = t.ledger_entries.Where(l => l.to_account == m_bitsharesAccount);
 
-					// make sure we didn't already send bitcoins for this deposit
-					if (!HasDepositBeenCredited(t.trx_id) && !IsTransactionIgnored(t.trx_id))
+					if (deposits.Count() == 1)
 					{
-						results[t.trx_id] = l;						
+						BitsharesLedgerEntry l = deposits.First();
+						results[t.trx_id] = l;
 					}
-				}
-				else
-				{
-					// fail with unhandled case
-					throw new UnsupportedTransactionException(t.trx_id);
+					else
+					{
+						// fail with unhandled case
+						throw new UnsupportedTransactionException(t.trx_id);
+					}
 				}
 			}
 
