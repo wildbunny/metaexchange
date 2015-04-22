@@ -499,6 +499,14 @@ namespace MetaDaemon
 					m_lastCommand = null;
 				}
 			}
+			catch (UnsupportedTransactionException ute)
+			{
+				// ignore so we can move on!
+				m_dataAccess.IgnoreTransaction(ute.m_trxId);
+
+				// log it
+				LogGeneralException(ute.ToString());
+			}
 			catch (Exception e)
 			{
 				LogGeneralException(e.ToString());
