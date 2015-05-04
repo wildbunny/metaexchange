@@ -453,6 +453,18 @@ namespace WebDaemonShared
 			return m_database.Statement("UPDATE markets SET transaction_processed_uid=@p WHERE symbol_pair=@s;", last, market);
 		}
 
+		/// <summary>	Null to empty. </summary>
+		///
+		/// <remarks>	Paul, 03/05/2015. </remarks>
+		///
+		/// <param name="s">	The string. </param>
+		///
+		/// <returns>	A string. </returns>
+		string NullToEmpty(string s)
+		{
+			return s != null ? s : "";
+		}
+
 		/// <summary>	Inserts a fee transaction. </summary>
 		///
 		/// <remarks>	Paul, 19/02/2015. </remarks>
@@ -471,7 +483,8 @@ namespace WebDaemonShared
 			long lastInsertedId;
 
 			DateTime now = DateTime.UtcNow;
-			object[] hashParts = { market, buyTrxId, sellTrxId, buyFee, sellFee, transactionProcessedUid, exception, startTxId, endTxId };
+			object[] hashParts = { market, NullToEmpty(buyTrxId), NullToEmpty(sellTrxId), buyFee, sellFee, transactionProcessedUid, NullToEmpty(exception), startTxId, endTxId };
+			
 			uint hash = (uint)string.Join("|", hashParts).GetHashCode();
 
 			m_database.StatementLastInserted(	verb + " INTO fee_collections (hash, symbol_pair, buy_trxid, sell_trxid, buy_fee, sell_fee, date, transaction_processed_uid, exception, start_txid, end_txid) VALUES(@aa,@a,@b,@c,@d,@e,@f,@g,@h,@i,@j);",
